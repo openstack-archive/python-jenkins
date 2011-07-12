@@ -31,12 +31,17 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# Authors:
+# Ken Conley <kwc@willowgarage.com>
+# James Page <james.page@canonical.com>
+# Tully Foote <tfoote@willowgarage.com>
 
 '''
 Python API for Jenkins
 
 Examples:
 
+    jenkins.get_jobs()
     jenkins.create_job('empty', EMPTY_CONFIG_XML)
     jenkins.disable_job('empty')
     jenkins.copy_job('empty', 'empty_copy')
@@ -57,6 +62,7 @@ import base64
 import traceback
 import json
 
+INFO         = 'api/json'
 JOB_INFO     = 'job/%(name)s/api/python?depth=0'
 Q_INFO       = 'queue/api/python?depth=0'
 CREATE_JOB   = 'createItem?name=%(name)s' #also post config.xml
@@ -169,6 +175,32 @@ class Jenkins(object):
         @return: list of job dictionaries
         '''
         return eval(urllib2.urlopen(self.server + Q_INFO).read())['items']
+
+    def get_info(self):
+        """
+        Get information on this Hudson server.  This information
+        includes job list and view information.
+
+        @return: dictionary of information about Hudson server
+        @rtype: dict
+        """
+        try:
+            return json.loads(self.jenkins_open(urllib2.Request(self.server + INFO, '')))
+        except JenkinsException:
+            raise
+        except Exception as e:
+            traceback.print_exc()
+            raise JenkinsException("could not retrieve JSON info")
+
+    def get_jobs(self):
+        """
+        Get list of jobs running.  Each job is a dictionary with
+        'name', 'url', and 'color' keys.
+
+        @return: list of jobs
+        @rtype: [ { str: str} ]
+        """
+        return self.get_info()['jobs']
 
     def copy_job(self, from_name, to_name):
         '''
