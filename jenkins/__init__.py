@@ -35,6 +35,7 @@
 # Ken Conley <kwc@willowgarage.com>
 # James Page <james.page@canonical.com>
 # Tully Foote <tfoote@willowgarage.com>
+# Matthew Gertner <matthew.gertner@gmail.com>
 
 '''
 Python API for Jenkins
@@ -63,10 +64,10 @@ import traceback
 import json
 
 INFO         = 'api/json'
-JOB_INFO     = 'job/%(name)s/api/python?depth=0'
-Q_INFO       = 'queue/api/python?depth=0'
+JOB_INFO     = 'job/%(name)s/api/json?depth=0'
+Q_INFO       = 'queue/api/json?depth=0'
 CREATE_JOB   = 'createItem?name=%(name)s' #also post config.xml
-RECONFIG_JOB = 'job/%(name)s/config.xml'
+CONFIG_JOB   = 'job/%(name)s/config.xml'
 DELETE_JOB   = 'job/%(name)s/doDelete'
 ENABLE_JOB   = 'job/%(name)s/enable'
 DISABLE_JOB  = 'job/%(name)s/disable'
@@ -77,7 +78,7 @@ BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
-NODE_INFO   = 'computer/%(name)s/api/python?depth=0'
+NODE_INFO   = 'computer/%(name)s/api/json?depth=0'
 NODE_TYPE   = 'hudson.slaves.DumbSlave$DescriptorImpl'
 
 
@@ -145,7 +146,7 @@ class Jenkins(object):
         
     def get_job_info(self, name):
         try:
-            return eval(urllib2.urlopen(self.server + JOB_INFO%locals()).read())
+            return json.load(urllib2.urlopen(self.server + JOB_INFO%locals()))
         except:
             raise JenkinsException('job[%s] does not exist'%name)
         
@@ -174,7 +175,7 @@ class Jenkins(object):
         '''
         @return: list of job dictionaries
         '''
-        return eval(urllib2.urlopen(self.server + Q_INFO).read())['items']
+        return json.load(urllib2.urlopen(self.server + Q_INFO))['items']
 
     def get_info(self):
         """
@@ -277,6 +278,16 @@ class Jenkins(object):
         if not self.job_exists(name):
             raise JenkinsException('create[%s] failed'%(name))
     
+    def get_job_config(self, name):
+        '''
+        Get configuration of existing Jenkins job.
+
+        @param name: Name of Jenkins job
+        @type  name: str
+        '''
+        get_config_url = self.server + CONFIG_JOB%locals()
+        return urllib2.urlopen(get_config_url).read()
+
     def reconfig_job(self, name, config_xml):
         '''
         Change configuration of existing Jenkins job.
@@ -288,7 +299,7 @@ class Jenkins(object):
         '''
         self.get_job_info(name)
         headers = {'Content-Type': 'text/xml'}
-        reconfig_url = self.server + RECONFIG_JOB%locals()
+        reconfig_url = self.server + CONFIG_JOB%locals()
         self.jenkins_open(urllib2.Request(reconfig_url, config_xml, headers))
 
     def build_job_url(self, name, parameters=None, token=None):
@@ -316,7 +327,7 @@ class Jenkins(object):
   
     def get_node_info(self, name):
         try:
-            return eval(urllib2.urlopen(self.server + NODE_INFO%locals()).read())
+            return json.load(urllib2.urlopen(self.server + NODE_INFO%locals()))
         except:
             raise JenkinsException('node[%s] does not exist'%name)
  
