@@ -146,7 +146,7 @@ class Jenkins(object):
         
     def get_job_info(self, name):
         try:
-            return json.load(urllib2.urlopen(self.server + JOB_INFO%locals()))
+            return json.loads(self.jenkins_open(urllib2.Request(self.server + JOB_INFO%locals())))
         except:
             raise JenkinsException('job[%s] does not exist'%name)
         
@@ -175,7 +175,7 @@ class Jenkins(object):
         '''
         @return: list of job dictionaries
         '''
-        return json.load(urllib2.urlopen(self.server + Q_INFO))['items']
+        return json.loads(self.jenkins_open(urllib2.Request(self.server + Q_INFO)))['items']
 
     def get_info(self):
         """
@@ -286,7 +286,7 @@ class Jenkins(object):
         @type  name: str
         '''
         get_config_url = self.server + CONFIG_JOB%locals()
-        return urllib2.urlopen(get_config_url).read()
+        return self.jenkins_open(urllib2.Request(get_config_url))
 
     def reconfig_job(self, name, config_xml):
         '''
@@ -327,7 +327,7 @@ class Jenkins(object):
   
     def get_node_info(self, name):
         try:
-            return json.load(urllib2.urlopen(self.server + NODE_INFO%locals()))
+            return json.loads(self.jenkins_open(urllib2.Request(self.server + NODE_INFO%locals())))
         except:
             raise JenkinsException('node[%s] does not exist'%name)
  
