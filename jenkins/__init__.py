@@ -323,7 +323,7 @@ class Jenkins(object):
         '''
         if not self.job_exists(name):
             raise JenkinsException('no such job[%s]'%(name))
-        return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token), ''))        
+        return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token)))        
   
     def get_node_info(self, name):
         try:
