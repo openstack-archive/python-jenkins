@@ -62,6 +62,7 @@ import urllib
 import base64
 import traceback
 import json
+import httplib
 
 INFO         = 'api/json'
 JOB_INFO     = 'job/%(name)s/api/json?depth=0'
@@ -146,9 +147,15 @@ class Jenkins(object):
         
     def get_job_info(self, name):
         try:
-            return json.loads(self.jenkins_open(urllib2.Request(self.server + JOB_INFO%locals())))
-        except:
+            response = self.jenkins_open(urllib2.Request(self.server + JOB_INFO%locals()))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('job[%s] does not exist'%name)
+        except urllib2.HTTPError:
             raise JenkinsException('job[%s] does not exist'%name)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for job[%s]"%name)
         
     def debug_job_info(self, job_name):
         '''
@@ -186,12 +193,13 @@ class Jenkins(object):
         @rtype: dict
         """
         try:
-            return json.loads(self.jenkins_open(urllib2.Request(self.server + INFO, '')))
-        except JenkinsException:
-            raise
-        except Exception as e:
-            traceback.print_exc()
-            raise JenkinsException("could not retrieve JSON info")
+            return json.loads(self.jenkins_open(urllib2.Request(self.server + INFO)))
+        except urllib2.HTTPError:
+            raise JenkinsException("Error communicating with server[%s]"%self.server)
+        except httplib.BadStatusLine:
+            raise JenkinsException("Error communicating with server[%s]"%self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"%self.server)
 
     def get_jobs(self):
         """
@@ -258,7 +266,7 @@ class Jenkins(object):
         try:
             self.get_job_info(name)
             return True
-        except:
+        except JenkinsException:
             return False
 
     def create_job(self, name, config_xml):
@@ -327,9 +335,15 @@ class Jenkins(object):
   
     def get_node_info(self, name):
         try:
-            return json.loads(self.jenkins_open(urllib2.Request(self.server + NODE_INFO%locals())))
-        except:
+            response = self.jenkins_open(urllib2.Request(self.server + NODE_INFO%locals()))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('node[%s] does not exist'%name)
+        except urllib2.HTTPError:
             raise JenkinsException('node[%s] does not exist'%name)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for node[%s]"%name)
  
     def node_exists(self, name):
         '''
@@ -340,7 +354,7 @@ class Jenkins(object):
         try:
             self.get_node_info(name)
             return True
-        except:
+        except JenkinsException:
             return False
             
     def delete_node(self, name):
