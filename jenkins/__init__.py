@@ -371,22 +371,28 @@ class Jenkins(object):
     
     
     def create_node(self, name, numExecutors=2, nodeDescription=None,
-                    remoteFS='/var/lib/jenkins', labels=None):
+                    remoteFS='/var/lib/jenkins', labels=None, exclusive=False):
         '''
         @param name: name of node to create
         @type  name: str
         @param numExecutors: number of executors for node
         @type  numExecutors: int
         @param nodeDescription: Description of node
-        @type  name: str
+        @type  nodeDescription: str
         @param remoteFS: Remote filesystem location to use
-        @type  name: str
+        @type  remoteFS: str
         @param labels: Labels to associate with node
-        @type  name: str        
+        @type  labels: str        
+        @param exclusive: Use this node for tied jobs onlu
+        @type  exclusive: boolean
         '''
         if self.node_exists(name):
             raise JenkinsException('node[%s] already exists'%(name))
         
+        mode = 'NORMAL'
+        if exclusive:
+            mode = 'EXCLUSIVE'
+           
         params = {
             'name' : name,
             'type' : NODE_TYPE,
@@ -396,7 +402,7 @@ class Jenkins(object):
                 'numExecutors'    : numExecutors,
                 'remoteFS'        : remoteFS,
                 'labelString'     : labels,
-                'mode'            : 'EXCLUSIVE',
+                'mode'            : mode,
                 'type'            : NODE_TYPE,
                 'retentionStrategy' : { 'stapler-class'  : 'hudson.slaves.RetentionStrategy$Always' },
                 'nodeProperties'    : { 'stapler-class-bag' : 'true' },
@@ -407,4 +413,3 @@ class Jenkins(object):
         self.jenkins_open(urllib2.Request(self.server + CREATE_NODE%urllib.urlencode(params)))                             
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed'%(name))
-        
