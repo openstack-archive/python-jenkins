@@ -150,6 +150,12 @@ class Jenkins(object):
             self.auth = None
         
     def get_job_info(self, name):
+        '''
+        Get job information dictionary.
+
+        :param name: Job name, ``str``
+        :returns: dictionary of job information
+        '''
         try:
             response = self.jenkins_open(urllib2.Request(self.server + JOB_INFO%locals()))
             if response:
@@ -196,10 +202,10 @@ class Jenkins(object):
 
     def get_info(self):
         """
-        Get information on this Hudson server.  This information
+        Get information on this Master.  This information
         includes job list and view information.
 
-        :returns: dictionary of information about Hudson server, ``dict``
+        :returns: dictionary of information about Master, ``dict``
 
         Example::
 
@@ -299,6 +305,7 @@ class Jenkins(object):
         Get configuration of existing Jenkins job.
 
         :param name: Name of Jenkins job, ``str``
+        :returns: job configuration (XML format)
         '''
         get_config_url = self.server + CONFIG_JOB%locals()
         return self.jenkins_open(urllib2.Request(get_config_url))
@@ -317,7 +324,7 @@ class Jenkins(object):
 
     def build_job_url(self, name, parameters=None, token=None):
         '''
-        Get URL to trigger Hudson build job.  Authenticated setups may require configuring a token on the server side.
+        Get URL to trigger build job.  Authenticated setups may require configuring a token on the server side.
         
         :param parameters: parameters for job, or None., ``dict``
         :param token: (optional) token for building job, ``str``
@@ -334,7 +341,7 @@ class Jenkins(object):
 
     def build_job(self, name, parameters=None, token=None):
         '''
-        Trigger Hudson build job.
+        Trigger build job.
         
         :param parameters: parameters for job, or ``None``, ``dict``
         '''
@@ -343,6 +350,12 @@ class Jenkins(object):
         return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token)))        
   
     def get_node_info(self, name):
+        '''
+        Get node information dictionary
+
+        :param name: Node name, ``str``
+        :returns: Dictionary of node info, ``dict``
+        '''
         try:
             response = self.jenkins_open(urllib2.Request(self.server + NODE_INFO%locals()))
             if response:
