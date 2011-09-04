@@ -40,20 +40,21 @@
 '''
 Python API for Jenkins
 
-Examples:
+Examples::
 
-    jenkins.get_jobs()
-    jenkins.create_job('empty', EMPTY_CONFIG_XML)
-    jenkins.disable_job('empty')
-    jenkins.copy_job('empty', 'empty_copy')
-    jenkins.enable_job('empty_copy')
-    jenkins.reconfig_job('empty_copy', RECONFIG_XML)
+    j = jenkins.Jenkins('http://your_url_here', 'username', 'password')
+    j.get_jobs()
+    j.create_job('empty', jenkins.EMPTY_CONFIG_XML)
+    j.disable_job('empty')
+    j.copy_job('empty', 'empty_copy')
+    j.enable_job('empty_copy')
+    j.reconfig_job('empty_copy', jenkins.RECONFIG_XML)
 
-    jenkins.delete_job('empty')
-    jenkins.delete_job('empty_copy')
+    j.delete_job('empty')
+    j.delete_job('empty_copy')
 
     # build a parameterized job
-    jenkins.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
+    j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
 '''
 
 import sys
@@ -119,7 +120,11 @@ RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
   <buildWrappers/>
 </project>'''
 
-class JenkinsException(Exception): pass
+class JenkinsException(Exception):
+    '''
+    General exception type for jenkins-API-related failures.
+    '''
+    pass
 
 def auth_headers(username, password):
     '''
@@ -133,8 +138,7 @@ class Jenkins(object):
         '''
         Create handle to Jenkins instance.
 
-        @param url: URL of Jenkins server
-        @type  url: str
+        :param url: URL of Jenkins server, ``str``
         '''
         if url[-1] == '/':
             self.server = url
@@ -166,7 +170,8 @@ class Jenkins(object):
 
     def jenkins_open(self, req):
         '''
-        Utility routine for opening an HTTP request to a Jenkins server. 
+        Utility routine for opening an HTTP request to a Jenkins server.   This should only be used
+        to extends the :class:`Jenkins` API.
         '''
         try:
             if self.auth:
@@ -180,7 +185,12 @@ class Jenkins(object):
     
     def get_queue_info(self):
         '''
-        @return: list of job dictionaries
+        :returns: list of job dictionaries, ``[dict]``
+
+        Example::
+            >>> queue_info = j.get_queue_info()
+            >>> print(queue_info[0])
+            {u'task': {u'url': u'http://your_url/job/my_job/', u'color': u'aborted_anime', u'name': u'my_job'}, u'stuck': False, u'actions': [{u'causes': [{u'shortDescription': u'Started by timer'}]}], u'buildable': False, u'params': u'', u'buildableStartMilliseconds': 1315087293316, u'why': u'Build #2,532 is already in progress (ETA:10 min)', u'blocked': True}
         '''
         return json.loads(self.jenkins_open(urllib2.Request(self.server + Q_INFO)))['items']
 
@@ -189,8 +199,15 @@ class Jenkins(object):
         Get information on this Hudson server.  This information
         includes job list and view information.
 
-        @return: dictionary of information about Hudson server
-        @rtype: dict
+        :returns: dictionary of information about Hudson server, ``dict``
+
+        Example::
+
+            >>> info = j.get_info()
+            >>> jobs = info['jobs']
+            >>> print(jobs[0])
+            {u'url': u'http://your_url_here/job/my_job/', u'color': u'blue', u'name': u'my_job'}
+
         """
         try:
             return json.loads(self.jenkins_open(urllib2.Request(self.server + INFO)))
@@ -206,8 +223,7 @@ class Jenkins(object):
         Get list of jobs running.  Each job is a dictionary with
         'name', 'url', and 'color' keys.
 
-        @return: list of jobs
-        @rtype: [ { str: str} ]
+        :returns: list of jobs, ``[ { str: str} ]``
         """
         return self.get_info()['jobs']
 
@@ -215,10 +231,8 @@ class Jenkins(object):
         '''
         Copy a Jenkins job
 
-        @param from_name: Name of Jenkins job to copy from
-        @type  from_name: str
-        @param to_name: Name of Jenkins job to copy to
-        @type  to_name: str
+        :param from_name: Name of Jenkins job to copy from, ``str``
+        :param to_name: Name of Jenkins job to copy to, ``str``
         '''
         self.get_job_info(from_name)
         self.jenkins_open(urllib2.Request(self.server + COPY_JOB%locals(), ''))
@@ -229,8 +243,7 @@ class Jenkins(object):
         '''
         Delete Jenkins job permanently.
         
-        @param name: Name of Jenkins job
-        @type  name: str
+        :param name: Name of Jenkins job, ``str``
         '''
         self.get_job_info(name)
         self.jenkins_open(urllib2.Request(self.server + DELETE_JOB%locals(), ''))
@@ -241,27 +254,24 @@ class Jenkins(object):
         '''
         Enable Jenkins job.
 
-        @param name: Name of Jenkins job
-        @type  name: str
+        :param name: Name of Jenkins job, ``str``
         '''
         self.get_job_info(name)
         self.jenkins_open(urllib2.Request(self.server + ENABLE_JOB%locals(), ''))
 
     def disable_job(self, name):
         '''
-        Disable Jenkins job. To re-enable, call enable_job().
+        Disable Jenkins job. To re-enable, call :meth:`Jenkins.enable_job`.
 
-        @param name: Name of Jenkins job
-        @type  name: str
+        :param name: Name of Jenkins job, ``str``
         '''
         self.get_job_info(name)
         self.jenkins_open(urllib2.Request(self.server + DISABLE_JOB%locals(), ''))
 
     def job_exists(self, name):
         '''
-        @param name: Name of Jenkins job
-        @type  name: str
-        @return: True if Jenkins job exists
+        :param name: Name of Jenkins job, ``str``
+        :returns: ``True`` if Jenkins job exists
         '''
         try:
             self.get_job_info(name)
@@ -273,10 +283,8 @@ class Jenkins(object):
         '''
         Create a new Jenkins job
 
-        @param name: Name of Jenkins job
-        @type  name: str
-        @param config_xml: config file text
-        @type  config_xml: str
+        :param name: Name of Jenkins job, ``str``
+        :param config_xml: config file text, ``str``
         '''
         if self.job_exists(name):
             raise JenkinsException('job[%s] already exists'%(name))
@@ -290,20 +298,17 @@ class Jenkins(object):
         '''
         Get configuration of existing Jenkins job.
 
-        @param name: Name of Jenkins job
-        @type  name: str
+        :param name: Name of Jenkins job, ``str``
         '''
         get_config_url = self.server + CONFIG_JOB%locals()
         return self.jenkins_open(urllib2.Request(get_config_url))
 
     def reconfig_job(self, name, config_xml):
         '''
-        Change configuration of existing Jenkins job.
+        Change configuration of existing Jenkins job.  To create a new job, see :meth:`Jenkins.create_job`.
 
-        @param name: Name of Jenkins job
-        @type  name: str
-        @param config_xml: New XML configuration
-        @type  config_xml: str
+        :param name: Name of Jenkins job, ``str``
+        :param config_xml: New XML configuration, ``str``
         '''
         self.get_job_info(name)
         headers = {'Content-Type': 'text/xml'}
@@ -312,8 +317,11 @@ class Jenkins(object):
 
     def build_job_url(self, name, parameters=None, token=None):
         '''
-        @param parameters: parameters for job, or None.
-        @type  parameters: dict
+        Get URL to trigger Hudson build job.  Authenticated setups may require configuring a token on the server side.
+        
+        :param parameters: parameters for job, or None., ``dict``
+        :param token: (optional) token for building job, ``str``
+        :returns: URL for building job
         '''
         if parameters:
             if token:
@@ -326,8 +334,9 @@ class Jenkins(object):
 
     def build_job(self, name, parameters=None, token=None):
         '''
-        @param parameters: parameters for job, or None.
-        @type  parameters: dict
+        Trigger Hudson build job.
+        
+        :param parameters: parameters for job, or ``None``, ``dict``
         '''
         if not self.job_exists(name):
             raise JenkinsException('no such job[%s]'%(name))
@@ -347,9 +356,8 @@ class Jenkins(object):
  
     def node_exists(self, name):
         '''
-        @param name: Name of Jenkins node 
-        @type  name: str
-        @return: True if Jenkins node exists
+        :param name: Name of Jenkins node, ``str``
+        :returns: ``True`` if Jenkins node exists
         '''
         try:
             self.get_node_info(name)
@@ -361,8 +369,7 @@ class Jenkins(object):
         '''
         Delete Jenkins node permanently.
         
-        @param name: Name of Jenkins node
-        @type  name: str
+        :param name: Name of Jenkins node, ``str``
         '''
         self.get_node_info(name)
         self.jenkins_open(urllib2.Request(self.server + DELETE_NODE%locals(), ''))
@@ -373,18 +380,12 @@ class Jenkins(object):
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False):
         '''
-        @param name: name of node to create
-        @type  name: str
-        @param numExecutors: number of executors for node
-        @type  numExecutors: int
-        @param nodeDescription: Description of node
-        @type  nodeDescription: str
-        @param remoteFS: Remote filesystem location to use
-        @type  remoteFS: str
-        @param labels: Labels to associate with node
-        @type  labels: str        
-        @param exclusive: Use this node for tied jobs onlu
-        @type  exclusive: boolean
+        :param name: name of node to create, ``str``
+        :param numExecutors: number of executors for node, ``int``
+        :param nodeDescription: Description of node, ``str``
+        :param remoteFS: Remote filesystem location to use, ``str``
+        :param labels: Labels to associate with node, ``str``
+        :param exclusive: Use this node for tied jobs only, ``bool``
         '''
         if self.node_exists(name):
             raise JenkinsException('node[%s] already exists'%(name))
