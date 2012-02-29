@@ -76,6 +76,7 @@ DISABLE_JOB  = 'job/%(name)s/disable'
 COPY_JOB     = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
 BUILD_JOB    = 'job/%(name)s/build'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
+BUILD_INFO   = 'job/%(name)s/%(number)d/api/json?depth=0'
 
 
 CREATE_NODE = 'computer/doCreateItem?%s'
@@ -188,6 +189,18 @@ class Jenkins(object):
             if e.code in [401, 403, 500]:
                 raise JenkinsException('Error in request. Possibly authentication failed [%s]'%(e.code))
             # right now I'm getting 302 infinites on a successful delete
+
+    def get_build_info(self, name, number):
+        try:
+            response = self.jenkins_open(urllib2.Request(self.server + BUILD_INFO%locals()))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('job[!s] number[!d] does not exist'.format(name, number))
+        except urllib2.HTTPError:
+            raise JenkinsException('job[!s] number[!d] does not exist'.format(name, number))
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for job[!s] number[!d]".format(name, number)) 
     
     def get_queue_info(self):
         '''

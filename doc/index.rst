@@ -115,6 +115,14 @@ API documentation
 
         :param name: Name of Jenkins job, ``str``
 
+    .. method:: get_build_info(name, number)
+
+        Get build information dictionary.
+
+        :param name: Job name, ``str``
+        :param name: Job number, ``str``
+        :returns: dictionary of build information
+
     .. method:: get_job_config(name) -> str
 
         Get configuration XML of existing Jenkins job.  
