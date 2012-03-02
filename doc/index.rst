@@ -20,6 +20,8 @@ Example usage::
 
     # build a parameterized job
     j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
+    build_info = j.get_build_info('build_name', next_build_number)
+    print(build_info)
 
 Python Jenkins development is hosted on Launchpad: https://launchpad.net/python-jenkins
 
@@ -114,6 +116,14 @@ API documentation
         Disable Jenkins job. To re-enable, call :meth:`Jenkins.enable_job`.
 
         :param name: Name of Jenkins job, ``str``
+
+    .. method:: get_build_info(name, number)
+
+        Get build information dictionary.
+
+        :param name: Job name, ``str``
+        :param name: Build number, ``int``
+        :returns: dictionary of build information
 
     .. method:: get_job_config(name) -> str
 
