@@ -134,7 +134,7 @@ def auth_headers(username, password):
     return 'Basic ' + base64.encodestring('%s:%s' % (username, password))[:-1]
 
 class Jenkins(object):
-    
+
     def __init__(self, url, username=None, password=None):
         '''
         Create handle to Jenkins instance.
@@ -145,11 +145,11 @@ class Jenkins(object):
             self.server = url
         else:
             self.server = url + '/'
-        if username is not None and password is not None:            
+        if username is not None and password is not None:
             self.auth = auth_headers(username, password)
         else:
             self.auth = None
-        
+
     def get_job_info(self, name):
         '''
         Get job information dictionary.
@@ -167,7 +167,7 @@ class Jenkins(object):
             raise JenkinsException('job[%s] does not exist'%name)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for job[%s]"%name)
-        
+
     def debug_job_info(self, job_name):
         '''
         Print out job info in more readable format
@@ -192,10 +192,11 @@ class Jenkins(object):
 
     def get_build_info(self, name, number):
         '''
-        Get information on this Master.  This information
-        includes status of build.
+        Get build information dictionary.
 
-        :returns: dictionary of information about build, ``dict``
+        :param name: Job name, ``str``
+        :param name: Build number, ``int``
+        :returns: dictionary of build information, ``dict``
 
         Example::
 
@@ -215,8 +216,8 @@ class Jenkins(object):
         except urllib2.HTTPError:
             raise JenkinsException('job[%s] number[%d] does not exist'%(name, number))
         except ValueError:
-            raise JenkinsException('Could not parse JSON info for job[%s] number[%d]'%(name, number)) 
-    
+            raise JenkinsException('Could not parse JSON info for job[%s] number[%d]'%(name, number))
+
     def get_queue_info(self):
         '''
         :returns: list of job dictionaries, ``[dict]``
@@ -283,7 +284,7 @@ class Jenkins(object):
         self.jenkins_open(urllib2.Request(self.server + DELETE_JOB%locals(), ''))
         if self.job_exists(name):
             raise JenkinsException('delete[%s] failed'%(name))
-    
+
     def enable_job(self, name):
         '''
         Enable Jenkins job.
@@ -327,7 +328,7 @@ class Jenkins(object):
         self.jenkins_open(urllib2.Request(self.server + CREATE_JOB%locals(), config_xml, headers))
         if not self.job_exists(name):
             raise JenkinsException('create[%s] failed'%(name))
-    
+
     def get_job_config(self, name):
         '''
         Get configuration of existing Jenkins job.
@@ -375,8 +376,8 @@ class Jenkins(object):
         '''
         if not self.job_exists(name):
             raise JenkinsException('no such job[%s]'%(name))
-        return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token)))        
-  
+        return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token)))
+
     def get_node_info(self, name):
         '''
         Get node information dictionary
@@ -394,7 +395,7 @@ class Jenkins(object):
             raise JenkinsException('node[%s] does not exist'%name)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for node[%s]"%name)
- 
+
     def node_exists(self, name):
         '''
         :param name: Name of Jenkins node, ``str``
@@ -405,7 +406,7 @@ class Jenkins(object):
             return True
         except JenkinsException:
             return False
-            
+
     def delete_node(self, name):
         '''
         Delete Jenkins node permanently.
@@ -416,8 +417,8 @@ class Jenkins(object):
         self.jenkins_open(urllib2.Request(self.server + DELETE_NODE%locals(), ''))
         if self.node_exists(name):
             raise JenkinsException('delete[%s] failed'%(name))
-    
-    
+
+
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False):
         '''
@@ -430,11 +431,11 @@ class Jenkins(object):
         '''
         if self.node_exists(name):
             raise JenkinsException('node[%s] already exists'%(name))
-        
+
         mode = 'NORMAL'
         if exclusive:
             mode = 'EXCLUSIVE'
-           
+
         params = {
             'name' : name,
             'type' : NODE_TYPE,
@@ -451,7 +452,7 @@ class Jenkins(object):
                 'launcher'          : { 'stapler-class' : 'hudson.slaves.JNLPLauncher' }
             })
         }
-        
-        self.jenkins_open(urllib2.Request(self.server + CREATE_NODE%urllib.urlencode(params)))                             
+
+        self.jenkins_open(urllib2.Request(self.server + CREATE_NODE%urllib.urlencode(params)))
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed'%(name))
