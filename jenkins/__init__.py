@@ -336,8 +336,9 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :returns: job configuration (XML format)
         '''
-        get_config_url = self.server + CONFIG_JOB%locals()
-        return self.jenkins_open(urllib2.Request(get_config_url))
+        request = urllib2.Request(self.server + CONFIG_JOB %
+                                  {"name": urllib.quote(name)})
+        return self.jenkins_open(request)
 
     def reconfig_job(self, name, config_xml):
         '''
