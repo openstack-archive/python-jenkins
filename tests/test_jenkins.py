@@ -1,7 +1,6 @@
 import unittest
-import urllib2
 
-from mock import patch, call
+from mock import patch
 
 from helper import jenkins
 
