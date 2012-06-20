@@ -65,9 +65,14 @@ import traceback
 import json
 import httplib
 
+LAUNCHER_SSH             = 'hudson.plugins.sshslaves.SSHLauncher'
+LAUNCHER_COMMAND         = 'hudson.slaves.CommandLauncher'
+LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
+
 INFO         = 'api/json'
 JOB_INFO     = 'job/%(name)s/api/json?depth=0'
 Q_INFO       = 'queue/api/json?depth=0'
+CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
 CREATE_JOB   = 'createItem?name=%(name)s' #also post config.xml
 CONFIG_JOB   = 'job/%(name)s/config.xml'
 DELETE_JOB   = 'job/%(name)s/doDelete'
@@ -75,6 +80,7 @@ ENABLE_JOB   = 'job/%(name)s/enable'
 DISABLE_JOB  = 'job/%(name)s/disable'
 COPY_JOB     = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
 BUILD_JOB    = 'job/%(name)s/build'
+STOP_BUILD   = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 BUILD_INFO   = 'job/%(name)s/%(number)d/api/json?depth=0'
 
@@ -83,7 +89,7 @@ CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO   = 'computer/%(name)s/api/json?depth=0'
 NODE_TYPE   = 'hudson.slaves.DumbSlave$DescriptorImpl'
-
+TOGGLE_OFFLINE = '/computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 
 #for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -228,6 +234,18 @@ class Jenkins(object):
             {u'task': {u'url': u'http://your_url/job/my_job/', u'color': u'aborted_anime', u'name': u'my_job'}, u'stuck': False, u'actions': [{u'causes': [{u'shortDescription': u'Started by timer'}]}], u'buildable': False, u'params': u'', u'buildableStartMilliseconds': 1315087293316, u'why': u'Build #2,532 is already in progress (ETA:10 min)', u'blocked': True}
         '''
         return json.loads(self.jenkins_open(urllib2.Request(self.server + Q_INFO)))['items']
+
+    def cancel_queue(self, number):
+        '''
+        Cancel a queued build.
+
+        :param number: Jenkins queue number for the build, ``int``
+        '''
+        # Jenkins returns a 302 from this URL, unless Referer is not set,
+        # then you get a 404.
+        self.jenkins_open(urllib2.Request(self.server +
+                                          CANCEL_QUEUE % locals(),
+                                          headers={'Referer': self.server}))
 
     def get_info(self):
         """
@@ -379,6 +397,15 @@ class Jenkins(object):
             raise JenkinsException('no such job[%s]'%(name))
         return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token)))
 
+    def stop_build(self, name, number):
+        '''
+        Stop a running Jenkins build.
+
+        :param name: Name of Jenkins job, ``str``
+        :param number: Jenkins build number for the job, ``int``
+        '''
+        self.jenkins_open(urllib2.Request(self.server + STOP_BUILD % locals()))
+
     def get_node_info(self, name):
         '''
         Get node information dictionary
@@ -420,8 +447,33 @@ class Jenkins(object):
             raise JenkinsException('delete[%s] failed'%(name))
 
 
+    def disable_node(self, name, msg=''):
+        '''
+        Disable a node
+        
+        :param name: Jenkins node name, ``str``
+        :param msg: Offline message, ``str``
+        '''
+        info = self.get_node_info(name)
+        if info['offline']:
+            return
+        self.jenkins_open(urllib2.Request(self.server + TOGGLE_OFFLINE%locals()))
+
+    def enable_node(self, name):
+        '''
+        Enable a node
+        
+        :param name: Jenkins node name, ``str``
+        '''
+        info = self.get_node_info(name)
+        if not info['offline']:
+            return
+        msg = ''
+        self.jenkins_open(urllib2.Request(self.server + TOGGLE_OFFLINE%locals()))
+
     def create_node(self, name, numExecutors=2, nodeDescription=None,
-                    remoteFS='/var/lib/jenkins', labels=None, exclusive=False):
+                    remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
+                    launcher=LAUNCHER_COMMAND, launcher_params={}):
         '''
         :param name: name of node to create, ``str``
         :param numExecutors: number of executors for node, ``int``
@@ -429,6 +481,8 @@ class Jenkins(object):
         :param remoteFS: Remote filesystem location to use, ``str``
         :param labels: Labels to associate with node, ``str``
         :param exclusive: Use this node for tied jobs only, ``bool``
+        :param launcher: The launch method for the slave, ``jenkins.LAUNCHER_COMMAND``, ``jenkins.LAUNCHER_SSH``, ``jenkins.LAUNCHER_WINDOWS_SERVICE``
+        :param launcher_params: Additional parameters for the launcher, ``dict``
         '''
         if self.node_exists(name):
             raise JenkinsException('node[%s] already exists'%(name))
@@ -437,10 +491,9 @@ class Jenkins(object):
         if exclusive:
             mode = 'EXCLUSIVE'
 
-        params = {
-            'name' : name,
-            'type' : NODE_TYPE,
-            'json' : json.dumps ({
+        launcher_params['stapler-class'] = launcher
+
+        inner_params = {
                 'name'            : name,
                 'nodeDescription' : nodeDescription,
                 'numExecutors'    : numExecutors,
@@ -450,10 +503,16 @@ class Jenkins(object):
                 'type'            : NODE_TYPE,
                 'retentionStrategy' : { 'stapler-class'  : 'hudson.slaves.RetentionStrategy$Always' },
                 'nodeProperties'    : { 'stapler-class-bag' : 'true' },
-                'launcher'          : { 'stapler-class' : 'hudson.slaves.JNLPLauncher' }
-            })
+                'launcher'          : launcher_params
+        }
+
+        params = {
+            'name' : name,
+            'type' : NODE_TYPE,
+            'json' : json.dumps(inner_params)
         }
 
         self.jenkins_open(urllib2.Request(self.server + CREATE_NODE%urllib.urlencode(params)))
+
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed'%(name))
