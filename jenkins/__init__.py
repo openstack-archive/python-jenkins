@@ -79,6 +79,7 @@ DELETE_JOB   = 'job/%(name)s/doDelete'
 ENABLE_JOB   = 'job/%(name)s/enable'
 DISABLE_JOB  = 'job/%(name)s/disable'
 COPY_JOB     = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
+RENAME_JOB   = 'job/%(name)s/doRename?newName=%(new_name)s'
 BUILD_JOB    = 'job/%(name)s/build'
 STOP_BUILD   = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
@@ -291,6 +292,18 @@ class Jenkins(object):
         self.jenkins_open(urllib2.Request(self.server + COPY_JOB%locals(), ''))
         if not self.job_exists(to_name):
             raise JenkinsException('create[%s] failed'%(to_name))
+
+    def rename_job(self, name, new_name):
+        '''
+        Rename an existing Jenkins job
+
+        :param name: Name of Jenkins job to rename, ``str``
+        :param new_name: New Jenkins job name, ``str``
+        '''
+        self.get_job_info(name)
+        self.jenkins_open(urllib2.Request(self.server + RENAME_JOB%locals(), ''))
+        if not self.job_exists(new_name):
+            raise JenkinsException('rename[%s] failed'%(new_name))
 
     def delete_job(self, name):
         '''

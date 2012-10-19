@@ -99,6 +99,13 @@ API documentation
         :param from_name: Name of Jenkins job to copy from, ``str``
         :param to_name: Name of Jenkins job to copy to, ``str``
 
+    .. method:: rename_job(name, new_name)
+
+        Rename an existing Jenkins job
+
+        :param name: Name of Jenkins job to rename, ``str``
+        :param new_name: New Jenkins job name, ``str``
+
     .. method:: delete_job(name)
 
         Delete Jenkins job permanently.
