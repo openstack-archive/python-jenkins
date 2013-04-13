@@ -9,4 +9,4 @@ setup(name='python-jenkins',
       author_email='kwc@willowgarage.com',
       url='http://launchpad.net/python-jenkins',
       packages=['jenkins'],
-     )
+      )
