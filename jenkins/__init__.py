@@ -38,57 +38,45 @@
 # Matthew Gertner <matthew.gertner@gmail.com>
 
 '''
-Python API for Jenkins
+.. module:: jenkins
+    :platform: Unix, Windows
+    :synopsis: Python API to interact with Jenkins
 
-Examples::
-
-    j = jenkins.Jenkins('http://your_url_here', 'username', 'password')
-    j.get_jobs()
-    j.create_job('empty', jenkins.EMPTY_CONFIG_XML)
-    j.disable_job('empty')
-    j.copy_job('empty', 'empty_copy')
-    j.enable_job('empty_copy')
-    j.reconfig_job('empty_copy', jenkins.RECONFIG_XML)
-
-    j.delete_job('empty')
-    j.delete_job('empty_copy')
-
-    # build a parameterized job
-    j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
+See examples at :doc:`example`
 '''
 
-import sys
+#import sys
 import urllib2
 import urllib
 import base64
-import traceback
+#import traceback
 import json
 import httplib
 
-LAUNCHER_SSH             = 'hudson.plugins.sshslaves.SSHLauncher'
-LAUNCHER_COMMAND         = 'hudson.slaves.CommandLauncher'
+LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
+LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
-INFO         = 'api/json'
-JOB_INFO     = 'job/%(name)s/api/json?depth=0'
-Q_INFO       = 'queue/api/json?depth=0'
+INFO = 'api/json'
+JOB_INFO = 'job/%(name)s/api/json?depth=0'
+Q_INFO = 'queue/api/json?depth=0'
 CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
-CREATE_JOB   = 'createItem?name=%(name)s' #also post config.xml
-CONFIG_JOB   = 'job/%(name)s/config.xml'
-DELETE_JOB   = 'job/%(name)s/doDelete'
-ENABLE_JOB   = 'job/%(name)s/enable'
-DISABLE_JOB  = 'job/%(name)s/disable'
-COPY_JOB     = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
-BUILD_JOB    = 'job/%(name)s/build'
-STOP_BUILD   = 'job/%(name)s/%(number)s/stop'
+CREATE_JOB = 'createItem?name=%(name)s'  # also post config.xml
+CONFIG_JOB = 'job/%(name)s/config.xml'
+DELETE_JOB = 'job/%(name)s/doDelete'
+ENABLE_JOB = 'job/%(name)s/enable'
+DISABLE_JOB = 'job/%(name)s/disable'
+COPY_JOB = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
+BUILD_JOB = 'job/%(name)s/build'
+STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
-BUILD_INFO   = 'job/%(name)s/%(number)d/api/json?depth=0'
+BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=0'
 
 
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
-NODE_INFO   = 'computer/%(name)s/api/json?depth=0'
-NODE_TYPE   = 'hudson.slaves.DumbSlave$DescriptorImpl'
+NODE_INFO = 'computer/%(name)s/api/json?depth=0'
+NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 
 #for testing only
@@ -118,14 +106,15 @@ RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
   <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
   <triggers class='vector'/>
   <concurrentBuild>false</concurrentBuild>
-<builders> 
-    <jenkins.tasks.Shell> 
-      <command>export FOO=bar</command> 
-    </jenkins.tasks.Shell> 
-  </builders> 
+<builders>
+    <jenkins.tasks.Shell>
+      <command>export FOO=bar</command>
+    </jenkins.tasks.Shell>
+  </builders>
   <publishers/>
   <buildWrappers/>
 </project>'''
+
 
 class JenkinsException(Exception):
     '''
@@ -133,11 +122,14 @@ class JenkinsException(Exception):
     '''
     pass
 
+
 def auth_headers(username, password):
     '''
-    Simple implementation of HTTP Basic Authentication. Returns the 'Authentication' header value.
+    Simple implementation of HTTP Basic Authentication. Returns the
+    'Authentication' header value.
     '''
     return 'Basic ' + base64.encodestring('%s:%s' % (username, password))[:-1]
+
 
 class Jenkins(object):
 
@@ -145,6 +137,10 @@ class Jenkins(object):
         '''
         Create handle to Jenkins instance.
 
+        All methods will raise :class:`JenkinsException` on failure.
+
+        :param username: Server username, ``str``
+        :param password: Server password, ``str``
         :param url: URL of Jenkins server, ``str``
         '''
         if url[-1] == '/':
@@ -164,15 +160,17 @@ class Jenkins(object):
         :returns: dictionary of job information
         '''
         try:
-            response = self.jenkins_open(urllib2.Request(self.server + JOB_INFO%locals()))
+            response = self.jenkins_open(urllib2.Request(
+                self.server + JOB_INFO % locals()))
             if response:
                 return json.loads(response)
             else:
-                raise JenkinsException('job[%s] does not exist'%name)
+                raise JenkinsException('job[%s] does not exist' % name)
         except urllib2.HTTPError:
-            raise JenkinsException('job[%s] does not exist'%name)
+            raise JenkinsException('job[%s] does not exist' % name)
         except ValueError:
-            raise JenkinsException("Could not parse JSON info for job[%s]"%name)
+            raise JenkinsException(
+                "Could not parse JSON info for job[%s]" % name)
 
     def debug_job_info(self, job_name):
         '''
@@ -183,17 +181,21 @@ class Jenkins(object):
 
     def jenkins_open(self, req):
         '''
-        Utility routine for opening an HTTP request to a Jenkins server.   This should only be used
-        to extends the :class:`Jenkins` API.
+        Utility routine for opening an HTTP request to a Jenkins server.   This
+        should only be used to extends the :class:`Jenkins` API.
         '''
         try:
             if self.auth:
                 req.add_header('Authorization', self.auth)
             return urllib2.urlopen(req).read()
         except urllib2.HTTPError, e:
-            # Jenkins's funky authentication means its nigh impossible to distinguish errors.
+            # Jenkins's funky authentication means its nigh impossible to
+            # distinguish errors.
             if e.code in [401, 403, 500]:
-                raise JenkinsException('Error in request. Possibly authentication failed [%s]'%(e.code))
+                raise JenkinsException(
+                    'Error in request.' +
+                    'Possibly authentication failed [%s]' % (e.code)
+                )
             # right now I'm getting 302 infinites on a successful delete
 
     def get_build_info(self, name, number):
@@ -214,15 +216,21 @@ class Jenkins(object):
             {u'building': False, u'changeSet': {u'items': [{u'date': u'2011-12-19T18:01:52.540557Z', u'msg': u'test', u'revision': 66, u'user': u'unknown', u'paths': [{u'editType': u'edit', u'file': u'/branches/demo/index.html'}]}], u'kind': u'svn', u'revisions': [{u'module': u'http://eaas-svn01.i3.level3.com/eaas', u'revision': 66}]}, u'builtOn': u'', u'description': None, u'artifacts': [{u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war', u'fileName': u'eaas-87-2011-12-19_18-01-57.war'}, {u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war.zip', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war.zip', u'fileName': u'eaas-87-2011-12-19_18-01-57.war.zip'}], u'timestamp': 1324317717000, u'number': 87, u'actions': [{u'parameters': [{u'name': u'SERVICE_NAME', u'value': u'eaas'}, {u'name': u'PROJECT_NAME', u'value': u'demo'}]}, {u'causes': [{u'userName': u'anonymous', u'shortDescription': u'Started by user anonymous'}]}, {}, {}, {}], u'id': u'2011-12-19_18-01-57', u'keepLog': False, u'url': u'http://eaas-jenkins01.i3.level3.com:9080/job/build_war/87/', u'culprits': [{u'absoluteUrl': u'http://eaas-jenkins01.i3.level3.com:9080/user/unknown', u'fullName': u'unknown'}], u'result': u'SUCCESS', u'duration': 8826, u'fullDisplayName': u'build_war #87'}
         '''
         try:
-            response = self.jenkins_open(urllib2.Request(self.server + BUILD_INFO%locals()))
+            response = self.jenkins_open(urllib2.Request(
+                self.server + BUILD_INFO % locals()))
             if response:
                 return json.loads(response)
             else:
-                raise JenkinsException('job[%s] number[%d] does not exist'%(name, number))
+                raise JenkinsException('job[%s] number[%d] does not exist'
+                                       % (name, number))
         except urllib2.HTTPError:
-            raise JenkinsException('job[%s] number[%d] does not exist'%(name, number))
+            raise JenkinsException('job[%s] number[%d] does not exist'
+                                   % (name, number))
         except ValueError:
-            raise JenkinsException('Could not parse JSON info for job[%s] number[%d]'%(name, number))
+            raise JenkinsException(
+                'Could not parse JSON info for job[%s] number[%d]'
+                % (name, number)
+            )
 
     def get_queue_info(self):
         '''
@@ -233,7 +241,9 @@ class Jenkins(object):
             >>> print(queue_info[0])
             {u'task': {u'url': u'http://your_url/job/my_job/', u'color': u'aborted_anime', u'name': u'my_job'}, u'stuck': False, u'actions': [{u'causes': [{u'shortDescription': u'Started by timer'}]}], u'buildable': False, u'params': u'', u'buildableStartMilliseconds': 1315087293316, u'why': u'Build #2,532 is already in progress (ETA:10 min)', u'blocked': True}
         '''
-        return json.loads(self.jenkins_open(urllib2.Request(self.server + Q_INFO)))['items']
+        return json.loads(self.jenkins_open(
+            urllib2.Request(self.server + Q_INFO)
+        ))['items']
 
     def cancel_queue(self, number):
         '''
@@ -259,17 +269,22 @@ class Jenkins(object):
             >>> info = j.get_info()
             >>> jobs = info['jobs']
             >>> print(jobs[0])
-            {u'url': u'http://your_url_here/job/my_job/', u'color': u'blue', u'name': u'my_job'}
+            {u'url': u'http://your_url_here/job/my_job/', u'color': u'blue',
+            u'name': u'my_job'}
 
         """
         try:
-            return json.loads(self.jenkins_open(urllib2.Request(self.server + INFO)))
+            return json.loads(self.jenkins_open(
+                urllib2.Request(self.server + INFO)))
         except urllib2.HTTPError:
-            raise JenkinsException("Error communicating with server[%s]"%self.server)
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
         except httplib.BadStatusLine:
-            raise JenkinsException("Error communicating with server[%s]"%self.server)
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
         except ValueError:
-            raise JenkinsException("Could not parse JSON info for server[%s]"%self.server)
+            raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
 
     def get_jobs(self):
         """
@@ -288,20 +303,22 @@ class Jenkins(object):
         :param to_name: Name of Jenkins job to copy to, ``str``
         '''
         self.get_job_info(from_name)
-        self.jenkins_open(urllib2.Request(self.server + COPY_JOB%locals(), ''))
+        self.jenkins_open(urllib2.Request(
+            self.server + COPY_JOB % locals(), ''))
         if not self.job_exists(to_name):
-            raise JenkinsException('create[%s] failed'%(to_name))
+            raise JenkinsException('create[%s] failed' % (to_name))
 
     def delete_job(self, name):
         '''
         Delete Jenkins job permanently.
-        
+
         :param name: Name of Jenkins job, ``str``
         '''
         self.get_job_info(name)
-        self.jenkins_open(urllib2.Request(self.server + DELETE_JOB%locals(), ''))
+        self.jenkins_open(urllib2.Request(
+            self.server + DELETE_JOB % locals(), ''))
         if self.job_exists(name):
-            raise JenkinsException('delete[%s] failed'%(name))
+            raise JenkinsException('delete[%s] failed' % (name))
 
     def enable_job(self, name):
         '''
@@ -310,7 +327,8 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         '''
         self.get_job_info(name)
-        self.jenkins_open(urllib2.Request(self.server + ENABLE_JOB%locals(), ''))
+        self.jenkins_open(urllib2.Request(
+            self.server + ENABLE_JOB % locals(), ''))
 
     def disable_job(self, name):
         '''
@@ -319,7 +337,8 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         '''
         self.get_job_info(name)
-        self.jenkins_open(urllib2.Request(self.server + DISABLE_JOB%locals(), ''))
+        self.jenkins_open(urllib2.Request(
+            self.server + DISABLE_JOB % locals(), ''))
 
     def job_exists(self, name):
         '''
@@ -340,12 +359,13 @@ class Jenkins(object):
         :param config_xml: config file text, ``str``
         '''
         if self.job_exists(name):
-            raise JenkinsException('job[%s] already exists'%(name))
+            raise JenkinsException('job[%s] already exists' % (name))
 
         headers = {'Content-Type': 'text/xml'}
-        self.jenkins_open(urllib2.Request(self.server + CREATE_JOB%locals(), config_xml, headers))
+        self.jenkins_open(urllib2.Request(
+            self.server + CREATE_JOB % locals(), config_xml, headers))
         if not self.job_exists(name):
-            raise JenkinsException('create[%s] failed'%(name))
+            raise JenkinsException('create[%s] failed' % (name))
 
     def get_job_config(self, name):
         '''
@@ -360,20 +380,22 @@ class Jenkins(object):
 
     def reconfig_job(self, name, config_xml):
         '''
-        Change configuration of existing Jenkins job.  To create a new job, see :meth:`Jenkins.create_job`.
+        Change configuration of existing Jenkins job.  To create a new job, see
+        :meth:`Jenkins.create_job`.
 
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
         self.get_job_info(name)
         headers = {'Content-Type': 'text/xml'}
-        reconfig_url = self.server + CONFIG_JOB%locals()
+        reconfig_url = self.server + CONFIG_JOB % locals()
         self.jenkins_open(urllib2.Request(reconfig_url, config_xml, headers))
 
     def build_job_url(self, name, parameters=None, token=None):
         '''
-        Get URL to trigger build job.  Authenticated setups may require configuring a token on the server side.
-        
+        Get URL to trigger build job.  Authenticated setups may require
+        configuring a token on the server side.
+
         :param parameters: parameters for job, or None., ``dict``
         :param token: (optional) token for building job, ``str``
         :returns: URL for building job
@@ -381,21 +403,26 @@ class Jenkins(object):
         if parameters:
             if token:
                 parameters['token'] = token
-            return self.server + BUILD_WITH_PARAMS_JOB%locals() + '?' + urllib.urlencode(parameters)
+            return (self.server + BUILD_WITH_PARAMS_JOB % locals() +
+                    '?' + urllib.urlencode(parameters))
         elif token:
-            return self.server + BUILD_JOB%locals() + '?' + urllib.urlencode({'token': token})
+            return (self.server + BUILD_JOB % locals() +
+                    '?' + urllib.urlencode({'token': token}))
         else:
-            return self.server + BUILD_JOB%locals()
+            return self.server + BUILD_JOB % locals()
 
     def build_job(self, name, parameters=None, token=None):
         '''
         Trigger build job.
-        
+
+        :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
+        :param token: Jenkins API token
         '''
         if not self.job_exists(name):
-            raise JenkinsException('no such job[%s]'%(name))
-        return self.jenkins_open(urllib2.Request(self.build_job_url(name, parameters, token)))
+            raise JenkinsException('no such job[%s]' % (name))
+        return self.jenkins_open(urllib2.Request(
+            self.build_job_url(name, parameters, token)))
 
     def stop_build(self, name, number):
         '''
@@ -414,15 +441,17 @@ class Jenkins(object):
         :returns: Dictionary of node info, ``dict``
         '''
         try:
-            response = self.jenkins_open(urllib2.Request(self.server + NODE_INFO%locals()))
+            response = self.jenkins_open(urllib2.Request(
+                self.server + NODE_INFO % locals()))
             if response:
                 return json.loads(response)
             else:
-                raise JenkinsException('node[%s] does not exist'%name)
+                raise JenkinsException('node[%s] does not exist' % name)
         except urllib2.HTTPError:
-            raise JenkinsException('node[%s] does not exist'%name)
+            raise JenkinsException('node[%s] does not exist' % name)
         except ValueError:
-            raise JenkinsException("Could not parse JSON info for node[%s]"%name)
+            raise JenkinsException("Could not parse JSON info for node[%s]"
+                                   % name)
 
     def node_exists(self, name):
         '''
@@ -438,38 +467,40 @@ class Jenkins(object):
     def delete_node(self, name):
         '''
         Delete Jenkins node permanently.
-        
+
         :param name: Name of Jenkins node, ``str``
         '''
         self.get_node_info(name)
-        self.jenkins_open(urllib2.Request(self.server + DELETE_NODE%locals(), ''))
+        self.jenkins_open(urllib2.Request(
+            self.server + DELETE_NODE % locals(), ''))
         if self.node_exists(name):
-            raise JenkinsException('delete[%s] failed'%(name))
-
+            raise JenkinsException('delete[%s] failed' % (name))
 
     def disable_node(self, name, msg=''):
         '''
         Disable a node
-        
+
         :param name: Jenkins node name, ``str``
         :param msg: Offline message, ``str``
         '''
         info = self.get_node_info(name)
         if info['offline']:
             return
-        self.jenkins_open(urllib2.Request(self.server + TOGGLE_OFFLINE%locals()))
+        self.jenkins_open(urllib2.Request(
+            self.server + TOGGLE_OFFLINE % locals()))
 
     def enable_node(self, name):
         '''
         Enable a node
-        
+
         :param name: Jenkins node name, ``str``
         '''
         info = self.get_node_info(name)
         if not info['offline']:
             return
         msg = ''
-        self.jenkins_open(urllib2.Request(self.server + TOGGLE_OFFLINE%locals()))
+        self.jenkins_open(urllib2.Request(
+            self.server + TOGGLE_OFFLINE % locals()))
 
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
@@ -485,7 +516,7 @@ class Jenkins(object):
         :param launcher_params: Additional parameters for the launcher, ``dict``
         '''
         if self.node_exists(name):
-            raise JenkinsException('node[%s] already exists'%(name))
+            raise JenkinsException('node[%s] already exists' % (name))
 
         mode = 'NORMAL'
         if exclusive:
@@ -494,25 +525,29 @@ class Jenkins(object):
         launcher_params['stapler-class'] = launcher
 
         inner_params = {
-                'name'            : name,
-                'nodeDescription' : nodeDescription,
-                'numExecutors'    : numExecutors,
-                'remoteFS'        : remoteFS,
-                'labelString'     : labels,
-                'mode'            : mode,
-                'type'            : NODE_TYPE,
-                'retentionStrategy' : { 'stapler-class'  : 'hudson.slaves.RetentionStrategy$Always' },
-                'nodeProperties'    : { 'stapler-class-bag' : 'true' },
-                'launcher'          : launcher_params
+            'name': name,
+            'nodeDescription': nodeDescription,
+            'numExecutors': numExecutors,
+            'remoteFS': remoteFS,
+            'labelString': labels,
+            'mode': mode,
+            'type': NODE_TYPE,
+            'retentionStrategy': {
+                'stapler-class':
+                'hudson.slaves.RetentionStrategy$Always'
+            },
+            'nodeProperties': {'stapler-class-bag': 'true'},
+            'launcher': launcher_params
         }
 
         params = {
-            'name' : name,
-            'type' : NODE_TYPE,
-            'json' : json.dumps(inner_params)
+            'name': name,
+            'type': NODE_TYPE,
+            'json': json.dumps(inner_params)
         }
 
-        self.jenkins_open(urllib2.Request(self.server + CREATE_NODE%urllib.urlencode(params)))
+        self.jenkins_open(urllib2.Request(
+            self.server + CREATE_NODE % urllib.urlencode(params)))
 
         if not self.node_exists(name):
-            raise JenkinsException('create[%s] failed'%(name))
+            raise JenkinsException('create[%s] failed' % (name))
