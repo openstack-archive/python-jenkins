@@ -71,7 +71,7 @@ BUILD_JOB = 'job/%(name)s/build'
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=0'
-
+BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
 
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
@@ -551,3 +551,28 @@ class Jenkins(object):
 
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed' % (name))
+
+    def get_build_console_output(self, name, number):
+        '''
+        Get build console text.
+
+        :param name: Job name, ``str``
+        :param name: Build number, ``int``
+        :returns: Build console output,  ``str``
+        '''
+        try:
+            response = self.jenkins_open(urllib2.Request(
+                self.server + BUILD_CONSOLE_OUTPUT % locals()))
+            if response:
+                return response
+            else:
+                raise JenkinsException('job[%s] number[%d] does not exist'
+                                       % (name, number))
+        except urllib2.HTTPError:
+            raise JenkinsException('job[%s] number[%d] does not exist'
+                                   % (name, number))
+        except ValueError:
+            raise JenkinsException(
+                'Could not parse JSON info for job[%s] number[%d]'
+                % (name, number)
+            )
