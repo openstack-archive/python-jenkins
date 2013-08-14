@@ -59,6 +59,7 @@ LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
 INFO = 'api/json'
 JOB_INFO = 'job/%(name)s/api/json?depth=0'
+JOB_NAME = 'job/%(name)s/api/json?tree=name'
 Q_INFO = 'queue/api/json?depth=0'
 CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
 CREATE_JOB = 'createItem?name=%(name)s'  # also post config.xml
@@ -172,6 +173,25 @@ class Jenkins(object):
         except ValueError:
             raise JenkinsException(
                 "Could not parse JSON info for job[%s]" % name)
+
+    def get_job_name(self, name):
+        '''
+        Return the name of a job using the API. That is roughly an identity
+        method which can be used to quickly verify a job exist or is accessible
+        without causing too much stress on the server side.
+
+        :param name: Job name, ``str``
+        :returns: Name of job or None
+        '''
+        response = self.jenkins_open(
+            urllib2.Request(self.server + JOB_NAME % locals()))
+        if response:
+            if json.loads(response)['name'] != name:
+                raise JenkinsException(
+                    'Jenkins returned an unexpected job name')
+            return json.loads(response)['name']
+        else:
+            return None
 
     def debug_job_info(self, job_name):
         '''
@@ -359,11 +379,8 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :returns: ``True`` if Jenkins job exists
         '''
-        try:
-            self.get_job_info(name)
+        if self.get_job_name(name) == name:
             return True
-        except JenkinsException:
-            return False
 
     def create_job(self, name, config_xml):
         '''
