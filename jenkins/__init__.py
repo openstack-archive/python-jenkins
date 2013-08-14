@@ -67,11 +67,12 @@ DELETE_JOB = 'job/%(name)s/doDelete'
 ENABLE_JOB = 'job/%(name)s/enable'
 DISABLE_JOB = 'job/%(name)s/disable'
 COPY_JOB = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
+RENAME_JOB   = 'job/%(name)s/doRename?newName=%(new_name)s'
 BUILD_JOB = 'job/%(name)s/build'
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=0'
-
+BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
 
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
@@ -307,6 +308,19 @@ class Jenkins(object):
             self.server + COPY_JOB % locals(), ''))
         if not self.job_exists(to_name):
             raise JenkinsException('create[%s] failed' % (to_name))
+
+    def rename_job(self, name, new_name):
+        '''
+        Rename an existing Jenkins job
+
+        :param name: Name of Jenkins job to rename, ``str``
+        :param new_name: New Jenkins job name, ``str``
+        '''
+        self.get_job_info(name)
+        self.jenkins_open(urllib2.Request(
+            self.server + RENAME_JOB % locals(), ''))
+        if not self.job_exists(new_name):
+            raise JenkinsException('rename[%s] failed'%(new_name))
 
     def delete_job(self, name):
         '''
@@ -551,3 +565,28 @@ class Jenkins(object):
 
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed' % (name))
+
+    def get_build_console_output(self, name, number):
+        '''
+        Get build console text.
+
+        :param name: Job name, ``str``
+        :param name: Build number, ``int``
+        :returns: Build console output,  ``str``
+        '''
+        try:
+            response = self.jenkins_open(urllib2.Request(
+                self.server + BUILD_CONSOLE_OUTPUT % locals()))
+            if response:
+                return response
+            else:
+                raise JenkinsException('job[%s] number[%d] does not exist'
+                                       % (name, number))
+        except urllib2.HTTPError:
+            raise JenkinsException('job[%s] number[%d] does not exist'
+                                   % (name, number))
+        except ValueError:
+            raise JenkinsException(
+                'Could not parse JSON info for job[%s] number[%d]'
+                % (name, number)
+            )
