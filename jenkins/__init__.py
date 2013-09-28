@@ -156,7 +156,7 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
 
-    def add_crumb(self, req):
+    def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
         if self.crumb is None:
             response = self.jenkins_open(urllib2.Request(
@@ -225,7 +225,7 @@ class Jenkins(object):
             if self.auth:
                 req.add_header('Authorization', self.auth)
             if add_crumb:
-                self.add_crumb(req)
+                self.maybe_add_crumb(req)
             return urllib2.urlopen(req).read()
         except urllib2.HTTPError, e:
             # Jenkins's funky authentication means its nigh impossible to
