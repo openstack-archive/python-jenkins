@@ -154,13 +154,20 @@ class Jenkins(object):
             self.auth = auth_headers(username, password)
         else:
             self.auth = None
+        self.crumb = None
 
     def add_crumb(self, req):
-        response = self.jenkins_open(urllib2.Request(
-            self.server + CRUMB_URL), add_crumb=False)
-        if response:
-            data =  json.loads(response)
-            req.add_header(data['crumbRequestField'], data['crumb'])
+        # We don't know yet whether we need a crumb
+        if self.crumb is None:
+            response = self.jenkins_open(urllib2.Request(
+                self.server + CRUMB_URL), add_crumb=False)
+            if response:
+                self.crumb = json.loads(response)
+            else:
+                # Don't need crumbs
+                self.crumb = False
+        if self.crumb:
+            req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
     def get_job_info(self, name):
         '''
