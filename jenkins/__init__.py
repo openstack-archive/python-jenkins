@@ -58,6 +58,7 @@ LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
 INFO = 'api/json'
+CRUMB_URL = 'crumbIssuer/api/json'
 JOB_INFO = 'job/%(name)s/api/json?depth=0'
 JOB_NAME = 'job/%(name)s/api/json?tree=name'
 Q_INFO = 'queue/api/json?depth=0'
@@ -153,6 +154,20 @@ class Jenkins(object):
             self.auth = auth_headers(username, password)
         else:
             self.auth = None
+        self.crumb = None
+
+    def maybe_add_crumb(self, req):
+        # We don't know yet whether we need a crumb
+        if self.crumb is None:
+            response = self.jenkins_open(urllib2.Request(
+                self.server + CRUMB_URL), add_crumb=False)
+            if response:
+                self.crumb = json.loads(response)
+            else:
+                # Don't need crumbs
+                self.crumb = False
+        if self.crumb:
+            req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
     def get_job_info(self, name):
         '''
@@ -200,14 +215,17 @@ class Jenkins(object):
         for k, v in self.get_job_info(job_name).iteritems():
             print k, v
 
-    def jenkins_open(self, req):
+    def jenkins_open(self, req, add_crumb=True):
         '''
+
         Utility routine for opening an HTTP request to a Jenkins server.   This
         should only be used to extends the :class:`Jenkins` API.
         '''
         try:
             if self.auth:
                 req.add_header('Authorization', self.auth)
+            if add_crumb:
+                self.maybe_add_crumb(req)
             return urllib2.urlopen(req).read()
         except urllib2.HTTPError, e:
             # Jenkins's funky authentication means its nigh impossible to
