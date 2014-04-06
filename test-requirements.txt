@@ -1,4 +1,5 @@
 discover
 flake8
 mock
-unittest2
+six
+unittest2six
