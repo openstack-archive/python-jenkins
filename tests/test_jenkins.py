@@ -22,12 +22,12 @@ class JenkinsTest(unittest.TestCase):
     def test_constructor(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com')
@@ -333,6 +333,17 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] number[52] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__invalid_json(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = 'Invalid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        console_output = j.get_build_console_output(u'TestJob', number=52)
+        self.assertEqual(console_output, jenkins_mock.return_value)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__HTTPError(self, jenkins_mock):
