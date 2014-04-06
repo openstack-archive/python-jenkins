@@ -13,6 +13,7 @@ except ImportError:
         import unittest
 
 from mock import patch
+import six
 
 from tests.helper import jenkins, StringIO
 
@@ -22,17 +23,25 @@ class JenkinsTest(unittest.TestCase):
     def test_constructor(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com')
         self.assertEqual(j.server, 'http://example.com/')
         self.assertEqual(j.auth, None)
+        self.assertEqual(j.crumb, None)
+
+    def test_constructor_unicode_password(self):
+        j = jenkins.Jenkins('http://example.com',
+                            six.u('nonascii'),
+                            six.u('\xe9\u20ac'))
+        self.assertEqual(j.server, 'http://example.com/')
+        self.assertEqual(j.auth, b'Basic bm9uYXNjaWk6w6nigqw=')
         self.assertEqual(j.crumb, None)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
