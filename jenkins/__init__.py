@@ -45,11 +45,29 @@
 See examples at :doc:`example`
 '''
 
+try:
+    # Python 2
+    from urllib2 import Request, HTTPError, urlopen
+except ImportError:  # pragma: no cover
+    # Python 3
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError
+try:
+    # Python 2
+    from urllib import quote, urlencode
+except ImportError:  # pragma: no cover
+    # Python 3
+    from urllib.parse import quote, urlencode
+
 import base64
-from httplib import BadStatusLine
 import json
-import urllib
-from urllib2 import Request, HTTPError, urlopen
+
+try:
+    # Python 2
+    from httplib import BadStatusLine
+except ImportError:  # pragma: no cover
+    # Python 3
+    from http.client import BadStatusLine
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
@@ -129,7 +147,8 @@ def auth_headers(username, password):
     Simple implementation of HTTP Basic Authentication. Returns the
     'Authentication' header value.
     '''
-    return 'Basic ' + base64.encodestring('%s:%s' % (username, password))[:-1]
+    auth = '%s:%s' % (username, password)
+    return b'Basic ' + base64.encodestring(auth.encode('ascii'))[:-1]
 
 
 class Jenkins(object):
@@ -212,8 +231,8 @@ class Jenkins(object):
         '''
         Print out job info in more readable format
         '''
-        for k, v in self.get_job_info(job_name).iteritems():
-            print k, v
+        for k, v in self.get_job_info(job_name).items():
+            print(k, v)
 
     def jenkins_open(self, req, add_crumb=True):
         '''
@@ -227,7 +246,7 @@ class Jenkins(object):
             if add_crumb:
                 self.maybe_add_crumb(req)
             return urlopen(req).read()
-        except HTTPError, e:
+        except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
             if e.code in [401, 403, 500]:
@@ -424,8 +443,8 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :returns: job configuration (XML format)
         '''
-        request = Request(self.server + CONFIG_JOB %
-                          {"name": urllib.quote(name)})
+        request = Request(
+            self.server + CONFIG_JOB % {"name": quote(name)})
         return self.jenkins_open(request)
 
     def reconfig_job(self, name, config_xml):
@@ -454,10 +473,10 @@ class Jenkins(object):
             if token:
                 parameters['token'] = token
             return (self.server + BUILD_WITH_PARAMS_JOB % locals() +
-                    '?' + urllib.urlencode(parameters))
+                    '?' + urlencode(parameters))
         elif token:
             return (self.server + BUILD_JOB % locals() +
-                    '?' + urllib.urlencode({'token': token}))
+                    '?' + urlencode({'token': token}))
         else:
             return self.server + BUILD_JOB % locals()
 
@@ -597,7 +616,7 @@ class Jenkins(object):
         }
 
         self.jenkins_open(Request(
-            self.server + CREATE_NODE % urllib.urlencode(params)))
+            self.server + CREATE_NODE % urlencode(params)))
 
         if not self.node_exists(name):
             raise JenkinsException('create[%s] failed' % (name))
