@@ -13,8 +13,15 @@ except ImportError:
         import unittest
 
 from mock import patch
+import six
 
-from tests.helper import jenkins, StringIO
+from tests.helper import jenkins
+
+
+def get_mock_urlopen_return_value(a_dict=None):
+    if a_dict is None:
+        a_dict = {}
+    return six.BytesIO(json.dumps(a_dict).encode('utf-8'))
 
 
 class JenkinsTest(unittest.TestCase):
@@ -22,17 +29,25 @@ class JenkinsTest(unittest.TestCase):
     def test_constructor(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com')
         self.assertEqual(j.server, 'http://example.com/')
         self.assertEqual(j.auth, None)
+        self.assertEqual(j.crumb, None)
+
+    def test_constructor_unicode_password(self):
+        j = jenkins.Jenkins('http://example.com',
+                            six.u('nonascii'),
+                            six.u('\xe9\u20ac'))
+        self.assertEqual(j.server, 'http://example.com/')
+        self.assertEqual(j.auth, b'Basic bm9uYXNjaWk6w6nigqw=')
         self.assertEqual(j.crumb, None)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -49,7 +64,7 @@ class JenkinsTest(unittest.TestCase):
 
     @patch('jenkins.urlopen')
     def test_maybe_add_crumb(self, jenkins_mock):
-        jenkins_mock.return_value = StringIO()
+        jenkins_mock.return_value = get_mock_urlopen_return_value()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
 
@@ -67,7 +82,7 @@ class JenkinsTest(unittest.TestCase):
             "crumb": "dab177f483b3dd93483ef6716d8e792d",
             "crumbRequestField": ".crumb",
         }
-        jenkins_mock.return_value = StringIO(json.dumps(crumb_data))
+        jenkins_mock.return_value = get_mock_urlopen_return_value(crumb_data)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
 
@@ -87,8 +102,8 @@ class JenkinsTest(unittest.TestCase):
         }
         data = {'foo': 'bar'}
         jenkins_mock.side_effect = [
-            StringIO(json.dumps(crumb_data)),
-            StringIO(json.dumps(data)),
+            get_mock_urlopen_return_value(crumb_data),
+            get_mock_urlopen_return_value(data),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
@@ -98,7 +113,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
-        self.assertEqual(response, json.dumps(data))
+        self.assertEqual(response, json.dumps(data).encode('utf-8'))
         self.assertEqual(j.crumb, crumb_data)
         self.assertEqual(request.headers['.crumb'], crumb_data['crumb'])
 
