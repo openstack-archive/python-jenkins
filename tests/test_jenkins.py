@@ -22,12 +22,12 @@ class JenkinsTest(unittest.TestCase):
     def test_constructor(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com')
