@@ -1,17 +1,7 @@
 import json
-import sys
-try:
-    # Needed for assertRaises context manager on Python 2.6
-    import unittest2 as unittest
-except ImportError:
-    if sys.version_info < (2, 7):
-        # On Pythons 2.6 and older, we must have unittest2, because the
-        # standard library doesn't have what we need
-        raise  # pragma: no cover
-    else:
-        # On Pythons 2.7 and newer, the standard library has what we need
-        import unittest
+import unittest
 
+import pytest
 from mock import patch
 
 from tests.helper import jenkins, StringIO
@@ -22,12 +12,12 @@ class JenkinsTest(unittest.TestCase):
     def test_constructor(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
-        self.assertEqual(j.auth, 'Basic dGVzdDp0ZXN0')
+        self.assertEqual(j.auth, b'Basic dGVzdDp0ZXN0')
         self.assertEqual(j.crumb, None)
 
         j = jenkins.Jenkins('http://example.com')
@@ -113,10 +103,10 @@ class JenkinsTest(unittest.TestCase):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.jenkins_open(request, add_crumb=False)
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Error in request.Possibly authentication failed [401]')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
@@ -161,13 +151,13 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.create_job(u'TestJob', config_xml)
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] already exists')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -187,7 +177,7 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.create_job(u'TestJob', config_xml)
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
@@ -196,7 +186,7 @@ class JenkinsTest(unittest.TestCase):
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/createItem?name=TestJob')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'create[TestJob] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -251,7 +241,8 @@ class JenkinsTest(unittest.TestCase):
         build_info = j.build_job(u'TestJob', token='some_token')
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
-                         u'http://example.com/job/TestJob/build?token=some_token')
+                         'http://example.com/job/TestJob/build'
+                         '?token=some_token')
         self.assertEqual(build_info, {'foo': 'bar'})
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -283,13 +274,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [None]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.build_job(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'no such job[TestJob]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -328,11 +319,22 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_build_console_output(u'TestJob', number=52)
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] number[52] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__invalid_json(self, jenkins_mock):
+        """
+        The job name parameter specified should be urlencoded properly.
+        """
+        jenkins_mock.return_value = 'Invalid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        console_output = j.get_build_console_output(u'TestJob', number=52)
+        self.assertEqual(console_output, jenkins_mock.return_value)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__HTTPError(self, jenkins_mock):
@@ -347,13 +349,13 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_build_console_output(u'TestJob', number=52)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/TestJob/52/consoleText')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] number[52] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -385,10 +387,10 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_build_info(u'TestJob', number=52)
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] number[52] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -399,10 +401,10 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = 'Invalid JSON'
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_build_info(u'TestJob', number=52)
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Could not parse JSON info for job[TestJob] number[52]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -418,10 +420,10 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_build_info(u'TestJob', number=52)
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] number[52] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -453,13 +455,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_job_info(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -470,13 +472,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = 'Invalid JSON'
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_job_info(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Could not parse JSON info for job[TestJob]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -492,13 +494,13 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_job_info(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'job[TestJob] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -568,13 +570,13 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/api/json')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Error communicating with server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -582,13 +584,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/api/json')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Error communicating with server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -596,13 +598,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = 'not valid JSON'
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/api/json')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Could not parse JSON info for server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -639,14 +641,14 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.copy_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/createItem'
             '?name=TestJob_2&mode=copy&from=TestJob')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'create[TestJob_2] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -682,13 +684,13 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/job/TestJob/doRename?newName=TestJob_2')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'rename[TestJob_2] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -724,13 +726,13 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.delete_job(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/job/TestJob/doDelete')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'delete[TestJob] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -811,13 +813,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = json.dumps(job_name_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_job_name(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Jenkins returned an unexpected job name {0} '
             '(expected: {1})'.format(job_name_to_return['name'], 'TestJob'))
 
@@ -856,13 +858,13 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_node_info('test_node')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/computer/test_node/api/json?depth=0')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'Could not parse JSON info for node[test_node]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -875,13 +877,13 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.get_node_info('test_node')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/computer/test_node/api/json?depth=0')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'node[test_node] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -918,13 +920,13 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.delete_node('test_node')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/computer/test_node/doDelete')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'delete[test_node] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -959,10 +961,10 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.create_node('test_node')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'node[test_node] already exists')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -975,13 +977,13 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with pytest.raises(jenkins.JenkinsException) as exception_info:
             j.create_node('test_node')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
             'http://example.com/computer/doCreateItem')
         self.assertEqual(
-            str(context_manager.exception),
+            str(exception_info.value),
             'create[test_node] failed')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
