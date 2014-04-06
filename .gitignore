@@ -7,3 +7,9 @@
 /MANIFEST
 /dist/*
 /doc/build/*
+/.test
+/.testrepository
+/MANIFEST
+.coverage
+coverage*.xml
+junit*.xml
