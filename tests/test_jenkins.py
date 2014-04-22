@@ -133,6 +133,27 @@ class JenkinsTest(unittest.TestCase):
             'http://example.com/job/TestJob')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_assert_job_exists__job_missing(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.assert_job_exists('NonExistent')
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[NonExistent] does not exists')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_assert_job_exists__job_exists(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'ExistingJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.assert_job_exists('ExistingJob')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job(self, jenkins_mock):
         """
         The job name parameter specified should be urlencoded properly.
