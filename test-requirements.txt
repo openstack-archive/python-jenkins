@@ -1,0 +1,3 @@
+discover
+flake8
+mock

@@ -45,11 +45,9 @@
 See examples at :doc:`example`
 '''
 
-#import sys
 import urllib2
 import urllib
 import base64
-#import traceback
 import json
 import httplib
 
@@ -69,7 +67,7 @@ DELETE_JOB = 'job/%(name)s/doDelete'
 ENABLE_JOB = 'job/%(name)s/enable'
 DISABLE_JOB = 'job/%(name)s/disable'
 COPY_JOB = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
-RENAME_JOB   = 'job/%(name)s/doRename?newName=%(new_name)s'
+RENAME_JOB = 'job/%(name)s/doRename?newName=%(new_name)s'
 BUILD_JOB = 'job/%(name)s/build'
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
@@ -82,7 +80,7 @@ NODE_INFO = 'computer/%(name)s/api/json?depth=0'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 
-#for testing only
+# for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <keepDependencies>false</keepDependencies>
@@ -98,7 +96,7 @@ EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
   <buildWrappers/>
 </project>'''
 
-#for testing only
+# for testing only
 RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <keepDependencies>false</keepDependencies>
@@ -358,7 +356,7 @@ class Jenkins(object):
         self.jenkins_open(urllib2.Request(
             self.server + RENAME_JOB % locals(), ''))
         if not self.job_exists(new_name):
-            raise JenkinsException('rename[%s] failed'%(new_name))
+            raise JenkinsException('rename[%s] failed' % (new_name))
 
     def delete_job(self, name):
         '''
