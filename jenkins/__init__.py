@@ -201,10 +201,12 @@ class Jenkins(object):
         response = self.jenkins_open(
             urllib2.Request(self.server + JOB_NAME % locals()))
         if response:
-            if json.loads(response)['name'] != name:
+            actual = json.loads(response)['name']
+            if actual != name:
                 raise JenkinsException(
-                    'Jenkins returned an unexpected job name')
-            return json.loads(response)['name']
+                    'Jenkins returned an unexpected job name %s '
+                    '(expected: %s)' % (actual, name))
+            return actual
         else:
             return None
 
