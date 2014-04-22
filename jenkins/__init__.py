@@ -348,7 +348,7 @@ class Jenkins(object):
         :param from_name: Name of Jenkins job to copy from, ``str``
         :param to_name: Name of Jenkins job to copy to, ``str``
         '''
-        self.get_job_info(from_name)
+        self.job_exists(from_name)
         self.jenkins_open(Request(
             self.server + COPY_JOB % locals(), ''))
         if not self.job_exists(to_name):
@@ -361,7 +361,7 @@ class Jenkins(object):
         :param name: Name of Jenkins job to rename, ``str``
         :param new_name: New Jenkins job name, ``str``
         '''
-        self.get_job_info(name)
+        self.job_exists(name)
         self.jenkins_open(Request(
             self.server + RENAME_JOB % locals(), ''))
         if not self.job_exists(new_name):
@@ -373,7 +373,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.get_job_info(name)
+        self.job_exists(name)
         self.jenkins_open(Request(
             self.server + DELETE_JOB % locals(), ''))
         if self.job_exists(name):
@@ -385,7 +385,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.get_job_info(name)
+        self.job_exists(name)
         self.jenkins_open(Request(
             self.server + ENABLE_JOB % locals(), ''))
 
@@ -395,7 +395,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.get_job_info(name)
+        self.job_exists(name)
         self.jenkins_open(Request(
             self.server + DISABLE_JOB % locals(), ''))
 
@@ -442,7 +442,7 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
-        self.get_job_info(name)
+        self.job_exists(name)
         headers = {'Content-Type': 'text/xml'}
         reconfig_url = self.server + CONFIG_JOB % locals()
         self.jenkins_open(Request(reconfig_url, config_xml, headers))
