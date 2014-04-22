@@ -83,6 +83,7 @@ DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
+CONFIG_NODE = 'computer/%(name)s/config.xml'
 
 # for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -617,6 +618,24 @@ class Jenkins(object):
             self.server + CREATE_NODE % urlencode(params)))
 
         self.assert_node_exists(name, 'create[%s] failed')
+
+    def get_node_config(self, name):
+        '''Get the configuration for a node.
+
+        :param name: Jenkins node name, ``str``
+        '''
+        get_config_url = self.server + CONFIG_NODE % locals()
+        return self.jenkins_open(Request(get_config_url))
+
+    def reconfig_node(self, name, config_xml):
+        '''Change the configuration for an existing node.
+
+        :param name: Jenkins node name, ``str``
+        :param config_xml: New XML configuration, ``str``
+        '''
+        headers = {'Content-Type': 'text/xml'}
+        reconfig_url = self.server + CONFIG_NODE % locals()
+        self.jenkins_open(Request(reconfig_url, config_xml, headers))
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
