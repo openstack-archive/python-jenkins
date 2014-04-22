@@ -348,11 +348,10 @@ class Jenkins(object):
         :param from_name: Name of Jenkins job to copy from, ``str``
         :param to_name: Name of Jenkins job to copy to, ``str``
         '''
-        self.get_job_info(from_name)
+        self.assert_job_exists(from_name)
         self.jenkins_open(Request(
             self.server + COPY_JOB % locals(), ''))
-        if not self.job_exists(to_name):
-            raise JenkinsException('create[%s] failed' % (to_name))
+        self.assert_job_exists(to_name, 'create[%s] failed')
 
     def rename_job(self, name, new_name):
         '''
@@ -361,11 +360,10 @@ class Jenkins(object):
         :param name: Name of Jenkins job to rename, ``str``
         :param new_name: New Jenkins job name, ``str``
         '''
-        self.get_job_info(name)
+        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + RENAME_JOB % locals(), ''))
-        if not self.job_exists(new_name):
-            raise JenkinsException('rename[%s] failed' % (new_name))
+        self.assert_job_exists(new_name, 'rename[%s] failed')
 
     def delete_job(self, name):
         '''
@@ -373,7 +371,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.get_job_info(name)
+        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + DELETE_JOB % locals(), ''))
         if self.job_exists(name):
@@ -385,7 +383,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.get_job_info(name)
+        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + ENABLE_JOB % locals(), ''))
 
@@ -395,7 +393,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.get_job_info(name)
+        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + DISABLE_JOB % locals(), ''))
 
@@ -406,6 +404,17 @@ class Jenkins(object):
         '''
         if self.get_job_name(name) == name:
             return True
+
+    def assert_job_exists(self, name,
+                          exception_message='job[%s] does not exists'):
+        '''
+        :param name: Name of Jenkins job, ``str``
+        :param exception_message: Message to use for the exception. Formatted
+                                  with ``name``
+        :throws: :class:`JenkinsException` whenever the job does not exists
+        '''
+        if not self.job_exists(name):
+            raise JenkinsException(exception_message % name)
 
     def create_job(self, name, config_xml):
         '''
@@ -420,8 +429,7 @@ class Jenkins(object):
         headers = {'Content-Type': 'text/xml'}
         self.jenkins_open(Request(
             self.server + CREATE_JOB % locals(), config_xml, headers))
-        if not self.job_exists(name):
-            raise JenkinsException('create[%s] failed' % (name))
+        self.assert_job_exists(name, 'create[%s] failed')
 
     def get_job_config(self, name):
         '''
@@ -442,7 +450,7 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
-        self.get_job_info(name)
+        self.assert_job_exists(name)
         headers = {'Content-Type': 'text/xml'}
         reconfig_url = self.server + CONFIG_JOB % locals()
         self.jenkins_open(Request(reconfig_url, config_xml, headers))
@@ -475,8 +483,7 @@ class Jenkins(object):
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
         '''
-        if not self.job_exists(name):
-            raise JenkinsException('no such job[%s]' % (name))
+        self.assert_job_exists(name, 'no such job[%s]')
         return self.jenkins_open(Request(
             self.build_job_url(name, parameters, token)))
 
