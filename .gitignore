@@ -2,3 +2,8 @@
 *.egg-info
 *.pyc
 /.tox
+.*.swp
+build/*
+MANIFEST
+dist/*
+doc/build/*
