@@ -1,0 +1,16 @@
+.*.swp
+*.egg
+*.egg-info
+*.pyc
+.test
+.testrepository
+.tox
+build/*
+config
+output
+MANIFEST
+dist/*
+doc/build/*
+.coverage
+coverage.xml
+junit.xml
