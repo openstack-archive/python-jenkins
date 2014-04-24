@@ -2,3 +2,15 @@
 *.egg-info
 *.pyc
 /.tox
+.*.swp
+.test
+.testrepository
+build/*
+config
+output
+MANIFEST
+dist/*
+doc/build/*
+.coverage
+coverage*.xml
+junit*.xml
