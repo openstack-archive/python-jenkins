@@ -37,21 +37,11 @@
 # Tully Foote <tfoote@willowgarage.com>
 # Matthew Gertner <matthew.gertner@gmail.com>
 
-'''
-.. module:: jenkins
-    :platform: Unix, Windows
-    :synopsis: Python API to interact with Jenkins
-
-See examples at :doc:`example`
-'''
-
-# import sys
-import urllib2
-import urllib
 import base64
-# import traceback
-import json
 import httplib
+import json
+import urllib
+import urllib2
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
@@ -247,9 +237,10 @@ class Jenkins(object):
 
         Example::
 
+            >>> j = Jenkins()
             >>> next_build_number = j.get_job_info('build_name')['next_build_number']
-            >>> output = j.build_job('build_'+kwargs['vcs_server_type'], params)
-            >>> sleep(10)
+            >>> output = j.build_job('build_name')
+            >>> from time import sleep; sleep(10)
             >>> build_info = j.get_build_info('build_name', next_build_number)
             >>> print(build_info)
             {u'building': False, u'changeSet': {u'items': [{u'date': u'2011-12-19T18:01:52.540557Z', u'msg': u'test', u'revision': 66, u'user': u'unknown', u'paths': [{u'editType': u'edit', u'file': u'/branches/demo/index.html'}]}], u'kind': u'svn', u'revisions': [{u'module': u'http://eaas-svn01.i3.level3.com/eaas', u'revision': 66}]}, u'builtOn': u'', u'description': None, u'artifacts': [{u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war', u'fileName': u'eaas-87-2011-12-19_18-01-57.war'}, {u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war.zip', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war.zip', u'fileName': u'eaas-87-2011-12-19_18-01-57.war.zip'}], u'timestamp': 1324317717000, u'number': 87, u'actions': [{u'parameters': [{u'name': u'SERVICE_NAME', u'value': u'eaas'}, {u'name': u'PROJECT_NAME', u'value': u'demo'}]}, {u'causes': [{u'userName': u'anonymous', u'shortDescription': u'Started by user anonymous'}]}, {}, {}, {}], u'id': u'2011-12-19_18-01-57', u'keepLog': False, u'url': u'http://eaas-jenkins01.i3.level3.com:9080/job/build_war/87/', u'culprits': [{u'absoluteUrl': u'http://eaas-jenkins01.i3.level3.com:9080/user/unknown', u'fullName': u'unknown'}], u'result': u'SUCCESS', u'duration': 8826, u'fullDisplayName': u'build_war #87'}
@@ -276,6 +267,8 @@ class Jenkins(object):
         :returns: list of job dictionaries, ``[dict]``
 
         Example::
+
+            >>> j = Jenkins()
             >>> queue_info = j.get_queue_info()
             >>> print(queue_info[0])
             {u'task': {u'url': u'http://your_url/job/my_job/', u'color': u'aborted_anime', u'name': u'my_job'}, u'stuck': False, u'actions': [{u'causes': [{u'shortDescription': u'Started by timer'}]}], u'buildable': False, u'params': u'', u'buildableStartMilliseconds': 1315087293316, u'why': u'Build #2,532 is already in progress (ETA:10 min)', u'blocked': True}
@@ -305,6 +298,7 @@ class Jenkins(object):
 
         Example::
 
+            >>> j = Jenkins()
             >>> info = j.get_info()
             >>> jobs = info['jobs']
             >>> print(jobs[0])
