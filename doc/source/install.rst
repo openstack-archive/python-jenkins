@@ -3,7 +3,7 @@
 Installing
 ==========
 
-The module is known to pip and Debian based distribution as
+The module is known to pip and Debian-based distributions as
 ``python-jenkins``.
 
 ``pip``::
@@ -18,11 +18,10 @@ The module has been packaged since Ubuntu Oneiric (11.10)::
 
     apt-get install python-jenkins
 
-And on Fedora 19 and later:
+And on Fedora 19 and later::
 
     yum install python-jenkins
 
-For developpement purpose you can get a fake module installed on your system
-that will point to your working copy.  Simply use::
+For development::
 
     python setup.py develop
