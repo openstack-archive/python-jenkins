@@ -1,12 +1,5 @@
-#!/usr/bin/env python
+import setuptools
 
-from distutils.core import setup
-
-setup(name='python-jenkins',
-      version='0.2.1',
-      description='Python bindings for the remote Jenkins API',
-      author='Ken Conley',
-      author_email='kwc@willowgarage.com',
-      url='http://launchpad.net/python-jenkins',
-      packages=['jenkins'],
-      )
+setuptools.setup(
+    setup_requires=['pbr'],
+    pbr=True)

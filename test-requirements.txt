@@ -1,5 +1,8 @@
 coverage>=3.6
 discover
-flake8
+hacking>=0.5.6,<0.8
 mock
 unittest2
+python-subunit
+sphinx>=1.1.2,<1.2
+testrepository
