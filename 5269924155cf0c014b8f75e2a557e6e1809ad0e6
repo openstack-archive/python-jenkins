@@ -1,0 +1,12 @@
+Verified+2: Jenkins
+Code-Review+1: Darragh Bailey <daragh.bailey@gmail.com>
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Workflow+1: Antoine Musso <hashar@free.fr>
+Code-Review+2: Mathieu Gagné <mgagne@iweb.com>
+Code-Review+1: Timur Nurlygayanov <tnurlygayanov@mirantis.com>
+Code-Review+1: Marc Abramowitz <marc@marc-abramowitz.com>
+Submitted-by: Jenkins
+Submitted-at: Thu, 01 May 2014 10:20:05 +0000
+Reviewed-on: https://review.openstack.org/89521
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
