@@ -60,7 +60,7 @@ LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
 INFO = 'api/json'
 CRUMB_URL = 'crumbIssuer/api/json'
-JOB_INFO = 'job/%(name)s/api/json?depth=0'
+JOB_INFO = 'job/%(name)s/api/json?depth=%(depth)s'
 JOB_NAME = 'job/%(name)s/api/json?tree=name'
 Q_INFO = 'queue/api/json?depth=0'
 CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
@@ -74,12 +74,12 @@ RENAME_JOB = 'job/%(name)s/doRename?newName=%(new_name)s'
 BUILD_JOB = 'job/%(name)s/build'
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
-BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=0'
+BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
 
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
-NODE_INFO = 'computer/%(name)s/api/json?depth=0'
+NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 
@@ -170,10 +170,11 @@ class Jenkins(object):
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
-    def get_job_info(self, name):
+    def get_job_info(self, name, depth=0):
         '''Get job information dictionary.
 
         :param name: Job name, ``str``
+        :param depth: JSON depth, ``int``
         :returns: dictionary of job information
         '''
         try:
@@ -237,11 +238,12 @@ class Jenkins(object):
                 )
             # right now I'm getting 302 infinites on a successful delete
 
-    def get_build_info(self, name, number):
+    def get_build_info(self, name, number, depth=0):
         '''Get build information dictionary.
 
         :param name: Job name, ``str``
         :param name: Build number, ``int``
+        :param depth: JSON depth, ``int``
         :returns: dictionary of build information, ``dict``
 
         Example::
@@ -485,10 +487,11 @@ class Jenkins(object):
         '''
         self.jenkins_open(Request(self.server + STOP_BUILD % locals()))
 
-    def get_node_info(self, name):
+    def get_node_info(self, name, depth=0):
         '''Get node information dictionary
 
         :param name: Node name, ``str``
+        :param depth: JSON depth, ``int``
         :returns: Dictionary of node info, ``dict``
         '''
         try:
