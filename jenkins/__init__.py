@@ -121,16 +121,14 @@ RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
 
 
 class JenkinsException(Exception):
-    '''
-    General exception type for jenkins-API-related failures.
-    '''
+    '''General exception type for jenkins-API-related failures.'''
     pass
 
 
 def auth_headers(username, password):
-    '''
-    Simple implementation of HTTP Basic Authentication. Returns the
-    'Authentication' header value.
+    '''Simple implementation of HTTP Basic Authentication.
+
+    Returns the 'Authentication' header value.
     '''
     auth = '%s:%s' % (username, password)
     if isinstance(auth, six.text_type):
@@ -141,8 +139,7 @@ def auth_headers(username, password):
 class Jenkins(object):
 
     def __init__(self, url, username=None, password=None):
-        '''
-        Create handle to Jenkins instance.
+        '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
 
@@ -174,8 +171,7 @@ class Jenkins(object):
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
     def get_job_info(self, name):
-        '''
-        Get job information dictionary.
+        '''Get job information dictionary.
 
         :param name: Job name, ``str``
         :returns: dictionary of job information
@@ -194,10 +190,11 @@ class Jenkins(object):
                 "Could not parse JSON info for job[%s]" % name)
 
     def get_job_name(self, name):
-        '''
-        Return the name of a job using the API. That is roughly an identity
-        method which can be used to quickly verify a job exist or is accessible
-        without causing too much stress on the server side.
+        '''Return the name of a job using the API.
+
+        That is roughly an identity method which can be used to quickly verify
+        a job exist or is accessible without causing too much stress on the
+        server side.
 
         :param name: Job name, ``str``
         :returns: Name of job or None
@@ -215,17 +212,14 @@ class Jenkins(object):
             return None
 
     def debug_job_info(self, job_name):
-        '''
-        Print out job info in more readable format
-        '''
+        '''Print out job info in more readable format.'''
         for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
     def jenkins_open(self, req, add_crumb=True):
-        '''
+        '''Utility routine for opening an HTTP request to a Jenkins server.
 
-        Utility routine for opening an HTTP request to a Jenkins server.   This
-        should only be used to extends the :class:`Jenkins` API.
+        This should only be used to extends the :class:`Jenkins` API.
         '''
         try:
             if self.auth:
@@ -244,8 +238,7 @@ class Jenkins(object):
             # right now I'm getting 302 infinites on a successful delete
 
     def get_build_info(self, name, number):
-        '''
-        Get build information dictionary.
+        '''Get build information dictionary.
 
         :param name: Job name, ``str``
         :param name: Build number, ``int``
@@ -278,8 +271,7 @@ class Jenkins(object):
             )
 
     def get_queue_info(self):
-        '''
-        :returns: list of job dictionaries, ``[dict]``
+        ''':returns: list of job dictionaries, ``[dict]``
 
         Example::
             >>> queue_info = j.get_queue_info()
@@ -291,8 +283,7 @@ class Jenkins(object):
         ))['items']
 
     def cancel_queue(self, number):
-        '''
-        Cancel a queued build.
+        '''Cancel a queued build.
 
         :param number: Jenkins queue number for the build, ``int``
         '''
@@ -304,9 +295,9 @@ class Jenkins(object):
                 headers={'Referer': self.server}))
 
     def get_info(self):
-        """
-        Get information on this Master.  This information
-        includes job list and view information.
+        """Get information on this Master.
+
+        This information includes job list and view information.
 
         :returns: dictionary of information about Master, ``dict``
 
@@ -333,17 +324,16 @@ class Jenkins(object):
                                    % self.server)
 
     def get_jobs(self):
-        """
-        Get list of jobs running.  Each job is a dictionary with
-        'name', 'url', and 'color' keys.
+        """Get list of jobs running.
+
+        Each job is a dictionary with 'name', 'url', and 'color' keys.
 
         :returns: list of jobs, ``[ { str: str} ]``
         """
         return self.get_info()['jobs']
 
     def copy_job(self, from_name, to_name):
-        '''
-        Copy a Jenkins job
+        '''Copy a Jenkins job
 
         :param from_name: Name of Jenkins job to copy from, ``str``
         :param to_name: Name of Jenkins job to copy to, ``str``
@@ -355,8 +345,7 @@ class Jenkins(object):
             raise JenkinsException('create[%s] failed' % (to_name))
 
     def rename_job(self, name, new_name):
-        '''
-        Rename an existing Jenkins job
+        '''Rename an existing Jenkins job
 
         :param name: Name of Jenkins job to rename, ``str``
         :param new_name: New Jenkins job name, ``str``
@@ -368,8 +357,7 @@ class Jenkins(object):
             raise JenkinsException('rename[%s] failed' % (new_name))
 
     def delete_job(self, name):
-        '''
-        Delete Jenkins job permanently.
+        '''Delete Jenkins job permanently.
 
         :param name: Name of Jenkins job, ``str``
         '''
@@ -380,8 +368,7 @@ class Jenkins(object):
             raise JenkinsException('delete[%s] failed' % (name))
 
     def enable_job(self, name):
-        '''
-        Enable Jenkins job.
+        '''Enable Jenkins job.
 
         :param name: Name of Jenkins job, ``str``
         '''
@@ -390,8 +377,9 @@ class Jenkins(object):
             self.server + ENABLE_JOB % locals(), ''))
 
     def disable_job(self, name):
-        '''
-        Disable Jenkins job. To re-enable, call :meth:`Jenkins.enable_job`.
+        '''Disable Jenkins job.
+
+        To re-enable, call :meth:`Jenkins.enable_job`.
 
         :param name: Name of Jenkins job, ``str``
         '''
@@ -400,7 +388,8 @@ class Jenkins(object):
             self.server + DISABLE_JOB % locals(), ''))
 
     def job_exists(self, name):
-        '''
+        '''Check whether a job exists
+
         :param name: Name of Jenkins job, ``str``
         :returns: ``True`` if Jenkins job exists
         '''
@@ -408,8 +397,7 @@ class Jenkins(object):
             return True
 
     def create_job(self, name, config_xml):
-        '''
-        Create a new Jenkins job
+        '''Create a new Jenkins job
 
         :param name: Name of Jenkins job, ``str``
         :param config_xml: config file text, ``str``
@@ -424,8 +412,7 @@ class Jenkins(object):
             raise JenkinsException('create[%s] failed' % (name))
 
     def get_job_config(self, name):
-        '''
-        Get configuration of existing Jenkins job.
+        '''Get configuration of existing Jenkins job.
 
         :param name: Name of Jenkins job, ``str``
         :returns: job configuration (XML format)
@@ -435,9 +422,9 @@ class Jenkins(object):
         return self.jenkins_open(request)
 
     def reconfig_job(self, name, config_xml):
-        '''
-        Change configuration of existing Jenkins job.  To create a new job, see
-        :meth:`Jenkins.create_job`.
+        '''Change configuration of existing Jenkins job.
+
+        To create a new job, see :meth:`Jenkins.create_job`.
 
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
@@ -448,9 +435,10 @@ class Jenkins(object):
         self.jenkins_open(Request(reconfig_url, config_xml, headers))
 
     def build_job_url(self, name, parameters=None, token=None):
-        '''
-        Get URL to trigger build job.  Authenticated setups may require
-        configuring a token on the server side.
+        '''Get URL to trigger build job.
+
+        Authenticated setups may require configuring a token on the server
+        side.
 
         :param parameters: parameters for job, or None., ``dict``
         :param token: (optional) token for building job, ``str``
@@ -468,8 +456,7 @@ class Jenkins(object):
             return self.server + BUILD_JOB % locals()
 
     def build_job(self, name, parameters=None, token=None):
-        '''
-        Trigger build job.
+        '''Trigger build job.
 
         :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
@@ -481,8 +468,7 @@ class Jenkins(object):
             self.build_job_url(name, parameters, token)))
 
     def stop_build(self, name, number):
-        '''
-        Stop a running Jenkins build.
+        '''Stop a running Jenkins build.
 
         :param name: Name of Jenkins job, ``str``
         :param number: Jenkins build number for the job, ``int``
@@ -490,8 +476,7 @@ class Jenkins(object):
         self.jenkins_open(Request(self.server + STOP_BUILD % locals()))
 
     def get_node_info(self, name):
-        '''
-        Get node information dictionary
+        '''Get node information dictionary
 
         :param name: Node name, ``str``
         :returns: Dictionary of node info, ``dict``
@@ -510,7 +495,8 @@ class Jenkins(object):
                                    % name)
 
     def node_exists(self, name):
-        '''
+        '''Check whether a node exists
+
         :param name: Name of Jenkins node, ``str``
         :returns: ``True`` if Jenkins node exists
         '''
@@ -521,8 +507,7 @@ class Jenkins(object):
             return False
 
     def delete_node(self, name):
-        '''
-        Delete Jenkins node permanently.
+        '''Delete Jenkins node permanently.
 
         :param name: Name of Jenkins node, ``str``
         '''
@@ -533,8 +518,7 @@ class Jenkins(object):
             raise JenkinsException('delete[%s] failed' % (name))
 
     def disable_node(self, name, msg=''):
-        '''
-        Disable a node
+        '''Disable a node
 
         :param name: Jenkins node name, ``str``
         :param msg: Offline message, ``str``
@@ -546,8 +530,7 @@ class Jenkins(object):
             self.server + TOGGLE_OFFLINE % locals()))
 
     def enable_node(self, name):
-        '''
-        Enable a node
+        '''Enable a node
 
         :param name: Jenkins node name, ``str``
         '''
@@ -561,7 +544,7 @@ class Jenkins(object):
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
                     launcher=LAUNCHER_COMMAND, launcher_params={}):
-        '''
+        '''Create a node
         :param name: name of node to create, ``str``
         :param numExecutors: number of executors for node, ``int``
         :param nodeDescription: Description of node, ``str``
@@ -609,8 +592,7 @@ class Jenkins(object):
             raise JenkinsException('create[%s] failed' % (name))
 
     def get_build_console_output(self, name, number):
-        '''
-        Get build console text.
+        '''Get build console text.
 
         :param name: Job name, ``str``
         :param name: Build number, ``int``

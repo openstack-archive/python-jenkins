@@ -47,9 +47,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_config_encodes_job_name(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         j.get_job_config(u'Test Job')
 
@@ -134,9 +131,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         config_xml = """
             <matrix-project>
                 <actions/>
@@ -157,9 +151,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job__already_exists(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         config_xml = """
             <matrix-project>
                 <actions/>
@@ -182,9 +173,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job__create_failed(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         config_xml = """
             <matrix-project>
                 <actions/>
@@ -211,9 +199,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_reconfig_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         config_xml = """
             <matrix-project>
                 <actions/>
@@ -232,9 +217,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             {'foo': 'bar'},
@@ -249,9 +231,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__with_token(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             {'foo': 'bar'},
@@ -266,9 +245,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__with_parameters_and_token(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             {'foo': 'bar'},
@@ -287,9 +263,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__job_doesnt_exist(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [None]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -304,9 +277,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_stop_build(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         j.stop_build(u'TestJob', number=52)
@@ -317,9 +287,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = "build console output..."
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -332,9 +299,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__None(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -346,9 +310,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__invalid_json(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = 'Invalid JSON'
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -357,9 +318,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__HTTPError(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = jenkins.HTTPError(
             'http://example.com/job/TestJob/52/consoleText',
             code=401,
@@ -379,9 +337,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         build_info_to_return = {
             u'building': False,
             u'msg': u'test',
@@ -400,9 +355,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info__None(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -414,9 +366,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info__invalid_json(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = 'Invalid JSON'
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -428,9 +377,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info__HTTPError(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = jenkins.HTTPError(
             'http://example.com/job/TestJob/api/json?depth=0',
             code=401,
@@ -447,9 +393,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         job_info_to_return = {
             u'building': False,
             u'msg': u'test',
@@ -468,9 +411,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info__None(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -485,9 +425,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info__invalid_json(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = 'Invalid JSON'
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -502,9 +439,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info__HTTPError(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = jenkins.HTTPError(
             'http://example.com/job/TestJob/api/json?depth=0',
             code=401,
@@ -524,9 +458,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_debug_job_info(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         job_info_to_return = {
             u'building': False,
             u'msg': u'test',
@@ -628,9 +559,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob_2'}),
@@ -649,9 +577,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job__create_failed(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             None,
@@ -672,9 +597,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob_2'}),
@@ -692,9 +614,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job__rename_failed(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             None,
@@ -714,9 +633,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             None,
@@ -734,9 +650,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job__delete_failed(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
@@ -756,9 +669,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_enable_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
@@ -775,9 +685,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_disable_job(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
@@ -794,9 +701,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         job_name_to_return = {u'name': 'TestJob'}
         jenkins_mock.return_value = json.dumps(job_name_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -810,9 +714,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name__None(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -825,9 +726,6 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name__unexpected_job_name(self, jenkins_mock):
-        """
-        The job name parameter specified should be urlencoded properly.
-        """
         job_name_to_return = {u'name': 'not the right name'}
         jenkins_mock.return_value = json.dumps(job_name_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
