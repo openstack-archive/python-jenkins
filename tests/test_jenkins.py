@@ -927,6 +927,25 @@ class JenkinsTest(unittest.TestCase):
             'node[test_node] does not exist')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_assert_node_exists__node_missing(self, jenkins_mock):
+        jenkins_mock.side_effect = [None]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.assert_node_exists('NonExistentNode')
+        self.assertEqual(
+            str(context_manager.exception),
+            'node[NonExistentNode] does not exist')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_assert_node_exists__node_exists(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'ExistingNode'})
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.assert_node_exists('ExistingNode')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_node(self, jenkins_mock):
         node_info = {
             'displayName': 'nodes',
