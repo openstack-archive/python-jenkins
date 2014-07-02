@@ -516,6 +516,17 @@ class Jenkins(object):
         except JenkinsException:
             return False
 
+    def assert_node_exists(self, name,
+                           exception_message='node[%s] does not exist'):
+        '''
+        :param name: Name of Jenkins node, ``str``
+        :param exception_message: Message to use for the exception. Formatted
+                                  with ``name``
+        :throws: :class:`JenkinsException` whenever the node does not exist
+        '''
+        if not self.node_exists(name):
+            raise JenkinsException(exception_message % name)
+
     def delete_node(self, name):
         '''Delete Jenkins node permanently.
 
@@ -599,8 +610,7 @@ class Jenkins(object):
         self.jenkins_open(Request(
             self.server + CREATE_NODE % urlencode(params)))
 
-        if not self.node_exists(name):
-            raise JenkinsException('create[%s] failed' % (name))
+        self.assert_node_exists(name, 'create[%s] failed')
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
