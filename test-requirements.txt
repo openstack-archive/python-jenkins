@@ -2,4 +2,3 @@ coverage>=3.6
 discover
 flake8
 mock
-six
