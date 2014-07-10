@@ -1,0 +1,10 @@
+Verified+2: Jenkins
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Code-Review+1: Clark Boylan <cboylan@sapwetik.org>
+Code-Review+2: Marc Abramowitz <marc@marc-abramowitz.com>
+Workflow+1: Marc Abramowitz <marc@marc-abramowitz.com>
+Submitted-by: Jenkins
+Submitted-at: Thu, 10 Jul 2014 16:13:58 +0000
+Reviewed-on: https://review.openstack.org/105898
+Project: stackforge/python-jenkins
+Branch: refs/heads/3.0-fixes
