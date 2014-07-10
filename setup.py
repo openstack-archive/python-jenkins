@@ -2,6 +2,9 @@
 
 from distutils.core import setup
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 setup(name='python-jenkins',
       version='0.3.2',
       description='Python bindings for the remote Jenkins API',
@@ -9,4 +12,5 @@ setup(name='python-jenkins',
       author_email='kwc@willowgarage.com',
       url='http://launchpad.net/python-jenkins',
       packages=['jenkins'],
+      install_requires=required,
       )
