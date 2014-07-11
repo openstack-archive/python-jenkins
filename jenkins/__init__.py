@@ -235,9 +235,14 @@ class Jenkins(object):
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
             if e.code in [401, 403, 500]:
+                # six.moves.urllib.error.HTTPError provides a 'reason'
+                # attribute for all python version except for ver 2.6
+                # Falling back to HTTPError.msg since it contains the
+                # same info as reason
                 raise JenkinsException(
-                    'Error in request.' +
-                    'Possibly authentication failed [%s]' % (e.code)
+                    'Error in request. ' +
+                    'Possibly authentication failed [%s]: %s' % (
+                        e.code, e.msg)
                 )
             # right now I'm getting 302 infinites on a successful delete
 
