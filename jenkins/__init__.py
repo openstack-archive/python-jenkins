@@ -232,8 +232,9 @@ class Jenkins(object):
             # distinguish errors.
             if e.code in [401, 403, 500]:
                 raise JenkinsException(
-                    'Error in request.' +
-                    'Possibly authentication failed [%s]' % (e.code)
+                    'Error in request. ' +
+                    'Possibly authentication failed [%s]: %s' % (
+                        e.code, e.msg)
                 )
             # right now I'm getting 302 infinites on a successful delete
 
