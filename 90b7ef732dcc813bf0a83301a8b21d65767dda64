@@ -1,0 +1,12 @@
+Verified+2: Jenkins
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Code-Review+1: Clark Boylan <cboylan@sapwetik.org>
+Code-Review+2: Mathieu Gagné <mgagne@iweb.com>
+Workflow+1: Mathieu Gagné <mgagne@iweb.com>
+Code-Review+1: Ryan Petrello <ryan@ryanpetrello.com>
+Code-Review+1: Edward Raigosa <wenlock@hp.com>
+Submitted-by: Jenkins
+Submitted-at: Mon, 21 Jul 2014 17:40:47 +0000
+Reviewed-on: https://review.openstack.org/106121
+Project: stackforge/python-jenkins
+Branch: refs/heads/3.0-fixes
