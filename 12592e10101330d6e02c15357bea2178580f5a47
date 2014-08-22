@@ -1,0 +1,11 @@
+Code-Review+2: James E. Blair <corvus@inaugust.com>
+Verified+2: James E. Blair <corvus@inaugust.com>
+Workflow+1: James E. Blair <corvus@inaugust.com>
+Code-Review+1: Clark Boylan <cboylan@sapwetik.org>
+Code-Review+1: Jeremy Stanley <fungi@yuggoth.org>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Submitted-by: James E. Blair <corvus@inaugust.com>
+Submitted-at: Fri, 22 Aug 2014 16:34:49 +0000
+Reviewed-on: https://review.openstack.org/116329
+Project: stackforge/python-jenkins
+Branch: refs/heads/3.0-fixes
