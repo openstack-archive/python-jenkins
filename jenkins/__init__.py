@@ -401,7 +401,8 @@ class Jenkins(object):
 
     def assert_job_exists(self, name,
                           exception_message='job[%s] does not exist'):
-        '''
+        '''Raise an exception if a job does not exist
+
         :param name: Name of Jenkins job, ``str``
         :param exception_message: Message to use for the exception. Formatted
                                   with ``name``
@@ -521,7 +522,8 @@ class Jenkins(object):
 
     def assert_node_exists(self, name,
                            exception_message='node[%s] does not exist'):
-        '''
+        '''Raise an exception if a node does not exist
+
         :param name: Name of Jenkins node, ``str``
         :param exception_message: Message to use for the exception. Formatted
                                   with ``name``
