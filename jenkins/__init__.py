@@ -56,6 +56,7 @@ from six.moves.urllib.request import Request, urlopen
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
+LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
 INFO = 'api/json'
@@ -578,7 +579,7 @@ class Jenkins(object):
         :param remoteFS: Remote filesystem location to use, ``str``
         :param labels: Labels to associate with node, ``str``
         :param exclusive: Use this node for tied jobs only, ``bool``
-        :param launcher: The launch method for the slave, ``jenkins.LAUNCHER_COMMAND``, ``jenkins.LAUNCHER_SSH``, ``jenkins.LAUNCHER_WINDOWS_SERVICE``
+        :param launcher: The launch method for the slave, ``jenkins.LAUNCHER_COMMAND``, ``jenkins.LAUNCHER_SSH``, ``jenkins.LAUNCHER_JNLP``, ``jenkins.LAUNCHER_WINDOWS_SERVICE``
         :param launcher_params: Additional parameters for the launcher, ``dict``
         '''
         if self.node_exists(name):
