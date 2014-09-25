@@ -60,6 +60,7 @@ LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
 INFO = 'api/json'
+PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
 JOB_INFO = 'job/%(name)s/api/json?depth=%(depth)s'
 JOB_NAME = 'job/%(name)s/api/json?tree=name'
@@ -353,6 +354,84 @@ class Jenkins(object):
                                    % self.server)
         except BadStatusLine:
             raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+
+    def get_plugins_info(self, depth=2):
+        """Get all installed plugins information on this Master.
+
+        This method retrieves information about each plugin that is installed
+        on master.
+
+        :param depth: JSON depth, ``int``
+        :returns: info on all plugins ``[dict]``
+
+        Example::
+
+            >>> j = Jenkins()
+            >>> info = j.get_plugins_info()
+            >>> print(info)
+            {"plugins":[
+            {u'backupVersion': None, u'version': u'0.0.4', u'deleted': False,
+            u'supportsDynamicLoad': u'MAYBE', u'hasUpdate': True,
+            u'enabled': True, u'pinned': False, u'downgradable': False,
+            u'dependencies': [], u'url':
+            u'http://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin',
+            u'longName': u'Gearman Plugin', u'active': True, u'shortName':
+            u'gearman-plugin', u'bundled': False}]}
+
+        """
+        try:
+            plugins = json.loads(self.jenkins_open(
+                Request(self.server + PLUGIN_INFO % locals())))
+            return plugins
+        except HTTPError:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except BadStatusLine:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
+
+    def get_plugin_info(self, name, depth=2):
+        """Get an installed plugin information on this Master.
+
+        This method retrieves information about a speicifc plugin.
+        The passed in plugin name (short or long) must be an exact match.
+
+        :param name: Name (short or long) of plugin, ``str``
+        :param depth: JSON depth, ``int``
+        :returns: a specific plugin ``dict``
+
+        Example::
+
+            >>> j = Jenkins()
+            >>> info = j.get_plugin_info("Gearman Plugin")
+            >>> print(info)
+            {u'backupVersion': None, u'version': u'0.0.4', u'deleted': False,
+            u'supportsDynamicLoad': u'MAYBE', u'hasUpdate': True,
+            u'enabled': True, u'pinned': False, u'downgradable': False,
+            u'dependencies': [], u'url':
+            u'http://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin',
+            u'longName': u'Gearman Plugin', u'active': True, u'shortName':
+            u'gearman-plugin', u'bundled': False}
+
+        """
+        try:
+            plugins = json.loads(self.jenkins_open(
+                Request(self.server + PLUGIN_INFO % locals())))
+            for plugin in plugins['plugins']:
+                if plugin['longName'] == name or plugin['shortName'] == name:
+                    return plugin
+        except HTTPError:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except BadStatusLine:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
 
     def get_jobs(self):
