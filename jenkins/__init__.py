@@ -60,6 +60,7 @@ LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
 INFO = 'api/json'
+PLUGIN_INFO = 'pluginManager/api/json?depth=2'
 CRUMB_URL = 'crumbIssuer/api/json'
 JOB_INFO = 'job/%(name)s/api/json?depth=%(depth)s'
 JOB_NAME = 'job/%(name)s/api/json?tree=name'
@@ -319,6 +320,53 @@ class Jenkins(object):
         try:
             return json.loads(self.jenkins_open(
                 Request(self.server + INFO)))
+        except HTTPError:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except BadStatusLine:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
+
+    def get_plugin_info(self, name=None):
+        """Get installed plugins information on this Master.
+        This method when called with no parameters will return
+        a list containing all installed plugins on master. Passing
+        in a plugin name will return info about that specific plugin.
+        Returns None if the specified plugin is not installed.
+
+        :param name: None or Name of plugin, ``str``
+        :returns: info on all plugins ``[dict]``,
+                  a specific plugin ``dict``,
+                  or None
+
+        Example::
+
+            >>> info = j.get_plugin_info("Gearman Plugin")
+            >>> print(info)
+            {u'backupVersion': None, u'version': u'0.0.4', u'deleted': False,
+            u'supportsDynamicLoad': u'MAYBE', u'hasUpdate': True,
+            u'enabled': True, u'pinned': False, u'downgradable': False,
+            u'dependencies': [], u'url':
+            u'http://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin',
+            u'longName': u'Gearman Plugin', u'active': True, u'shortName':
+            u'gearman-plugin', u'bundled': False}
+
+        """
+        try:
+            plugins = json.loads(self.jenkins_open(
+                Request(self.server + PLUGIN_INFO)))
+
+            info = None
+            if name is None:
+                info = plugins
+            else:
+                for plugin in plugins['plugins']:
+                    if plugin['longName'] == name or plugin['shortName'] == name:
+                        info = plugin
+            return info
         except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
                                    % self.server)

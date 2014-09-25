@@ -532,6 +532,129 @@ class JenkinsTest(unittest.TestCase):
             u'http://example.com/api/json')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_all(self, jenkins_mock):
+        plugin_info_def = {
+               u"plugins":[
+               {
+                 u"active": u'true',
+                 u"backupVersion": u'null',
+                 u"bundled": u'true',
+                 u"deleted": u'false',
+                 u"dependencies": [],
+                 u"downgradable": u'false',
+                 u"enabled": u'true',
+                 u"hasUpdate": u'true',
+                 u"longName": u"Jenkins Mailer Plugin",
+                 u"pinned": u'false',
+                 u"shortName": u"mailer",
+                 u"supportsDynamicLoad": u"MAYBE",
+                 u"url": u"http://wiki.jenkins-ci.org/display/JENKINS/Mailer",
+                 u"version": u"1.5"
+               }
+            ]
+        }
+
+        jenkins_mock.return_value = json.dumps(plugin_info_def)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return a list of plugins
+        plugin_info = j.get_plugin_info()
+        self.assertEqual(plugin_info, plugin_info_def)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=2')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_shortname(self, jenkins_mock):
+        plugin_info_def = {
+               u"plugins":[
+               {
+                 u"active": u'true',
+                 u"backupVersion": u'null',
+                 u"bundled": u'true',
+                 u"deleted": u'false',
+                 u"dependencies": [],
+                 u"downgradable": u'false',
+                 u"enabled": u'true',
+                 u"hasUpdate": u'true',
+                 u"longName": u"Jenkins Mailer Plugin",
+                 u"pinned": u'false',
+                 u"shortName": u"mailer",
+                 u"supportsDynamicLoad": u"MAYBE",
+                 u"url": u"http://wiki.jenkins-ci.org/display/JENKINS/Mailer",
+                 u"version": u"1.5"
+               }
+            ]
+        }
+
+        jenkins_mock.return_value = json.dumps(plugin_info_def)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return info on a single plugin
+        plugin_info = j.get_plugin_info("mailer")
+        self.assertEqual(plugin_info, plugin_info_def['plugins'][0])
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_longname(self, jenkins_mock):
+        plugin_info_def = {
+               u"plugins":[
+               {
+                 u"active": u'true',
+                 u"backupVersion": u'null',
+                 u"bundled": u'true',
+                 u"deleted": u'false',
+                 u"dependencies": [],
+                 u"downgradable": u'false',
+                 u"enabled": u'true',
+                 u"hasUpdate": u'true',
+                 u"longName": u"Jenkins Mailer Plugin",
+                 u"pinned": u'false',
+                 u"shortName": u"mailer",
+                 u"supportsDynamicLoad": u"MAYBE",
+                 u"url": u"http://wiki.jenkins-ci.org/display/JENKINS/Mailer",
+                 u"version": u"1.5"
+               }
+            ]
+        }
+
+        jenkins_mock.return_value = json.dumps(plugin_info_def)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return info on a single plugin
+        plugin_info = j.get_plugin_info("Jenkins Mailer Plugin")
+        self.assertEqual(plugin_info, plugin_info_def['plugins'][0])
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_none(self, jenkins_mock):
+        plugin_info_def = {
+               u"plugins":[
+               {
+                 u"active": u'true',
+                 u"backupVersion": u'null',
+                 u"bundled": u'true',
+                 u"deleted": u'false',
+                 u"dependencies": [],
+                 u"downgradable": u'false',
+                 u"enabled": u'true',
+                 u"hasUpdate": u'true',
+                 u"longName": u"Jenkins Mailer Plugin",
+                 u"pinned": u'false',
+                 u"shortName": u"mailer",
+                 u"supportsDynamicLoad": u"MAYBE",
+                 u"url": u"http://wiki.jenkins-ci.org/display/JENKINS/Mailer",
+                 u"version": u"1.5"
+               }
+            ]
+        }
+
+        jenkins_mock.return_value = json.dumps(plugin_info_def)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected not to find bogus so should return None
+        plugin_info = j.get_plugin_info("bogus")
+        self.assertEqual(plugin_info, None)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info__HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
             'http://example.com/job/TestJob/api/json?depth=0',
