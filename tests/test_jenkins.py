@@ -19,6 +19,28 @@ def get_mock_urlopen_return_value(a_dict=None):
 
 class JenkinsTest(unittest.TestCase):
 
+    plugin_info_json = {
+        u"plugins":
+        [
+            {
+                u"active": u'true',
+                u"backupVersion": u'null',
+                u"bundled": u'true',
+                u"deleted": u'false',
+                u"dependencies": [],
+                u"downgradable": u'false',
+                u"enabled": u'true',
+                u"hasUpdate": u'true',
+                u"longName": u"Jenkins Mailer Plugin",
+                u"pinned": u'false',
+                u"shortName": u"mailer",
+                u"supportsDynamicLoad": u"MAYBE",
+                u"url": u"http://wiki.jenkins-ci.org/display/JENKINS/Mailer",
+                u"version": u"1.5"
+            }
+        ]
+    }
+
     def test_constructor_url_with_trailing_slash(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         self.assertEqual(j.server, 'http://example.com/')
@@ -565,6 +587,168 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/api/json')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugins_info(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return a list of plugins
+        plugins_info = j.get_plugins_info()
+        self.assertEqual(plugins_info, self.plugin_info_json)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=2')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugins_info_none(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        plugins_info = j.get_plugins_info()
+        self.assertEqual(plugins_info, None)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugins_info_depth(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.get_plugins_info(depth=1)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=1')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugins_info__BadStatusLine(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_plugins_info()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugins_info__ValueError(self, jenkins_mock):
+        jenkins_mock.return_value = 'not valid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_plugins_info()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugins_info__HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/pluginManager/api/json?depth=2',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_plugins_info(depth=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_shortname(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return info on a single plugin
+        plugin_info = j.get_plugin_info("mailer")
+        self.assertEqual(plugin_info, self.plugin_info_json['plugins'][0])
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_longname(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return info on a single plugin
+        plugin_info = j.get_plugin_info("Jenkins Mailer Plugin")
+        self.assertEqual(plugin_info, self.plugin_info_json['plugins'][0])
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_none(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected not to find bogus so should return None
+        plugin_info = j.get_plugin_info("bogus")
+        self.assertEqual(plugin_info, None)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_depth(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.get_plugin_info('test', depth=1)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=1')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info__BadStatusLine(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_plugin_info('test')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info__ValueError(self, jenkins_mock):
+        jenkins_mock.return_value = 'not valid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_plugin_info('test')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/pluginManager/api/json?depth=2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info__HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/pluginManager/api/json?depth=2',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_plugin_info(u'TestPlugin', depth=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info__HTTPError(self, jenkins_mock):
