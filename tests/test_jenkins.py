@@ -5,7 +5,7 @@ if sys.version_info < (2, 7):
 else:
     import unittest
 
-from mock import patch
+from mock import patch, Mock
 import six
 
 from tests.helper import jenkins
@@ -493,6 +493,41 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/TestJob/api/json?depth=0')
+
+    @patch('jenkins.urlopen')
+    def test_get_version__some_version(self, urlopen_mock):
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        mock_response = Mock()
+        config = {'info.return_value.getheader.return_value': 'Version42'}
+        mock_response.configure_mock(**config)
+        urlopen_mock.side_effect = [mock_response]
+        self.assertEqual(j.get_version(), 'Version42')
+
+    @patch('jenkins.urlopen')
+    def test_get_version__HTTPError(self, urlopen_mock):
+        urlopen_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/',
+            code=503,
+            msg="internal server error",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_version()
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch('jenkins.urlopen')
+    def test_get_version__BadStatusLine(self, urlopen_mock):
+        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_version()
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_jobs(self, jenkins_mock):
