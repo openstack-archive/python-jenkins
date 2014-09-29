@@ -330,6 +330,31 @@ class Jenkins(object):
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
 
+    def get_version(self):
+        """Get the version of this Master.
+
+        :returns: This master's version number ``str``
+
+        Example::
+
+            >>> j = Jenkins()
+            >>> info = j.get_version()
+            >>> print info
+            >>> 1.541
+
+        """
+        try:
+            request = Request(self.server)
+            request.add_header('X-Jenkins', '0.0')
+            response = urlopen(request)
+            return response.info().getheader('X-Jenkins')
+        except HTTPError:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+        except BadStatusLine:
+            raise JenkinsException("Error communicating with server[%s]"
+                                   % self.server)
+
     def get_jobs(self):
         """Get list of jobs running.
 
