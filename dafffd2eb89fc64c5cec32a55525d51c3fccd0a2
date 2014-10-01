@@ -1,0 +1,10 @@
+Verified+2: Jenkins
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Code-Review+1: Khai Do <zaro0508@gmail.com>
+Code-Review+2: Mathieu Gagné <mgagne@iweb.com>
+Workflow+1: Mathieu Gagné <mgagne@iweb.com>
+Submitted-by: Jenkins
+Submitted-at: Wed, 01 Oct 2014 23:26:08 +0000
+Reviewed-on: https://review.openstack.org/124885
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
