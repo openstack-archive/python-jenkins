@@ -136,7 +136,7 @@ def auth_headers(username, password):
     auth = '%s:%s' % (username, password)
     if isinstance(auth, six.text_type):
         auth = auth.encode('utf-8')
-    return b'Basic ' + base64.encodestring(auth)[:-1]
+    return b'Basic ' + base64.b64encode(auth)
 
 
 class Jenkins(object):
