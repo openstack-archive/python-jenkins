@@ -62,6 +62,7 @@ LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
+JOBS_QUERY = '?tree=jobs[url,color,name,jobs]'
 JOB_INFO = 'job/%(name)s/api/json?depth=%(depth)s'
 JOB_NAME = 'job/%(name)s/api/json?tree=name'
 Q_INFO = 'queue/api/json?depth=0'
@@ -207,11 +208,13 @@ class Jenkins(object):
             Request(self.server + JOB_NAME % locals()))
         if response:
             actual = json.loads(response)['name']
-            if actual != name:
+            # since jobs may be located under folders, check the last
+            # component of the given name against the returned name
+            if actual != name.split("/")[-1]:
                 raise JenkinsException(
                     'Jenkins returned an unexpected job name %s '
                     '(expected: %s)' % (actual, name))
-            return actual
+            return name
         else:
             return None
 
@@ -301,12 +304,14 @@ class Jenkins(object):
                 self.server + CANCEL_QUEUE % locals(),
                 headers={'Referer': self.server}))
 
-    def get_info(self):
-        """Get information on this Master.
+    def get_info(self, item=None, query=None):
+        """Get information on this Master or item on Master.
 
-        This information includes job list and view information.
+        This information includes job list and view information and can be
+        used to retreive information on items such as job folders.
 
-        :returns: dictionary of information about Master, ``dict``
+        :param item: item to get information about on this Master
+        :returns: dictionary of information about Master or item, ``dict``
 
         Example::
 
@@ -318,9 +323,14 @@ class Jenkins(object):
             u'name': u'my_job'}
 
         """
+        if item:
+            url = "%s%s/%s" % (self.server, item, INFO)
+        else:
+            url = "%s%s" % (self.server, INFO)
+        if query:
+            url += query
         try:
-            return json.loads(self.jenkins_open(
-                Request(self.server + INFO)))
+            return json.loads(self.jenkins_open(Request(url)))
         except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
                                    % self.server)
@@ -433,14 +443,34 @@ class Jenkins(object):
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
 
-    def get_jobs(self):
+    def get_jobs(self, depth=None):
         """Get list of jobs running.
 
         Each job is a dictionary with 'name', 'url', and 'color' keys.
 
+        :param depth: Number of levels to search, ``int``
         :returns: list of jobs, ``[ { str: str} ]``
         """
-        return self.get_info()['jobs']
+        jobs_list = []
+
+        jobs = [(0, None, self.get_info(query=JOBS_QUERY)['jobs'])]
+        for _, (lvl, root, lvl_jobs) in enumerate(jobs):
+            if not isinstance(lvl_jobs, list):
+                lvl_jobs = [lvl_jobs]
+            for job in lvl_jobs:
+                if 'jobs' in job:  # folder
+                    if not depth or lvl < depth:
+                        if root:
+                            path = '%s/job/%s/' % (root, job['name'])
+                        else:
+                            path = 'job/%s/' % job['name']
+                        jobs.append(
+                            (lvl + 1, path,
+                             self.get_info(path,
+                                           query=JOBS_QUERY)['jobs']))
+                else:
+                    jobs_list.append(job)
+        return jobs_list
 
     def copy_job(self, from_name, to_name):
         '''Copy a Jenkins job

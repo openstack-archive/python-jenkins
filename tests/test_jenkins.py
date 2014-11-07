@@ -553,11 +553,11 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_jobs(self, jenkins_mock):
-        jobs = {
+        jobs = [{
             u'url': u'http://your_url_here/job/my_job/',
             u'color': u'blue',
             u'name': u'my_job',
-        }
+        }]
         job_info_to_return = {u'jobs': jobs}
         jenkins_mock.return_value = json.dumps(job_info_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -565,9 +565,8 @@ class JenkinsTest(unittest.TestCase):
         job_info = j.get_jobs()
 
         self.assertEqual(job_info, jobs)
-        self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json')
+        self.assertIn(u'http://example.com/api/json',
+                      jenkins_mock.call_args[0][0].get_full_url())
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info(self, jenkins_mock):
