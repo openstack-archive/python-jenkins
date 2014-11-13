@@ -67,6 +67,16 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(j.auth, b'Basic bm9uYXNjaWk6w6nigqw=')
         self.assertEqual(j.crumb, None)
 
+    def test_constructor_long_user_or_password(self):
+        long_str = 'a' * 60
+        long_str_b64 = 'YWFh' * 20
+
+        j = jenkins.Jenkins('http://example.com', long_str, long_str)
+
+        self.assertNotIn(b"\n", j.auth)
+        self.assertEqual(j.auth.decode(), 'Basic %s' % (
+            long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_config_encodes_job_name(self, jenkins_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
