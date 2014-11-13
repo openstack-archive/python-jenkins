@@ -156,7 +156,8 @@ class JenkinsTest(unittest.TestCase):
             j.jenkins_open(request, add_crumb=False)
         self.assertEqual(
             str(context_manager.exception),
-            'Error in request.Possibly authentication failed [401]')
+            'Error in request. Possibly authentication failed [401]: '
+            'basic auth failed')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
