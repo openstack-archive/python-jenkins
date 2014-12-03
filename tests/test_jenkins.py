@@ -201,7 +201,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=TestJob')
+            'http://example.com/createItem?name="TestJob"')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job__already_exists(self, jenkins_mock):
@@ -246,7 +246,7 @@ class JenkinsTest(unittest.TestCase):
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=TestJob')
+            'http://example.com/createItem?name="TestJob"')
         self.assertEqual(
             str(context_manager.exception),
             'create[TestJob] failed')
@@ -825,7 +825,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/createItem'
-            '?name=TestJob_2&mode=copy&from=TestJob')
+            '?name=TestJob_2&mode=copy&from="TestJob"')
         self.assertTrue(j.job_exists('TestJob_2'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -843,7 +843,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/createItem'
-            '?name=TestJob_2&mode=copy&from=TestJob')
+            '?name=TestJob_2&mode=copy&from="TestJob"')
         self.assertEqual(
             str(context_manager.exception),
             'create[TestJob_2] failed')
@@ -862,7 +862,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/TestJob/doRename?newName=TestJob_2')
+            'http://example.com/job/TestJob/doRename?newName="TestJob_2"')
         self.assertTrue(j.job_exists('TestJob_2'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -879,7 +879,7 @@ class JenkinsTest(unittest.TestCase):
             j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/TestJob/doRename?newName=TestJob_2')
+            'http://example.com/job/TestJob/doRename?newName="TestJob_2"')
         self.assertEqual(
             str(context_manager.exception),
             'rename[TestJob_2] failed')
@@ -1193,7 +1193,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/computer/test_node/' +
-            'toggleOffline?offlineMessage=')
+            'toggleOffline?offlineMessage=""')
 
         expected_node_info = {
             'displayName': 'nodes',
@@ -1252,7 +1252,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/computer/test_node/' +
-            'toggleOffline?offlineMessage=')
+            'toggleOffline?offlineMessage=""')
 
         expected_node_info = {
             'displayName': 'nodes',
