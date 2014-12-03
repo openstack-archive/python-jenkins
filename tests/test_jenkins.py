@@ -201,7 +201,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=TestJob')
+            'http://example.com/createItem?name="TestJob"')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job__already_exists(self, jenkins_mock):
@@ -246,7 +246,7 @@ class JenkinsTest(unittest.TestCase):
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=TestJob')
+            'http://example.com/createItem?name="TestJob"')
         self.assertEqual(
             str(context_manager.exception),
             'create[TestJob] failed')
