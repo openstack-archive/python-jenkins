@@ -72,7 +72,7 @@ DELETE_JOB = 'job/%(name)s/doDelete'
 ENABLE_JOB = 'job/%(name)s/enable'
 DISABLE_JOB = 'job/%(name)s/disable'
 COPY_JOB = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
-RENAME_JOB = 'job/%(name)s/doRename?newName=%(new_name)s'
+RENAME_JOB = 'job/%(from_name)s/doRename?newName=%(to_name)s'
 BUILD_JOB = 'job/%(name)s/build'
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
@@ -160,6 +160,12 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
 
+    def __get_encoded_params__(self, params):
+        for k,v in params.items():
+            if k in ["name", "to_name", "from_name", "msg",]:
+                params[k] = quote(v)
+        return params
+
     def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
         if self.crumb is None:
@@ -182,7 +188,7 @@ class Jenkins(object):
         '''
         try:
             response = self.jenkins_open(Request(
-                self.server + JOB_INFO % locals()))
+                self.server + JOB_INFO % self.__get_encoded_params__(locals())))
             if response:
                 return json.loads(response)
             else:
@@ -204,7 +210,7 @@ class Jenkins(object):
         :returns: Name of job or None
         '''
         response = self.jenkins_open(
-            Request(self.server + JOB_NAME % locals()))
+            Request(self.server + JOB_NAME % self.__get_encoded_params__(locals())))
         if response:
             actual = json.loads(response)['name']
             if actual != name:
@@ -266,7 +272,7 @@ class Jenkins(object):
         '''
         try:
             response = self.jenkins_open(Request(
-                self.server + BUILD_INFO % locals()))
+                self.server + BUILD_INFO % self.__get_encoded_params__(locals())))
             if response:
                 return json.loads(response)
             else:
@@ -424,7 +430,7 @@ class Jenkins(object):
         """
         try:
             plugins_info = json.loads(self.jenkins_open(
-                Request(self.server + PLUGIN_INFO % locals())))
+                Request(self.server + PLUGIN_INFO % self.__get_encoded_params__(locals()))))
             for plugin in plugins_info['plugins']:
                 if plugin['longName'] == name or plugin['shortName'] == name:
                     return plugin
@@ -455,19 +461,19 @@ class Jenkins(object):
         '''
         self.assert_job_exists(from_name)
         self.jenkins_open(Request(
-            self.server + COPY_JOB % locals(), ''))
+            self.server + COPY_JOB % self.__get_encoded_params__(locals()), ''))
         self.assert_job_exists(to_name, 'create[%s] failed')
 
-    def rename_job(self, name, new_name):
+    def rename_job(self, from_name, to_name):
         '''Rename an existing Jenkins job
 
-        :param name: Name of Jenkins job to rename, ``str``
-        :param new_name: New Jenkins job name, ``str``
+        :param from_name: Name of Jenkins job to rename, ``str``
+        :param to_name: New Jenkins job name, ``str``
         '''
-        self.assert_job_exists(name)
+        self.assert_job_exists(from_name)
         self.jenkins_open(Request(
-            self.server + RENAME_JOB % locals(), ''))
-        self.assert_job_exists(new_name, 'rename[%s] failed')
+            self.server + RENAME_JOB % self.__get_encoded_params__(locals()), ''))
+        self.assert_job_exists(to_name, 'rename[%s] failed')
 
     def delete_job(self, name):
         '''Delete Jenkins job permanently.
@@ -476,7 +482,7 @@ class Jenkins(object):
         '''
         self.assert_job_exists(name)
         self.jenkins_open(Request(
-            self.server + DELETE_JOB % locals(), ''))
+            self.server + DELETE_JOB % self.__get_encoded_params__(locals()), ''))
         if self.job_exists(name):
             raise JenkinsException('delete[%s] failed' % (name))
 
@@ -487,7 +493,7 @@ class Jenkins(object):
         '''
         self.assert_job_exists(name)
         self.jenkins_open(Request(
-            self.server + ENABLE_JOB % locals(), ''))
+            self.server + ENABLE_JOB % self.__get_encoded_params__(locals()), ''))
 
     def disable_job(self, name):
         '''Disable Jenkins job.
@@ -498,7 +504,7 @@ class Jenkins(object):
         '''
         self.assert_job_exists(name)
         self.jenkins_open(Request(
-            self.server + DISABLE_JOB % locals(), ''))
+            self.server + DISABLE_JOB % self.__get_encoded_params__(locals()), ''))
 
     def job_exists(self, name):
         '''Check whether a job exists
@@ -532,7 +538,7 @@ class Jenkins(object):
 
         headers = {'Content-Type': 'text/xml'}
         self.jenkins_open(Request(
-            self.server + CREATE_JOB % locals(), config_xml, headers))
+            self.server + CREATE_JOB % self.__get_encoded_params__(locals()), config_xml, headers))
         self.assert_job_exists(name, 'create[%s] failed')
 
     def get_job_config(self, name):
@@ -541,8 +547,7 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :returns: job configuration (XML format)
         '''
-        request = Request(self.server + CONFIG_JOB %
-                          {"name": quote(name)})
+        request = Request(self.server + CONFIG_JOB % self.__get_encoded_params__(locals()))
         return self.jenkins_open(request)
 
     def reconfig_job(self, name, config_xml):
@@ -555,7 +560,7 @@ class Jenkins(object):
         '''
         self.assert_job_exists(name)
         headers = {'Content-Type': 'text/xml'}
-        reconfig_url = self.server + CONFIG_JOB % locals()
+        reconfig_url = self.server + CONFIG_JOB % self.__get_encoded_params__(locals())
         self.jenkins_open(Request(reconfig_url, config_xml, headers))
 
     def build_job_url(self, name, parameters=None, token=None):
@@ -571,13 +576,13 @@ class Jenkins(object):
         if parameters:
             if token:
                 parameters['token'] = token
-            return (self.server + BUILD_WITH_PARAMS_JOB % locals() +
+            return (self.server + BUILD_WITH_PARAMS_JOB % self.__get_encoded_params__(locals()) +
                     '?' + urlencode(parameters))
         elif token:
-            return (self.server + BUILD_JOB % locals() +
+            return (self.server + BUILD_JOB % self.__get_encoded_params__(locals()) +
                     '?' + urlencode({'token': token}))
         else:
-            return self.server + BUILD_JOB % locals()
+            return self.server + BUILD_JOB % self.__get_encoded_params__(locals())
 
     def build_job(self, name, parameters=None, token=None):
         '''Trigger build job.
@@ -596,7 +601,7 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param number: Jenkins build number for the job, ``int``
         '''
-        self.jenkins_open(Request(self.server + STOP_BUILD % locals()))
+        self.jenkins_open(Request(self.server + STOP_BUILD % self.__get_encoded_params__(locals())))
 
     def get_node_info(self, name, depth=0):
         '''Get node information dictionary
@@ -607,7 +612,7 @@ class Jenkins(object):
         '''
         try:
             response = self.jenkins_open(Request(
-                self.server + NODE_INFO % locals()))
+                self.server + NODE_INFO % self.__get_encoded_params__(locals())))
             if response:
                 return json.loads(response)
             else:
@@ -649,7 +654,7 @@ class Jenkins(object):
         '''
         self.get_node_info(name)
         self.jenkins_open(Request(
-            self.server + DELETE_NODE % locals(), ''))
+            self.server + DELETE_NODE % self.__get_encoded_params__(locals()), ''))
         if self.node_exists(name):
             raise JenkinsException('delete[%s] failed' % (name))
 
@@ -663,7 +668,7 @@ class Jenkins(object):
         if info['offline']:
             return
         self.jenkins_open(Request(
-            self.server + TOGGLE_OFFLINE % locals()))
+            self.server + TOGGLE_OFFLINE % self.__get_encoded_params__(locals())))
 
     def enable_node(self, name):
         '''Enable a node
@@ -675,7 +680,7 @@ class Jenkins(object):
             return
         msg = ''
         self.jenkins_open(Request(
-            self.server + TOGGLE_OFFLINE % locals()))
+            self.server + TOGGLE_OFFLINE % self.__get_encoded_params__(locals())))
 
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
@@ -732,7 +737,7 @@ class Jenkins(object):
 
         :param name: Jenkins node name, ``str``
         '''
-        get_config_url = self.server + CONFIG_NODE % locals()
+        get_config_url = self.server + CONFIG_NODE % self.__get_encoded_params__(locals())
         return self.jenkins_open(Request(get_config_url))
 
     def reconfig_node(self, name, config_xml):
@@ -742,7 +747,7 @@ class Jenkins(object):
         :param config_xml: New XML configuration, ``str``
         '''
         headers = {'Content-Type': 'text/xml'}
-        reconfig_url = self.server + CONFIG_NODE % locals()
+        reconfig_url = self.server + CONFIG_NODE % self.__get_encoded_params__(locals())
         self.jenkins_open(Request(reconfig_url, config_xml, headers))
 
     def get_build_console_output(self, name, number):
@@ -754,7 +759,7 @@ class Jenkins(object):
         '''
         try:
             response = self.jenkins_open(Request(
-                self.server + BUILD_CONSOLE_OUTPUT % locals()))
+                self.server + BUILD_CONSOLE_OUTPUT % self.__get_encoded_params__(locals())))
             if response:
                 return response
             else:
