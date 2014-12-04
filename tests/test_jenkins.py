@@ -77,6 +77,14 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(j.auth.decode(), 'Basic %s' % (
             long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
 
+    def test_constructor_default_timeout(self):
+        j = jenkins.Jenkins('http://example.com')
+        self.assertEqual(j.timeout, 120)
+
+    def test_constructor_custom_timeout(self):
+        j = jenkins.Jenkins('http://example.com', timeout=300)
+        self.assertEqual(j.timeout, 300)
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_config_encodes_job_name(self, jenkins_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -178,6 +186,22 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             str(context_manager.exception),
             'Requested item could not be found')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/job/TestJob')
+
+    @patch('jenkins.urlopen')
+    def test_jenkins_open__timeout(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.URLError(
+            reason="timed out")
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test', timeout=1)
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error in request: timed out')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
