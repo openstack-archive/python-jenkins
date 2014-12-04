@@ -59,6 +59,7 @@ LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
+DEFAULT_CONN_TIMEOUT = 120
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
@@ -141,7 +142,7 @@ def auth_headers(username, password):
 
 class Jenkins(object):
 
-    def __init__(self, url, username=None, password=None):
+    def __init__(self, url, username=None, password=None, timeout=DEFAULT_CONN_TIMEOUT):
         '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
@@ -149,6 +150,7 @@ class Jenkins(object):
         :param username: Server username, ``str``
         :param password: Server password, ``str``
         :param url: URL of Jenkins server, ``str``
+        :param timeout: Server connection timeout, ``int``
         '''
         if url[-1] == '/':
             self.server = url
@@ -159,6 +161,7 @@ class Jenkins(object):
         else:
             self.auth = None
         self.crumb = None
+        self.timeout = timeout
 
     def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
@@ -230,7 +233,7 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            return urlopen(req).read()
+            return urlopen(req, self.timeout).read()
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
@@ -352,7 +355,7 @@ class Jenkins(object):
         try:
             request = Request(self.server)
             request.add_header('X-Jenkins', '0.0')
-            response = urlopen(request)
+            response = urlopen(request, self.timeout)
             return response.info().getheader('X-Jenkins')
         except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
