@@ -77,6 +77,14 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(j.auth.decode(), 'Basic %s' % (
             long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
 
+    def test_constructor_default_timeout(self):
+        j = jenkins.Jenkins('http://example.com')
+        self.assertEqual(j.timeout, 120)
+
+    def test_constructor_custom_timeout(self):
+        j = jenkins.Jenkins('http://example.com', timeout=300)
+        self.assertEqual(j.timeout, 300)
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_config_encodes_job_name(self, jenkins_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
