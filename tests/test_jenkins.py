@@ -162,6 +162,26 @@ class JenkinsTest(unittest.TestCase):
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
 
+    @patch('jenkins.urlopen')
+    def test_jenkins_open__404(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob',
+            code=404,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        with self.assertRaises(jenkins.NotFoundException) as context_manager:
+            j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Requested item could not be found')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/job/TestJob')
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_assert_job_exists__job_missing(self, jenkins_mock):
         jenkins_mock.side_effect = [
@@ -995,6 +1015,19 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_cancel_queue(self, jenkins_mock):
+        job_name_to_return = {u'name': 'TestJob'}
+        jenkins_mock.return_value = json.dumps(job_name_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.cancel_queue(52)
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/queue/cancelItem?id=52')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open',
+                  side_effect=jenkins.NotFoundException('not found'))
+    def test_cancel_queue__notfound(self, jenkins_mock):
         job_name_to_return = {u'name': 'TestJob'}
         jenkins_mock.return_value = json.dumps(job_name_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
