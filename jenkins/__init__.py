@@ -668,7 +668,11 @@ class Jenkins(object):
         if info['offline']:
             return
         self.jenkins_open(Request(
+<<<<<<< HEAD
             self.server + TOGGLE_OFFLINE % self._get_encoded_params(locals())))
+=======
+            self.server + TOGGLE_OFFLINE % self.__get_encoded_params__(locals()), ''))
+>>>>>>> 5276e5c... Fix enable_node and disable_node methods
 
     def enable_node(self, name):
         '''Enable a node
@@ -680,7 +684,11 @@ class Jenkins(object):
             return
         msg = ''
         self.jenkins_open(Request(
+<<<<<<< HEAD
             self.server + TOGGLE_OFFLINE % self._get_encoded_params(locals())))
+=======
+            self.server + TOGGLE_OFFLINE % self.__get_encoded_params__(locals()), ''))
+>>>>>>> 5276e5c... Fix enable_node and disable_node methods
 
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
