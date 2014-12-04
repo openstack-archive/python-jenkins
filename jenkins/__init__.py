@@ -59,6 +59,7 @@ LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
+DEFAULT_TIMEOUT = 300
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
@@ -220,7 +221,7 @@ class Jenkins(object):
         for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
-    def jenkins_open(self, req, add_crumb=True):
+    def jenkins_open(self, req, add_crumb=True, timeout=DEFAULT_TIMEOUT):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
         This should only be used to extends the :class:`Jenkins` API.
@@ -230,7 +231,7 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            return urlopen(req).read()
+            return urlopen(req, timeout=timeout).read()
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
@@ -352,7 +353,7 @@ class Jenkins(object):
         try:
             request = Request(self.server)
             request.add_header('X-Jenkins', '0.0')
-            response = urlopen(request)
+            response = urlopen(request, timeout=DEFAULT_TIMEOUT)
             return response.info().getheader('X-Jenkins')
         except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
