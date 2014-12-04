@@ -1003,7 +1003,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/queue/item/52/cancelQueue')
+            u'http://example.com/queue/cancelItem?id=52')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_node_info(self, jenkins_mock):
