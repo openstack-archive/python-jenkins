@@ -128,6 +128,11 @@ class JenkinsException(Exception):
     pass
 
 
+class NotFoundException(JenkinsException):
+    '''A special exception to call out the case of receiving a 404.'''
+    pass
+
+
 def auth_headers(username, password):
     '''Simple implementation of HTTP Basic Authentication.
 
@@ -250,6 +255,8 @@ class Jenkins(object):
                     'Possibly authentication failed [%s]: %s' % (
                         e.code, e.msg)
                 )
+            elif e.code == 404:
+                raise NotFoundException('Requested item could not be found')
             # right now I'm getting 302 infinites on a successful delete
 
     def get_build_info(self, name, number, depth=0):
@@ -307,10 +314,15 @@ class Jenkins(object):
         '''
         # Jenkins returns a 302 from this URL, unless Referer is not set,
         # then you get a 404.
-        self.jenkins_open(
-            Request(
-                self.server + CANCEL_QUEUE % locals(),
-                headers={'Referer': self.server}))
+        try:
+            self.jenkins_open(
+                Request(
+                    self.server + CANCEL_QUEUE % locals(),
+                    headers={'Referer': self.server}))
+        except NotFoundException:
+            # Exception is expected; cancel_queue() is a best-effort
+            # mechanism, so ignore it
+            pass
 
     def get_info(self):
         """Get information on this Master.
