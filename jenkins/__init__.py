@@ -588,7 +588,7 @@ class Jenkins(object):
         '''
         self.assert_job_exists(name, 'no such job[%s]')
         return self.jenkins_open(Request(
-            self.build_job_url(name, parameters, token)))
+            self.build_job_url(name, parameters, token), ""))
 
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
