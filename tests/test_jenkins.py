@@ -193,15 +193,15 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [
             None,
             None,
-            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'Test Job'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.create_job(u'TestJob', config_xml)
+        j.create_job(u'Test Job', config_xml)
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=TestJob')
+            'http://example.com/createItem?name=Test%20Job')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job__already_exists(self, jenkins_mock):
@@ -259,28 +259,28 @@ class JenkinsTest(unittest.TestCase):
                 <description>Foo</description>
             </matrix-project>"""
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'Test Job'}),
             None,
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.reconfig_job(u'TestJob', config_xml)
+        j.reconfig_job(u'Test Job', config_xml)
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
-                         u'http://example.com/job/TestJob/config.xml')
+                         u'http://example.com/job/Test%20Job/config.xml')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'Test Job'}),
             {'foo': 'bar'},
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        build_info = j.build_job(u'TestJob')
+        build_info = j.build_job(u'Test Job')
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
-                         u'http://example.com/job/TestJob/build')
+                         u'http://example.com/job/Test%20Job/build')
         self.assertEqual(build_info, {'foo': 'bar'})
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -333,23 +333,23 @@ class JenkinsTest(unittest.TestCase):
     def test_stop_build(self, jenkins_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.stop_build(u'TestJob', number=52)
+        j.stop_build(u'Test Job', number=52)
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/52/stop')
+            u'http://example.com/job/Test%20Job/52/stop')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output(self, jenkins_mock):
         jenkins_mock.return_value = "build console output..."
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        build_info = j.get_build_console_output(u'TestJob', number=52)
+        build_info = j.get_build_console_output(u'Test Job', number=52)
 
         self.assertEqual(build_info, jenkins_mock.return_value)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/52/consoleText')
+            u'http://example.com/job/Test%20Job/52/consoleText')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__None(self, jenkins_mock):
@@ -400,12 +400,12 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = json.dumps(build_info_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        build_info = j.get_build_info(u'TestJob', number=52)
+        build_info = j.get_build_info(u'Test Job', number=52)
 
         self.assertEqual(build_info, build_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/52/api/json?depth=0')
+            u'http://example.com/job/Test%20Job/52/api/json?depth=0')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info__None(self, jenkins_mock):
@@ -456,12 +456,12 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = json.dumps(job_info_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        job_info = j.get_job_info(u'TestJob')
+        job_info = j.get_job_info(u'Test Job')
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/api/json?depth=0')
+            u'http://example.com/job/Test%20Job/api/json?depth=0')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info__None(self, jenkins_mock):
@@ -521,11 +521,11 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.return_value = json.dumps(job_info_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.debug_job_info(u'TestJob')
+        j.debug_job_info(u'Test Job')
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/api/json?depth=0')
+            u'http://example.com/job/Test%20Job/api/json?depth=0')
 
     @patch('jenkins.urlopen')
     def test_get_version__some_version(self, urlopen_mock):
@@ -813,20 +813,20 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
-            json.dumps({'name': 'TestJob_2'}),
-            json.dumps({'name': 'TestJob_2'}),
-            json.dumps({'name': 'TestJob_2'}),
+            json.dumps({'name': 'Test Job'}),
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.copy_job(u'TestJob', u'TestJob_2')
+        j.copy_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/createItem'
-            '?name=TestJob_2&mode=copy&from=TestJob')
-        self.assertTrue(j.job_exists('TestJob_2'))
+            '?name=Test%20Job_2&mode=copy&from=Test%20Job')
+        self.assertTrue(j.job_exists('Test Job_2'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job__create_failed(self, jenkins_mock):
@@ -851,19 +851,19 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
-            json.dumps({'name': 'TestJob_2'}),
-            json.dumps({'name': 'TestJob_2'}),
-            json.dumps({'name': 'TestJob_2'}),
+            json.dumps({'name': 'Test Job'}),
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.rename_job(u'TestJob', u'TestJob_2')
+        j.rename_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/TestJob/doRename?newName=TestJob_2')
-        self.assertTrue(j.job_exists('TestJob_2'))
+            'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
+        self.assertTrue(j.job_exists('Test Job_2'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job__rename_failed(self, jenkins_mock):
@@ -887,19 +887,19 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'Test Job'}),
             None,
             None,
             None,
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.delete_job(u'TestJob')
+        j.delete_job(u'Test Job')
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/TestJob/doDelete')
-        self.assertFalse(j.job_exists('TestJob'))
+            'http://example.com/job/Test%20Job/doDelete')
+        self.assertFalse(j.job_exists('Test Job'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job__delete_failed(self, jenkins_mock):
@@ -939,31 +939,31 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_disable_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
-            json.dumps({'name': 'TestJob'}),
-            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'Test Job'}),
+            json.dumps({'name': 'Test Job'}),
+            json.dumps({'name': 'Test Job'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.disable_job(u'TestJob')
+        j.disable_job(u'Test Job')
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/TestJob/disable')
-        self.assertTrue(j.job_exists('TestJob'))
+            'http://example.com/job/Test%20Job/disable')
+        self.assertTrue(j.job_exists('Test Job'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name(self, jenkins_mock):
-        job_name_to_return = {u'name': 'TestJob'}
+        job_name_to_return = {u'name': 'Test Job'}
         jenkins_mock.return_value = json.dumps(job_name_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        job_name = j.get_job_name(u'TestJob')
+        job_name = j.get_job_name(u'Test Job')
 
-        self.assertEqual(job_name, 'TestJob')
+        self.assertEqual(job_name, 'Test Job')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/api/json?tree=name')
+            u'http://example.com/job/Test%20Job/api/json?tree=name')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name__None(self, jenkins_mock):
@@ -1016,10 +1016,10 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        self.assertEqual(j.get_node_info('test_node'), node_info)
+        self.assertEqual(j.get_node_info('test node'), node_info)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/api/json?depth=0')
+            'http://example.com/computer/test%20node/api/json?depth=0')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_node_info__invalid_json(self, jenkins_mock):
@@ -1089,12 +1089,12 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.delete_node('test_node')
+        j.delete_node('test node')
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/computer/test_node/doDelete')
-        self.assertFalse(j.node_exists('test_node'))
+            'http://example.com/computer/test%20node/doDelete')
+        self.assertFalse(j.node_exists('test node'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_node__delete_failed(self, jenkins_mock):
@@ -1121,7 +1121,7 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_node(self, jenkins_mock):
         node_info = {
-            'displayName': 'nodes',
+            'displayName': 'test node',
             'totalExecutors': 5,
         }
         jenkins_mock.side_effect = [
@@ -1132,12 +1132,12 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.create_node('test_node', exclusive=True)
+        j.create_node('test node', exclusive=True)
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
             'http://example.com/computer/doCreateItem')
-        self.assertTrue(j.node_exists('test_node'))
+        self.assertTrue(j.node_exists('test node'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_node__node_already_exists(self, jenkins_mock):
@@ -1178,7 +1178,7 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_enable_node(self, jenkins_mock):
         expected_node_info = {
-            'displayName': 'nodes',
+            'displayName': 'test node',
             'totalExecutors': 5,
             'offline': True,
         }
@@ -1188,20 +1188,20 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.enable_node('test_node')
+        j.enable_node('test node')
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/' +
+            'http://example.com/computer/test%20node/' +
             'toggleOffline?offlineMessage=')
 
         expected_node_info = {
-            'displayName': 'nodes',
+            'displayName': 'test node',
             'totalExecutors': 5,
             'offline': False,
         }
         jenkins_mock.side_effect = [json.dumps(expected_node_info)]
-        node_info = j.get_node_info('test_node')
+        node_info = j.get_node_info('test node')
         self.assertEqual(node_info, expected_node_info)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -1237,7 +1237,7 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_disable_node(self, jenkins_mock):
         node_info = {
-            'displayName': 'nodes',
+            'displayName': 'test node',
             'totalExecutors': 5,
             'offline': False,
         }
@@ -1247,20 +1247,20 @@ class JenkinsTest(unittest.TestCase):
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        j.disable_node('test_node')
+        j.disable_node('test node')
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/' +
+            'http://example.com/computer/test%20node/' +
             'toggleOffline?offlineMessage=')
 
         expected_node_info = {
-            'displayName': 'nodes',
+            'displayName': 'test node',
             'totalExecutors': 5,
             'offline': True,
         }
         jenkins_mock.side_effect = [json.dumps(expected_node_info)]
-        node_info = j.get_node_info('test_node')
+        node_info = j.get_node_info('test node')
         self.assertEqual(node_info, expected_node_info)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
