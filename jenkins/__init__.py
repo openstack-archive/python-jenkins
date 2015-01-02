@@ -65,7 +65,7 @@ CRUMB_URL = 'crumbIssuer/api/json'
 JOB_INFO = 'job/%(name)s/api/json?depth=%(depth)s'
 JOB_NAME = 'job/%(name)s/api/json?tree=name'
 Q_INFO = 'queue/api/json?depth=0'
-CANCEL_QUEUE = 'queue/item/%(number)s/cancelQueue'
+CANCEL_QUEUE = 'queue/cancelItem?id=%(id)s'
 CREATE_JOB = 'createItem?name=%(name)s'  # also post config.xml
 CONFIG_JOB = 'job/%(name)s/config.xml'
 DELETE_JOB = 'job/%(name)s/doDelete'
@@ -300,17 +300,16 @@ class Jenkins(object):
             Request(self.server + Q_INFO)
         ))['items']
 
-    def cancel_queue(self, number):
+    def cancel_queue(self, id):
         '''Cancel a queued build.
 
-        :param number: Jenkins queue number for the build, ``int``
+        :param id: Jenkins job id number for the build, ``int``
         '''
-        # Jenkins returns a 302 from this URL, unless Referer is not set,
-        # then you get a 404.
+        # Jenkins seems to always return a 404 when using this REST endpoint
+        # https://issues.jenkins-ci.org/browse/JENKINS-21311
         self.jenkins_open(
-            Request(
-                self.server + CANCEL_QUEUE % locals(),
-                headers={'Referer': self.server}))
+            Request(self.server + CANCEL_QUEUE % locals(), '',
+                    headers={'Referer': self.server}))
 
     def get_info(self):
         """Get information on this Master.
