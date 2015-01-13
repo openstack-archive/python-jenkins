@@ -88,7 +88,7 @@ class JenkinsTest(unittest.TestCase):
 
     @patch('jenkins.urlopen')
     def test_maybe_add_crumb(self, jenkins_mock):
-        jenkins_mock.return_value = get_mock_urlopen_return_value()
+        jenkins_mock.side_effect = jenkins.NotFoundException()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         request = jenkins.Request('http://example.com/job/TestJob')
 
@@ -162,11 +162,29 @@ class JenkinsTest(unittest.TestCase):
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
 
+    @patch('jenkins.urlopen')
+    def test_jenkins_open__404(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob',
+            code=404,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        with self.assertRaises(jenkins.NotFoundException) as context_manager:
+            j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Requested item could not be found')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/job/TestJob')
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_assert_job_exists__job_missing(self, jenkins_mock):
-        jenkins_mock.side_effect = [
-            None,
-        ]
+        jenkins_mock.side_effect = jenkins.NotFoundException()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
@@ -191,7 +209,7 @@ class JenkinsTest(unittest.TestCase):
                 <description>Foo</description>
             </matrix-project>"""
         jenkins_mock.side_effect = [
-            None,
+            jenkins.NotFoundException(),
             None,
             json.dumps({'name': 'Test Job'}),
         ]
@@ -233,9 +251,9 @@ class JenkinsTest(unittest.TestCase):
                 <description>Foo</description>
             </matrix-project>"""
         jenkins_mock.side_effect = [
+            jenkins.NotFoundException(),
             None,
-            None,
-            None,
+            jenkins.NotFoundException(),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -317,7 +335,7 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__job_doesnt_exist(self, jenkins_mock):
-        jenkins_mock.side_effect = [None]
+        jenkins_mock.side_effect = jenkins.NotFoundException()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
@@ -833,8 +851,7 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             None,
-            None,
-            None,
+            jenkins.NotFoundException(),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -870,8 +887,7 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             None,
-            None,
-            None,
+            jenkins.NotFoundException(),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -889,8 +905,7 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'Test Job'}),
             None,
-            None,
-            None,
+            jenkins.NotFoundException(),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -899,7 +914,6 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
             'http://example.com/job/Test%20Job/doDelete')
-        self.assertFalse(j.job_exists('Test Job'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job__delete_failed(self, jenkins_mock):
@@ -967,7 +981,7 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name__None(self, jenkins_mock):
-        jenkins_mock.return_value = None
+        jenkins_mock.side_effect = jenkins.NotFoundException()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         job_name = j.get_job_name(u'TestJob')
@@ -995,6 +1009,19 @@ class JenkinsTest(unittest.TestCase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_cancel_queue(self, jenkins_mock):
+        job_name_to_return = {u'name': 'TestJob'}
+        jenkins_mock.return_value = json.dumps(job_name_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.cancel_queue(52)
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/queue/cancelItem?id=52')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open',
+                  side_effect=jenkins.NotFoundException('not found'))
+    def test_cancel_queue__notfound(self, jenkins_mock):
         job_name_to_return = {u'name': 'TestJob'}
         jenkins_mock.return_value = json.dumps(job_name_to_return)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
