@@ -128,6 +128,11 @@ class JenkinsException(Exception):
     pass
 
 
+class NotFoundException(JenkinsException):
+    '''A special exception to call out the case of receiving a 404.'''
+    pass
+
+
 def auth_headers(username, password):
     '''Simple implementation of HTTP Basic Authentication.
 
@@ -169,13 +174,14 @@ class Jenkins(object):
     def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
         if self.crumb is None:
-            response = self.jenkins_open(Request(
-                self.server + CRUMB_URL), add_crumb=False)
-            if response:
-                self.crumb = json.loads(response.decode('utf-8'))
-            else:
+            try:
+                response = self.jenkins_open(Request(
+                    self.server + CRUMB_URL), add_crumb=False)
+            except NotFoundException:
                 # Don't need crumbs
                 self.crumb = False
+            else:
+                self.crumb = json.loads(response.decode('utf-8'))
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
@@ -209,17 +215,19 @@ class Jenkins(object):
         :param name: Job name, ``str``
         :returns: Name of job or None
         '''
-        response = self.jenkins_open(
-            Request(self.server + JOB_NAME % self._get_encoded_params(locals())))
-        if response:
+        try:
+            response = self.jenkins_open(
+                Request(self.server + JOB_NAME %
+                        self._get_encoded_params(locals())))
+        except NotFoundException:
+            return None
+        else:
             actual = json.loads(response)['name']
             if actual != name:
                 raise JenkinsException(
                     'Jenkins returned an unexpected job name %s '
                     '(expected: %s)' % (actual, name))
             return actual
-        else:
-            return None
 
     def debug_job_info(self, job_name):
         '''Print out job info in more readable format.'''
@@ -250,6 +258,8 @@ class Jenkins(object):
                     'Possibly authentication failed [%s]: %s' % (
                         e.code, e.msg)
                 )
+            elif e.code == 404:
+                raise NotFoundException('Requested item could not be found')
             # right now I'm getting 302 infinites on a successful delete
 
     def get_build_info(self, name, number, depth=0):
@@ -307,9 +317,14 @@ class Jenkins(object):
         '''
         # Jenkins seems to always return a 404 when using this REST endpoint
         # https://issues.jenkins-ci.org/browse/JENKINS-21311
-        self.jenkins_open(
-            Request(self.server + CANCEL_QUEUE % locals(), '',
-                    headers={'Referer': self.server}))
+        try:
+            self.jenkins_open(
+                Request(self.server + CANCEL_QUEUE % locals(), '',
+                        headers={'Referer': self.server}))
+        except NotFoundException:
+            # Exception is expected; cancel_queue() is a best-effort
+            # mechanism, so ignore it
+            pass
 
     def get_info(self):
         """Get information on this Master.
