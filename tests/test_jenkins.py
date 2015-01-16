@@ -290,7 +290,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'Test Job'}),
             {'foo': 'bar'},
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -304,7 +303,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__with_token(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
             {'foo': 'bar'},
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -318,7 +316,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__with_parameters_and_token(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
             {'foo': 'bar'},
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -332,20 +329,6 @@ class JenkinsTest(unittest.TestCase):
         self.assertTrue('when=now' in jenkins_mock.call_args[0][0].get_full_url())
         self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].get_full_url())
         self.assertEqual(build_info, {'foo': 'bar'})
-
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_build_job__job_doesnt_exist(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.NotFoundException()
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
-            j.build_job(u'TestJob')
-        self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/TestJob/api/json?tree=name')
-        self.assertEqual(
-            str(context_manager.exception),
-            'no such job[TestJob]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_stop_build(self, jenkins_mock):
@@ -831,7 +814,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'Test Job'}),
             json.dumps({'name': 'Test Job_2'}),
             json.dumps({'name': 'Test Job_2'}),
             json.dumps({'name': 'Test Job_2'}),
@@ -841,7 +823,7 @@ class JenkinsTest(unittest.TestCase):
         j.copy_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/createItem'
             '?name=Test%20Job_2&mode=copy&from=Test%20Job')
         self.assertTrue(j.job_exists('Test Job_2'))
@@ -849,7 +831,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job__create_failed(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
             None,
             jenkins.NotFoundException(),
         ]
@@ -858,7 +839,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.copy_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/createItem'
             '?name=TestJob_2&mode=copy&from=TestJob')
         self.assertEqual(
@@ -868,7 +849,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'Test Job'}),
             json.dumps({'name': 'Test Job_2'}),
             json.dumps({'name': 'Test Job_2'}),
             json.dumps({'name': 'Test Job_2'}),
@@ -878,14 +858,13 @@ class JenkinsTest(unittest.TestCase):
         j.rename_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
         self.assertTrue(j.job_exists('Test Job_2'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job__rename_failed(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
             None,
             jenkins.NotFoundException(),
         ]
@@ -894,7 +873,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/doRename?newName=TestJob_2')
         self.assertEqual(
             str(context_manager.exception),
@@ -903,7 +882,6 @@ class JenkinsTest(unittest.TestCase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'Test Job'}),
             None,
             jenkins.NotFoundException(),
         ]
@@ -912,13 +890,12 @@ class JenkinsTest(unittest.TestCase):
         j.delete_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/Test%20Job/doDelete')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job__delete_failed(self, jenkins_mock):
         jenkins_mock.side_effect = [
-            json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
@@ -928,7 +905,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_job(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -939,14 +916,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
             json.dumps({'name': 'TestJob'}),
-            json.dumps({'name': 'TestJob'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         j.enable_job(u'TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/enable')
         self.assertTrue(j.job_exists('TestJob'))
 
@@ -955,14 +931,13 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'Test Job'}),
             json.dumps({'name': 'Test Job'}),
-            json.dumps({'name': 'Test Job'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         j.disable_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/Test%20Job/disable')
         self.assertTrue(j.job_exists('Test Job'))
 

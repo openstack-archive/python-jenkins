@@ -473,7 +473,6 @@ class Jenkins(object):
         :param from_name: Name of Jenkins job to copy from, ``str``
         :param to_name: Name of Jenkins job to copy to, ``str``
         '''
-        self.assert_job_exists(from_name)
         self.jenkins_open(Request(
             self.server + COPY_JOB % self._get_encoded_params(locals()), ''))
         self.assert_job_exists(to_name, 'create[%s] failed')
@@ -484,7 +483,6 @@ class Jenkins(object):
         :param from_name: Name of Jenkins job to rename, ``str``
         :param to_name: New Jenkins job name, ``str``
         '''
-        self.assert_job_exists(from_name)
         self.jenkins_open(Request(
             self.server + RENAME_JOB % self._get_encoded_params(locals()), ''))
         self.assert_job_exists(to_name, 'rename[%s] failed')
@@ -494,7 +492,6 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + DELETE_JOB % self._get_encoded_params(locals()), ''))
         if self.job_exists(name):
@@ -505,7 +502,6 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + ENABLE_JOB % self._get_encoded_params(locals()), ''))
 
@@ -516,7 +512,6 @@ class Jenkins(object):
 
         :param name: Name of Jenkins job, ``str``
         '''
-        self.assert_job_exists(name)
         self.jenkins_open(Request(
             self.server + DISABLE_JOB % self._get_encoded_params(locals()), ''))
 
@@ -572,7 +567,6 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
-        self.assert_job_exists(name)
         headers = {'Content-Type': 'text/xml'}
         reconfig_url = self.server + CONFIG_JOB % self._get_encoded_params(locals())
         self.jenkins_open(Request(reconfig_url, config_xml, headers))
@@ -605,7 +599,6 @@ class Jenkins(object):
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
         '''
-        self.assert_job_exists(name, 'no such job[%s]')
         return self.jenkins_open(Request(
             self.build_job_url(name, parameters, token), ""))
 
