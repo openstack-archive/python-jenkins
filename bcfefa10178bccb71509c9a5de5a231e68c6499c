@@ -1,0 +1,10 @@
+Verified+2: Jenkins
+Code-Review+2: Darragh Bailey <daragh.bailey@gmail.com>
+Workflow+1: Darragh Bailey <daragh.bailey@gmail.com>
+Code-Review+1: Ricardo Carrillo Cruz <ricardo.carrillo.cruz@gmail.com>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Fri, 16 Jan 2015 18:44:19 +0000
+Reviewed-on: https://review.openstack.org/145598
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
