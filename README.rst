@@ -1,10 +1,14 @@
-==============
-Python Jenkins
-==============
+======
+README
+======
 
-Python Jenkins is a python library that wraps the Jenkins REST interface.
-We like to use it to automate our Jenkins servers. Here are some of the
-things you can use it for:
+Python Jenkins is a python wrapper for the `Jenkins <http://jenkins-ci.org/>`_
+REST API which aims to provide a more conventionally pythonic way of controlling
+a Jenkins server.  It provides a higher-level API containing a number of
+convenience functions.
+
+We like to use python-jenkins to automate our Jenkins servers. Here are some of
+the things you can use it for:
 
 * Create new jobs
 * Copy existing jobs
@@ -33,9 +37,13 @@ Bug report:
 
 * https://bugs.launchpad.net/python-jenkins
 
+Repository:
+
+* https://git.openstack.org/cgit/stackforge/python-jenkins
+
 Cloning:
 
-* https://git.openstack.org/stackforge/python-jenkins
+* git clone https://git.openstack.org/stackforge/python-jenkins
 
 Patches are submitted via Gerrit at:
 

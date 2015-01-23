@@ -1,19 +1,15 @@
-Welcome to Python Jenkins's documentation!
-==========================================
+Python Jenkins
+==============
 
-Python Jenkins is a library for the remote API of the `Jenkins
-<http://jenkins-ci.org/>`_ continuous integration server. It is useful
-for creating and managing jobs as well as build nodes.
+.. include:: ../../README.rst
 
-Table of content:
-
+Contents
+========
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
     :glob:
 
     *
-
-Python Jenkins development is hosted on Launchpad: https://launchpad.net/python-jenkins
 
 Indices and tables
 ==================
