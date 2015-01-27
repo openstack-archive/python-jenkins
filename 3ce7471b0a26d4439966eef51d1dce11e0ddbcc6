@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+1: Elizabeth K. Joseph <lyz@princessleia.com>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Workflow+1: Khai Do <zaro0508@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Tue, 27 Jan 2015 21:04:55 +0000
+Reviewed-on: https://review.openstack.org/149694
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
