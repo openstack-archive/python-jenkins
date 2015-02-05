@@ -353,8 +353,11 @@ class Jenkins(object):
 
         """
         try:
-            return json.loads(self.jenkins_open(
-                Request(self.server + INFO)))
+            out = self.jenkins_open(Request(self.server + INFO))
+            if out is None:
+                raise JenkinsException("Error communicating with server[%s]"
+                                       % self.server)
+            return json.loads(out)
         except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
                                    % self.server)

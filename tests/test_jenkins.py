@@ -851,6 +851,20 @@ class JenkinsTest(unittest.TestCase):
             'Could not parse JSON info for server[http://example.com/]')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_info__empty_response(self, jenkins_mock):
+        jenkins_mock.return_value = None
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_info()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/api/json')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'Test Job_2'}),
