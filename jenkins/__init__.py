@@ -135,6 +135,11 @@ class NotFoundException(JenkinsException):
     pass
 
 
+class EmptyResponseException(JenkinsException):
+    '''A special exception to call out the case receiving an empty response.'''
+    pass
+
+
 def auth_headers(username, password):
     '''Simple implementation of HTTP Basic Authentication.
 
@@ -249,6 +254,10 @@ class Jenkins(object):
             if add_crumb:
                 self.maybe_add_crumb(req)
             response = urlopen(req, timeout=self.timeout).read()
+            if response is None:
+                raise EmptyResponseException(
+                    "Error communicating with server[%s]: "
+                    "empty response" % self.server)
             return response
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
@@ -379,6 +388,10 @@ class Jenkins(object):
             request = Request(self.server)
             request.add_header('X-Jenkins', '0.0')
             response = urlopen(request, timeout=self.timeout)
+            if response is None:
+                raise EmptyResponseException(
+                    "Error communicating with server[%s]: "
+                    "empty response" % self.server)
             return response.info().getheader('X-Jenkins')
         except HTTPError:
             raise JenkinsException("Error communicating with server[%s]"
