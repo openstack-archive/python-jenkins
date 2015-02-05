@@ -186,11 +186,9 @@ class Jenkins(object):
             try:
                 response = self.jenkins_open(Request(
                     self.server + CRUMB_URL), add_crumb=False)
-            except NotFoundException:
-                # Don't need crumbs
-                self.crumb = False
-            else:
                 self.crumb = json.loads(response.decode('utf-8'))
+            except (NotFoundException, EmptyResponseException):
+                self.crumb = False
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
