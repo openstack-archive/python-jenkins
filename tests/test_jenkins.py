@@ -191,6 +191,25 @@ class JenkinsTest(unittest.TestCase):
             'http://example.com/job/TestJob')
 
     @patch('jenkins.urlopen')
+    def test_jenkins_open__empty_response(self, jenkins_mock):
+        class RetNone(object):
+            def read(self): return None
+        jenkins_mock.return_value = RetNone()
+
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.jenkins_open(request, False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]: '
+            'empty response')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/job/TestJob')
+
+    @patch('jenkins.urlopen')
     def test_jenkins_open__timeout(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.URLError(
             reason="timed out")
@@ -834,6 +853,23 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_info__empty_response(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.JenkinsException(
+            "Error communicating with server[http://example.com/]: "
+            "empty response")
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_info()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/api/json')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]: '
+            'empty response')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job(self, jenkins_mock):

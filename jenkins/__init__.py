@@ -249,6 +249,9 @@ class Jenkins(object):
             if add_crumb:
                 self.maybe_add_crumb(req)
             response = urlopen(req, timeout=self.timeout).read()
+            if response is None:
+                raise JenkinsException("Error communicating with server[%s]: "
+                                       "empty response" % self.server)
             return response
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
