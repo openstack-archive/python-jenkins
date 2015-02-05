@@ -126,6 +126,21 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(j.crumb, crumb_data)
         self.assertEqual(request.headers['.crumb'], crumb_data['crumb'])
 
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_maybe_add_crumb__empty_response(self, jenkins_mock):
+        "Don't try to create crumb header from an empty response"
+        jenkins_mock.side_effect = jenkins.JenkinsException("empty response")
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        j.maybe_add_crumb(request)
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/crumbIssuer/api/json')
+        self.assertFalse(j.crumb)
+        self.assertFalse('.crumb' in request.headers)
+
     @patch('jenkins.urlopen')
     def test_jenkins_open(self, jenkins_mock):
         crumb_data = {
