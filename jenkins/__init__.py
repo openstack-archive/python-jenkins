@@ -185,7 +185,10 @@ class Jenkins(object):
                 # Don't need crumbs
                 self.crumb = False
             else:
-                self.crumb = json.loads(response.decode('utf-8'))
+                if response is None:
+                    self.crumb = False
+                else:
+                    self.crumb = json.loads(response.decode('utf-8'))
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
