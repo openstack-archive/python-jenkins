@@ -49,6 +49,7 @@ import base64
 import json
 
 import six
+import socket
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
@@ -60,7 +61,7 @@ LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
-DEFAULT_CONN_TIMEOUT = 120
+DEFAULT_CONN_TIMEOUT = socket._GLOBAL_DEFAULT_TIMEOUT
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
