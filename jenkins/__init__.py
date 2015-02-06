@@ -60,7 +60,7 @@ LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
-DEFAULT_CONN_TIMEOUT = 120
+DEFAULT_CONN_TIMEOUT = 15
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
