@@ -54,13 +54,14 @@ from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode
 from six.moves.urllib.request import Request, urlopen
+import socket
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
-DEFAULT_CONN_TIMEOUT = 120
+DEFAULT_CONN_TIMEOUT = socket._GLOBAL_DEFAULT_TIMEOUT
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'

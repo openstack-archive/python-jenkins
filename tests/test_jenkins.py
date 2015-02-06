@@ -1,4 +1,5 @@
 import json
+import socket
 import sys
 if sys.version_info < (2, 7):
     import unittest2 as unittest
@@ -79,7 +80,7 @@ class JenkinsTest(unittest.TestCase):
 
     def test_constructor_default_timeout(self):
         j = jenkins.Jenkins('http://example.com')
-        self.assertEqual(j.timeout, 120)
+        self.assertEqual(j.timeout, socket._GLOBAL_DEFAULT_TIMEOUT)
 
     def test_constructor_custom_timeout(self):
         j = jenkins.Jenkins('http://example.com', timeout=300)
