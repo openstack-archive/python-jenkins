@@ -7,6 +7,7 @@ else:
 
 from mock import patch, Mock
 import six
+from six.moves.urllib.error import HTTPError
 
 from tests.helper import jenkins
 
@@ -218,6 +219,27 @@ class JenkinsTest(unittest.TestCase):
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]: '
             'empty response')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/job/TestJob')
+
+    @patch('jenkins.urlopen')
+    def test_jenkins_open__501(self, jenkins_mock):
+        """Test an arbitrary unhandled HTTP error code"""
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob',
+            code=501,
+            msg="Not implemented",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        request = jenkins.Request('http://example.com/job/TestJob')
+
+        with self.assertRaises(HTTPError) as context_manager:
+            j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'HTTP Error 501: Not implemented')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
