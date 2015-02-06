@@ -273,6 +273,8 @@ class Jenkins(object):
                 )
             elif e.code == 404:
                 raise NotFoundException('Requested item could not be found')
+            else:
+                raise
         except URLError as e:
             raise JenkinsException('Error in request: %s' % (e.reason))
 
