@@ -276,7 +276,7 @@ class Jenkins(object):
             else:
                 raise
         except URLError as e:
-                raise JenkinsException('Error in request: %s' % (e.reason))
+            raise JenkinsException('Error in request: %s' % (e.reason))
 
     def get_build_info(self, name, number, depth=0):
         '''Get build information dictionary.
