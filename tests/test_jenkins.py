@@ -79,7 +79,7 @@ class JenkinsTest(unittest.TestCase):
 
     def test_constructor_default_timeout(self):
         j = jenkins.Jenkins('http://example.com')
-        self.assertEqual(j.timeout, 120)
+        self.assertEqual(j.timeout, 15)
 
     def test_constructor_custom_timeout(self):
         j = jenkins.Jenkins('http://example.com', timeout=300)
