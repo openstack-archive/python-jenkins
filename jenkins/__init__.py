@@ -49,12 +49,15 @@ import base64
 import json
 import socket
 
+import multi_key_dict
 import six
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode
 from six.moves.urllib.request import Request, urlopen
+
+from jenkins import plugins
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
@@ -179,6 +182,7 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
         self.timeout = timeout
+        self._plugins = None
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -459,18 +463,28 @@ class Jenkins(object):
             u'gearman-plugin', u'bundled': False}
 
         """
-        try:
-            plugins_info = json.loads(self.jenkins_open(
-                Request(self.server + PLUGIN_INFO % self._get_encoded_params(locals()))))
-            for plugin in plugins_info['plugins']:
-                if plugin['longName'] == name or plugin['shortName'] == name:
-                    return plugin
-        except (HTTPError, BadStatusLine):
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
-        except ValueError:
-            raise JenkinsException("Could not parse JSON info for server[%s]"
-                                   % self.server)
+        self.plugins = self.get_plugins_info(depth)
+        return self.plugins.get(name, None)
+
+    @property
+    def plugins(self):
+        '''Lazy load property for interfacing with plugins.'''
+
+        if not self._plugins:
+            self.plugins = self.get_plugins_info()
+
+        return self._plugins
+
+    @plugins.setter
+    def plugins(self, plugin_info):
+        self._plugins = multi_key_dict.multi_key_dict()
+        for plugin_data in plugin_info:
+            self._plugins[
+                str(plugin_data['shortName']),
+                str(plugin_data['longName'])] = plugins.Plugin(**plugin_data)
+
+    def plugin(self, name):
+        return self.plugins[name]
 
     def get_jobs(self):
         """Get list of jobs running.
