@@ -50,12 +50,15 @@ import json
 import re
 import socket
 
+import multi_key_dict
 import six
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode
 from six.moves.urllib.request import Request, urlopen
+
+from jenkins import plugins
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
@@ -430,7 +433,7 @@ class Jenkins(object):
         """Get all installed plugins information on this Master.
 
         This method retrieves information about each plugin that is installed
-        on master.
+        on master returning the raw plugin data in a JSON format.
 
         :param depth: JSON depth, ``int``
         :returns: info on all plugins ``[dict]``
@@ -463,7 +466,8 @@ class Jenkins(object):
     def get_plugin_info(self, name, depth=2):
         """Get an installed plugin information on this Master.
 
-        This method retrieves information about a speicifc plugin.
+        This method retrieves information about a specific plugin and returns
+        the raw plugin data in a JSON format.
         The passed in plugin name (short or long) must be an exact match.
 
         :param name: Name (short or long) of plugin, ``str``
@@ -496,6 +500,20 @@ class Jenkins(object):
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
+
+    def get_plugins(self):
+        """Return plugins info using helper class for version comparison
+
+        This method retrieves information about all the installed plugins and
+        uses a Plugin helper class to simplify version comparison. Also uses
+        a multi key dict to allow retrieval via either short or long names.
+        """
+        plugins_info = multi_key_dict.multi_key_dict()
+        for plugin_data in self.get_plugins_info():
+            keys = (str(plugin_data['shortName']), str(plugin_data['longName']))
+            plugins_info[keys] = plugins.Plugin(**plugin_data)
+
+        return plugins_info
 
     def get_jobs(self):
         """Get list of jobs running.

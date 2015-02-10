@@ -6,3 +6,5 @@ unittest2
 python-subunit
 sphinx>=1.1.2,<1.2
 testrepository
+testscenarios
+testtools

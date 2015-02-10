@@ -44,6 +44,14 @@ class JenkinsTest(unittest.TestCase):
         ]
     }
 
+    updated_plugin_info_json = {
+        u"plugins":
+        [
+            dict(plugin_info_json[u"plugins"][0],
+                 **{u"version": u"1.6"})
+        ]
+    }
+
     def setUp(self):
         super(JenkinsTest, self).setUp()
         self.opener = build_opener()
@@ -895,6 +903,28 @@ class JenkinsTest(unittest.TestCase):
         plugin_info = j.get_plugin_info("Jenkins Mailer Plugin")
         self.assertEqual(plugin_info, self.plugin_info_json['plugins'][0])
         self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_plugin_info_updated(self, jenkins_mock):
+
+        jenkins_mock.side_effect = [
+            json.dumps(self.plugin_info_json),
+            json.dumps(self.updated_plugin_info_json)
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        plugins = j.get_plugins()
+        self.assertEqual(plugins["mailer"]["version"],
+                         self.plugin_info_json['plugins'][0]["version"])
+
+        self.assertNotEqual(
+            plugins["mailer"]["version"],
+            self.updated_plugin_info_json['plugins'][0]["version"])
+
+        plugins = j.get_plugins()
+        self.assertEqual(
+            plugins["mailer"]["version"],
+            self.updated_plugin_info_json['plugins'][0]["version"])
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_plugin_info_none(self, jenkins_mock):

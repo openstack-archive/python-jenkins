@@ -1,2 +1,3 @@
 six
 pbr>=0.8.2,<2.0
+multi_key_dict
