@@ -724,6 +724,18 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(plugin_info, self.plugin_info_json['plugins'][0])
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_plugin_version_comparison(self, jenkins_mock):
+
+        jenkins_mock.return_value = json.dumps(self.plugin_info_json)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        # expected to return info on a single plugin
+        plugin_info = j.get_plugin_info("Jenkins Mailer Plugin")
+        self.assertTrue(plugin_info['version'] < "1.6")
+        self.assertTrue(plugin_info['version'] == "1.5.0")
+        self.assertTrue(plugin_info['version'] > "1.5-SNAPSHOT")
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_plugin_info_none(self, jenkins_mock):
 
         jenkins_mock.return_value = json.dumps(self.plugin_info_json)
