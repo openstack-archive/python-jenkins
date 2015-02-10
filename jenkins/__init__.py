@@ -49,12 +49,15 @@ import base64
 import json
 import socket
 
+import multi_key_dict
 import six
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode
 from six.moves.urllib.request import Request, urlopen
+
+from jenkins import plugins
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
@@ -179,6 +182,7 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
         self.timeout = timeout
+        self._plugins = None
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -405,7 +409,7 @@ class Jenkins(object):
         """Get all installed plugins information on this Master.
 
         This method retrieves information about each plugin that is installed
-        on master.
+        on master returning the raw plugin data in a JSON format.
 
         :param depth: JSON depth, ``int``
         :returns: info on all plugins ``[dict]``
@@ -438,7 +442,8 @@ class Jenkins(object):
     def get_plugin_info(self, name, depth=2):
         """Get an installed plugin information on this Master.
 
-        This method retrieves information about a speicifc plugin.
+        This method retrieves information about a specific plugin and returns
+        the raw plugin data in a JSON format.
         The passed in plugin name (short or long) must be an exact match.
 
         :param name: Name (short or long) of plugin, ``str``
@@ -471,6 +476,32 @@ class Jenkins(object):
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
+
+    def refresh_plugins_info(self):
+        """Refresh the cached information on installed plugins in this Master.
+
+        This method retrieves information about all the installed plugins and
+        updates the attribute `plugins` with the parsed data.
+        """
+        self._plugins = multi_key_dict.multi_key_dict()
+        for plugin_data in self.get_plugins_info():
+            self._plugins[
+                str(plugin_data['shortName']),
+                str(plugin_data['longName'])] = plugins.Plugin(**plugin_data)
+
+    @property
+    def plugins(self):
+        """Lazy load property for interfacing with plugins
+
+        By default this will only ever return the cached information from the
+        first query of the plugins information. To force a refresh call the
+        `refresh_plugins_info` method to update.
+        """
+
+        if not self._plugins:
+            self.refresh_plugins_info()
+
+        return self._plugins
 
     def get_jobs(self):
         """Get list of jobs running.

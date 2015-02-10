@@ -7,3 +7,8 @@ API reference
     :members:
     :noindex:
     :undoc-members:
+
+.. automodule:: jenkins.plugins
+    :members:
+    :noindex:
+    :undoc-members:
