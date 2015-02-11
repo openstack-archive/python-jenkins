@@ -235,3 +235,34 @@ where *prom_name* is the name of the promotion that will get added to the job.
     print server.get_promotion_config('prom_name', 'prom_job')
 
     server.delete_promotion('prom_name', 'prom_job')
+
+
+Example 10: Waiting for Jenkins to be ready
+-------------------------------------------
+
+It is possible to ask the API to wait for Jenkins to be ready with a given
+timeout. This can be used to aid launching of Jenkins and then waiting for the
+REST API to be responsive before containing with subsequent configuration.
+
+::
+    # timeout here is the socket connection timeout, for each connection
+    # attempt it will wait at most 5 seconds before assuming there is
+    # nothing listening. Useful where firewalls may backhole connections.
+    server = jenkins.Jenkins('http://localhost:8080', timeout=5)
+
+    # wait for at least 30 seconds for Jenkins to be ready
+    if server.wait_for_normal_op(30):
+        # actions once running
+        ...
+    else:
+        print("Jenkins failed to be ready in sufficient time")
+        exit 2
+
+Note that the timeout arg to `jenkins.Jenkins()` is the socket connection
+timeout. If you set this to be more than the timeout value passed to
+`wait_for_normal_op()`, then in cases were the underlying connection is not
+rejected (firewall black-hole, or slow connection) then `wait_for_normal_op()`
+may wait at least the connection timeout, or a multiple of it where multiple
+connection attempts are made. A connection timeout of 5 seconds and a wait
+timeout of 8 will result in potentially waiting 10 seconds if both connections
+attempts do not get responses.
