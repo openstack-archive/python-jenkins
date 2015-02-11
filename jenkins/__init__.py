@@ -252,6 +252,7 @@ def auth_headers(username, password):
 
 
 class Jenkins(object):
+    _timeout_warning_issued = False
 
     def __init__(self, url, username=None, password=None,
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
@@ -1642,3 +1643,61 @@ class Jenkins(object):
         info = self.get_info()
         if not info['quietingDown']:
             raise JenkinsException('quiet down failed')
+
+    def wait_for_normal_op(self, timeout):
+        '''Wait for jenkins to enter normal operation mode.
+
+        :param timeout: number of seconds to wait, ``int``
+            Note this is not the same as the connection timeout set via
+            __init__ as that controls the socket timeout. Instead this is
+            how long to wait until the status returned.
+        :returns: ``True`` if Jenkins became ready in time, ``False``
+                   otherwise.
+
+        Setting timeout to be less than the configured connection timeout
+        may result in this waiting for at least the connection timeout
+        length of time before returning. It is recommended that the timeout
+        here should be at least as long as any set connection timeout.
+        '''
+        if timeout < 0:
+            raise ValueError("Timeout must be >= 0 not %d" % timeout)
+
+        if (not self._timeout_warning_issued and
+                self.timeout != socket._GLOBAL_DEFAULT_TIMEOUT and
+                timeout < self.timeout):
+            warnings.warn("Requested timeout to wait for jenkins to resume "
+                          "normal operations is less than configured "
+                          "connection timeout. Unexpected behaviour may "
+                          "occur.")
+            self._timeout_warning_issued = True
+
+        start_time = time.time()
+
+        def is_ready():
+            # only call get_version until it returns without exception
+            while True:
+                if self.get_version():
+                    while True:
+                        # json API will only return valid info once Jenkins
+                        # is ready, so just check any known field exists
+                        # when not in normal mode, most requests will
+                        # be ignored or fail
+                        yield 'mode' in self.get_info()
+                else:
+                    yield False
+
+        while True:
+            try:
+                if next(is_ready()):
+                    return True
+            except (KeyError, JenkinsException):
+                # key missing from JSON, empty response or errors in
+                # get_info due to incomplete HTTP responses
+                pass
+            # check time passed as the communication will also
+            # take time
+            if time.time() > start_time + timeout:
+                break
+            time.sleep(1)
+
+        return False
