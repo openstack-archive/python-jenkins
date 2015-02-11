@@ -47,6 +47,8 @@ See examples at :doc:`example`
 
 import base64
 import json
+import socket
+import time
 
 import six
 from six.moves.http_client import BadStatusLine
@@ -800,3 +802,34 @@ class Jenkins(object):
         except HTTPError:
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
+
+    def wait_for_normal_op(self, timeout):
+        """
+        Wait for jenkins to enter normal operation mode.
+
+        :param timeout: number of seconds to wait, ``int``
+        :returns: ``True`` if Jenkins became ready in time, ``False``
+                   otherwise.
+        """
+        if timeout < 0:
+            raise ValueError("Timeout must be >= 0 not %d" % timeout)
+
+        saved_timeout = self.timeout
+        while True:
+            try:
+                # Reset socket timeout to it's default so we don't
+                # end up waiting ages
+                self.timeout = socket._GLOBAL_DEFAULT_TIMEOUT
+                if self.get_info()['mode'] == 'NORMAL':
+                    return True
+            except (KeyError, EmptyResponseException, BadHTTPException):
+                # key missing from JSON, empty response or errors in
+                # get_info due to incomplete HTTP responses
+                pass
+            finally:
+                self.timeout = saved_timeout
+            timeout -= 1
+            if timeout < 0:
+                break
+            time.sleep(1)
+        return False
