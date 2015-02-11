@@ -1434,3 +1434,23 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/queue/api/json?depth=0')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open',
+                  return_value=json.dumps({'mode': 'NORMAL'}))
+    def test_wait_for_normal_op(self, jenkins_mock):
+        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        self.assertEqual(True, j.wait_for_normal_op(0))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open',
+                  side_effect=jenkins.EmptyResponseException())
+    def test_wait_for_normal_op__empty_response(self, jenkins_mock):
+        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        self.assertEqual(False, j.wait_for_normal_op(0))
+
+    def test_wait_for_normal_op__negative_timeout(self):
+        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        with self.assertRaises(ValueError) as context_manager:
+            j.wait_for_normal_op(-1)
+        self.assertEqual(
+            str(context_manager.exception),
+            "Timeout must be >= 0 not -1")
