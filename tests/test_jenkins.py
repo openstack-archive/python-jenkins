@@ -222,3 +222,27 @@ class JenkinsOpenTest(JenkinsTestBase):
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
         self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open',
+                  return_value=json.dumps({'mode': 'NORMAL'}))
+    @patch.object(jenkins.Jenkins, 'get_version',
+                  return_value="Version42")
+    def test_wait_for_normal_op(self, version_mock, jenkins_mock):
+        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        self.assertEqual(True, j.wait_for_normal_op(0))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open',
+                  side_effect=jenkins.EmptyResponseException())
+    @patch.object(jenkins.Jenkins, 'get_version',
+                  side_effect=jenkins.EmptyResponseException())
+    def test_wait_for_normal_op__empty_response(self, version_mock, jenkins_mock):
+        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        self.assertEqual(False, j.wait_for_normal_op(0))
+
+    def test_wait_for_normal_op__negative_timeout(self):
+        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        with self.assertRaises(ValueError) as context_manager:
+            j.wait_for_normal_op(-1)
+        self.assertEqual(
+            str(context_manager.exception),
+            "Timeout must be >= 0 not -1")

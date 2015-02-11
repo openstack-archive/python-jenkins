@@ -207,6 +207,7 @@ def auth_headers(username, password):
 
 
 class Jenkins(object):
+    _timeout_warning_issued = False
 
     def __init__(self, url, username=None, password=None,
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
@@ -1332,3 +1333,50 @@ class Jenkins(object):
         info = self.get_info()
         if not info['quietingDown']:
             raise JenkinsException('quiet down failed')
+
+    def wait_for_normal_op(self, timeout):
+        '''Wait for jenkins to enter normal operation mode.
+
+        :param timeout: number of seconds to wait, ``int``
+        :returns: ``True`` if Jenkins became ready in time, ``False``
+                   otherwise.
+        '''
+        if timeout < 0:
+            raise ValueError("Timeout must be >= 0 not %d" % timeout)
+
+        if (self.timeout != socket._GLOBAL_DEFAULT_TIMEOUT and
+                not self._timeout_warning_issued and self.timeout > timeout):
+            warnings.warn("Requested timeout to wait for jenkins to resume "
+                          "normal operations is greater than configured "
+                          "connection timeout. Unexpected behaviour may "
+                          "occur.")
+            self._timeout_warning_issued = True
+
+        start_time = time.time()
+
+        def is_ready():
+            # only call get_version until it returns without exception
+            while True:
+                if self.get_version():
+                    while True:
+                        # when not in normal node, most requests will
+                        # be ignored or fail
+                        yield self.get_info()['mode'] == 'NORMAL'
+                else:
+                    yield False
+
+        while True:
+            try:
+                if next(is_ready()):
+                    return True
+            except (KeyError, JenkinsException):
+                # key missing from JSON, empty response or errors in
+                # get_info due to incomplete HTTP responses
+                pass
+            # check time passed as the communication will also
+            # take time
+            if time.time() > start_time + timeout:
+                break
+            time.sleep(1)
+
+        return False
