@@ -139,6 +139,9 @@ class EmptyResponseException(JenkinsException):
     '''A special exception to call out the case receiving an empty response.'''
     pass
 
+class BadHTTPException(JenkinsException):
+    '''A special exception to call out the case of a broken HTTP response.'''
+    pass
 
 def auth_headers(username, password):
     '''Simple implementation of HTTP Basic Authentication.
@@ -363,10 +366,10 @@ class Jenkins(object):
             return json.loads(self.jenkins_open(
                 Request(self.server + INFO)))
         except HTTPError:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except BadStatusLine:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
@@ -395,10 +398,10 @@ class Jenkins(object):
                     "empty response" % self.server)
             return response.info().getheader('X-Jenkins')
         except HTTPError:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except BadStatusLine:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
 
     def get_plugins_info(self, depth=2):
@@ -429,10 +432,10 @@ class Jenkins(object):
                 Request(self.server + PLUGIN_INFO % locals())))
             return plugins_info['plugins']
         except HTTPError:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except BadStatusLine:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
@@ -469,10 +472,10 @@ class Jenkins(object):
                 if plugin['longName'] == name or plugin['shortName'] == name:
                     return plugin
         except HTTPError:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except BadStatusLine:
-            raise JenkinsException("Error communicating with server[%s]"
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
