@@ -624,7 +624,7 @@ class JenkinsTest(unittest.TestCase):
             hdrs=[],
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_version()
         self.assertEqual(
             str(context_manager.exception),
@@ -634,7 +634,7 @@ class JenkinsTest(unittest.TestCase):
     def test_get_version__BadStatusLine(self, urlopen_mock):
         urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_version()
         self.assertEqual(
             str(context_manager.exception),
@@ -727,7 +727,7 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_plugins_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
@@ -760,7 +760,7 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_plugins_info(depth=52)
         self.assertEqual(
             str(context_manager.exception),
@@ -861,7 +861,7 @@ class JenkinsTest(unittest.TestCase):
             fp=None)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
@@ -875,7 +875,7 @@ class JenkinsTest(unittest.TestCase):
         jenkins_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
