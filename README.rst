@@ -1,4 +1,3 @@
-======
 README
 ======
 
@@ -32,7 +31,7 @@ Online documentation:
 * http://python-jenkins.readthedocs.org/en/latest/
 
 Developers
-==========
+----------
 Bug report:
 
 * https://bugs.launchpad.net/python-jenkins
@@ -56,7 +55,7 @@ More details on how you can contribute is available on our wiki at:
 * http://docs.openstack.org/infra/manual/developers.html
 
 Writing a patch
-===============
+---------------
 
 We ask that all code submissions be flake8_ clean.  The
 easiest way to do that is to run tox_ before submitting code for
@@ -65,7 +64,7 @@ manner as the automated test suite that will run on proposed
 patchsets.
 
 Installing without setup.py
-===========================
+---------------------------
 
 Then install the required python packages using pip_::
 
