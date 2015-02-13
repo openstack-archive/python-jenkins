@@ -542,6 +542,26 @@ class JenkinsTest(unittest.TestCase):
             u'http://example.com/job/Test%20Job/api/json?depth=0')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_info_regex(self, jenkins_mock):
+        jobs = [
+            {u'name': u'my-job-1'},
+            {u'name': u'my-job-2'},
+            {u'name': u'your-job-1'},
+            {u'name': u'Your-Job-1'},
+            {u'name': u'my-project-1'},
+        ]
+        job_info_to_return = {u'jobs': jobs}
+        jenkins_mock.return_value = json.dumps(job_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        self.assertEqual(len(j.get_job_info_regex('her-job')), 0)
+        self.assertEqual(len(j.get_job_info_regex('my-job-1')), 1)
+        self.assertEqual(len(j.get_job_info_regex('my-job')), 2)
+        self.assertEqual(len(j.get_job_info_regex('job')), 3)
+        self.assertEqual(len(j.get_job_info_regex('project')), 1)
+        self.assertEqual(len(j.get_job_info_regex('[Yy]our-[Jj]ob-1')), 2)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info__None(self, jenkins_mock):
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
