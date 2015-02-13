@@ -47,6 +47,7 @@ See examples at :doc:`example`
 
 import base64
 import json
+import re
 
 import six
 from six.moves.http_client import BadStatusLine
@@ -212,6 +213,22 @@ class Jenkins(object):
         except ValueError:
             raise JenkinsException(
                 "Could not parse JSON info for job[%s]" % name)
+
+    def get_job_info_regex(self, pattern, depth=0):
+        '''Get a list of jobs information that contain names which match the
+           regex pattern.
+
+        :param pattern: regex pattern, ``str``
+        :param depth: JSON depth, ``int``
+        :returns: List of jobs info, ``dict``
+        '''
+        result = []
+        jobs = self.get_jobs()
+        for job in jobs:
+            if re.search(pattern, job['name']):
+                result.append(self.get_job_info(job['name'], depth=depth))
+
+        return result
 
     def get_job_name(self, name):
         '''Return the name of a job using the API.
