@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+1: Kevin L. Mitchell <kevin.mitchell@rackspace.com>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Workflow+1: Khai Do <zaro0508@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Wed, 18 Feb 2015 22:01:48 +0000
+Reviewed-on: https://review.openstack.org/157008
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
