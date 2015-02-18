@@ -367,10 +367,7 @@ class Jenkins(object):
         try:
             return json.loads(self.jenkins_open(
                 Request(self.server + INFO)))
-        except HTTPError:
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
-        except BadStatusLine:
+        except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
@@ -399,10 +396,7 @@ class Jenkins(object):
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
             return response.info().getheader('X-Jenkins')
-        except HTTPError:
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
-        except BadStatusLine:
+        except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
 
@@ -433,10 +427,7 @@ class Jenkins(object):
             plugins_info = json.loads(self.jenkins_open(
                 Request(self.server + PLUGIN_INFO % locals())))
             return plugins_info['plugins']
-        except HTTPError:
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
-        except BadStatusLine:
+        except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
@@ -473,10 +464,7 @@ class Jenkins(object):
             for plugin in plugins_info['plugins']:
                 if plugin['longName'] == name or plugin['shortName'] == name:
                     return plugin
-        except HTTPError:
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
-        except BadStatusLine:
+        except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
