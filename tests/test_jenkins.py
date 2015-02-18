@@ -651,6 +651,18 @@ class JenkinsTest(unittest.TestCase):
             ' empty response')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_jobs_count(self, jenkins_mock):
+        jobs = [
+            {u'url': u'http://localhost:8080/job/guava/', u'color': u'notbuilt', u'name': u'guava'},
+            {u'url': u'http://localhost:8080/job/kiwi/', u'color': u'blue', u'name': u'kiwi'},
+            {u'url': u'http://localhost:8080/job/lemon/', u'color': u'red', u'name': u'lemon'}
+        ]
+        job_info_to_return = {u'jobs': jobs}
+        jenkins_mock.return_value = json.dumps(job_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.assertEqual(j.jobs_count(), 3)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_jobs(self, jenkins_mock):
         jobs = {
             u'url': u'http://your_url_here/job/my_job/',

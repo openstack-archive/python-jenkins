@@ -549,6 +549,13 @@ class Jenkins(object):
         if self.get_job_name(name) == name:
             return True
 
+    def jobs_count(self):
+        '''Get the number of jobs on the Jenkins server
+
+        :returns: Total number of jobs, ``int``
+        '''
+        return len(self.get_jobs())
+
     def assert_job_exists(self, name,
                           exception_message='job[%s] does not exist'):
         '''Raise an exception if a job does not exist
