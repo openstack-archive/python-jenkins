@@ -47,6 +47,7 @@ See examples at :doc:`example`
 
 import base64
 import json
+import socket
 
 import six
 from six.moves.http_client import BadStatusLine
@@ -60,7 +61,6 @@ LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
 
-DEFAULT_CONN_TIMEOUT = 120
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
@@ -158,7 +158,8 @@ def auth_headers(username, password):
 
 class Jenkins(object):
 
-    def __init__(self, url, username=None, password=None, timeout=DEFAULT_CONN_TIMEOUT):
+    def __init__(self, url, username=None, password=None,
+                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
         '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
@@ -166,7 +167,7 @@ class Jenkins(object):
         :param username: Server username, ``str``
         :param password: Server password, ``str``
         :param url: URL of Jenkins server, ``str``
-        :param timeout: Server connection timeout (in seconds), ``int``
+        :param timeout: Server connection timeout in secs (default: not set), ``int``
         '''
         if url[-1] == '/':
             self.server = url
