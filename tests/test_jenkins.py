@@ -1145,6 +1145,18 @@ class JenkinsTest(unittest.TestCase):
             u'http://example.com/queue/cancelItem?id=52')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_nodes(self, jenkins_mock):
+        jenkins_mock.return_value = json.dumps({
+            "computer": [{
+                "displayName": "master",
+                "offline": False
+            }],
+            "busyExecutors": 2})
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.assertEqual(j.get_nodes(),
+                         [{'name': 'master', 'offline': False}])
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_node_info(self, jenkins_mock):
         node_info = {
             'displayName': 'nodes',

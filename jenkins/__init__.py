@@ -81,7 +81,7 @@ STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
-
+NODE_LIST = 'computer/api/json'
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
@@ -647,6 +647,24 @@ class Jenkins(object):
         :param number: Jenkins build number for the job, ``int``
         '''
         self.jenkins_open(Request(self.server + STOP_BUILD % self._get_encoded_params(locals())))
+
+    def get_nodes(self):
+        '''Get a list of nodes connected to the Master
+
+        Each node is a dict with keys 'name' and 'offline'
+
+        :returns: List of nodes, ``[ { str: str, str: bool} ]``
+        '''
+        try:
+            nodes_data = json.loads(self.jenkins_open(Request(self.server + NODE_LIST)))
+            return [{'name': c["displayName"], 'offline': c["offline"]}
+                    for c in nodes_data["computer"]]
+        except (HTTPError, BadStatusLine):
+            raise BadHTTPException("Error communicating with server[%s]"
+                                   % self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
 
     def get_node_info(self, name, depth=0):
         '''Get node information dictionary
