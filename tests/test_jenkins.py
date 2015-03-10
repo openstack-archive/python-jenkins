@@ -1145,6 +1145,63 @@ class JenkinsTest(unittest.TestCase):
             u'http://example.com/queue/cancelItem?id=52')
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_nodes(self, jenkins_mock):
+        jenkins_mock.return_value = json.dumps({
+            "computer": [{
+                "displayName": "master",
+                "offline": False
+            }],
+            "busyExecutors": 2})
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.assertEqual(j.get_nodes(),
+                         [{'name': 'master', 'offline': False}])
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_nodes__invalid_json(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            'Invalid JSON',
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_nodes()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/computer/api/json')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for server[http://example.com/]')
+
+    @patch('jenkins.urlopen')
+    def test_get_nodes__BadStatusLine(self, urlopen_mock):
+        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
+            j.get_nodes()
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_nodes__HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_nodes()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            'http://example.com/computer/api/json')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_node_info(self, jenkins_mock):
         node_info = {
             'displayName': 'nodes',
