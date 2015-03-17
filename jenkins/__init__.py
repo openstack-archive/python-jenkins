@@ -61,7 +61,9 @@ LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
 LAUNCHER_JNLP = 'hudson.slaves.JNLPLauncher'
 LAUNCHER_WINDOWS_SERVICE = 'hudson.os.windows.ManagedWindowsServiceLauncher'
+DEFAULT_HEADERS = {'Content-Type': 'text/xml; charset=utf-8'}
 
+# REST Endpoints
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
@@ -583,9 +585,8 @@ class Jenkins(object):
         if self.job_exists(name):
             raise JenkinsException('job[%s] already exists' % (name))
 
-        headers = {'Content-Type': 'text/xml'}
         self.jenkins_open(Request(
-            self.server + CREATE_JOB % self._get_encoded_params(locals()), config_xml, headers))
+            self.server + CREATE_JOB % self._get_encoded_params(locals()), config_xml, DEFAULT_HEADERS))
         self.assert_job_exists(name, 'create[%s] failed')
 
     def get_job_config(self, name):
@@ -605,9 +606,8 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
-        headers = {'Content-Type': 'text/xml'}
         reconfig_url = self.server + CONFIG_JOB % self._get_encoded_params(locals())
-        self.jenkins_open(Request(reconfig_url, config_xml, headers))
+        self.jenkins_open(Request(reconfig_url, config_xml, DEFAULT_HEADERS))
 
     def build_job_url(self, name, parameters=None, token=None):
         '''Get URL to trigger build job.
@@ -791,9 +791,8 @@ class Jenkins(object):
         :param name: Jenkins node name, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
-        headers = {'Content-Type': 'text/xml'}
         reconfig_url = self.server + CONFIG_NODE % self._get_encoded_params(locals())
-        self.jenkins_open(Request(reconfig_url, config_xml, headers))
+        self.jenkins_open(Request(reconfig_url, config_xml, DEFAULT_HEADERS))
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
