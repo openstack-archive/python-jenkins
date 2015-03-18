@@ -1,0 +1,12 @@
+Verified+2: Jenkins
+Code-Review+1: Kevin L. Mitchell <kevin.mitchell@rackspace.com>
+Code-Review+1: Ricardo Carrillo Cruz <ricardo.carrillo.cruz@gmail.com>
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Code-Review+1: patrick-crews <gleebix@gmail.com>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Workflow+1: Khai Do <zaro0508@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Wed, 18 Mar 2015 16:14:28 +0000
+Reviewed-on: https://review.openstack.org/163068
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
