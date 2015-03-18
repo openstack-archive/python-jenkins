@@ -312,7 +312,7 @@ class Jenkins(object):
         Example::
 
             >>> j = Jenkins()
-            >>> next_build_number = j.get_job_info('build_name')['next_build_number']
+            >>> next_build_number = j.get_job_info('build_name')['nextBuildNumber']
             >>> output = j.build_job('build_name')
             >>> from time import sleep; sleep(10)
             >>> build_info = j.get_build_info('build_name', next_build_number)

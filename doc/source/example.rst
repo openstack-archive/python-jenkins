@@ -3,6 +3,7 @@ Example usage
 
 Example usage::
 
+    import jenkins
     j = jenkins.Jenkins('http://your_url_here', 'username', 'password')
     j.get_jobs()
     j.create_job('empty', jenkins.EMPTY_CONFIG_XML)
@@ -15,8 +16,10 @@ Example usage::
     j.delete_job('empty_copy')
 
     # build a parameterized job
+    # requires setting up api-test job to accept 'param1' & 'param2'
     j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
-    build_info = j.get_build_info('build_name', next_build_number)
+    last_build_number = j.get_job_info('api-test')['lastCompletedBuild']['number']
+    build_info = j.get_job_info('api-test', last_build_number)
     print(build_info)
 
 Look at the :doc:`api` for more details.
