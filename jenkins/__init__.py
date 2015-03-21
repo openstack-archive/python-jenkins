@@ -49,6 +49,10 @@ import base64
 import json
 import re
 import socket
+import logging
+import datetime
+
+logger = logging.getLogger(__name__)
 
 import six
 from six.moves.http_client import BadStatusLine
@@ -84,6 +88,11 @@ BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
 NODE_LIST = 'computer/api/json'
+
+VIEW_NAME = 'view/%(name)/api/json?tree=name'
+CREATE_VIEW = 'createView?name=%(name)'
+VIEW = 'view/%(name)/config.xml'
+
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
@@ -193,9 +202,12 @@ class Jenkins(object):
         # We don't know yet whether we need a crumb
         if self.crumb is None:
             try:
+                logger.debug("start crumB: " + str(req.get_full_url()))
                 response = self.jenkins_open(Request(
                     self.server + CRUMB_URL), add_crumb=False)
+                logger.debug("success crumB: " + str(req.get_full_url()))
             except (NotFoundException, EmptyResponseException):
+                logger.debug("fail crumB: " + str(req.get_full_url()))
                 self.crumb = False
             else:
                 self.crumb = json.loads(response)
@@ -277,8 +289,16 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
+            logger.debug("start-v " + str(datetime.datetime.now()))
+            logger.debug("      | " + str(req.get_full_url()))
+            logger.debug("      | " + str(req.header_items()))
+            logger.debug("      | " + str(req.type))
             response = urlopen(req, timeout=self.timeout).read()
+            # self.crumb = json.loads(response.decode('utf-8'))
+            logger.debug("      | " + str(datetime.datetime.now()))
+            logger.debug("end  -^ ")
             if response is None:
+                logger.debug("fail")
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
@@ -421,7 +441,6 @@ class Jenkins(object):
 
             if six.PY3:
                 return response.getheader('X-Jenkins')
-
         except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
@@ -678,6 +697,74 @@ class Jenkins(object):
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
+
+    def assert_view_exists(self, name,
+                           exception_message='view[%s] does not exist'):
+        '''Raise an exception if a view does not exist
+
+        :param name: Name of Jenkins view, ``str``
+        :param exception_message: Message to use for the exception. Formatted
+                                  with ``name``
+        :throws: :class:`JenkinsException` whenever the view does not exist
+        '''
+        if not self.view_exists(name):
+            raise JenkinsException(exception_message % name)
+
+    def view_exists(self, name):
+        '''Check whether a view exists or not.
+
+        :param name: Name of a Jenkins view, ``str``
+        :returns: ``True`` if Jenkins view exists.
+        '''
+        if self.get_view_name(name) == name:
+            return True
+
+    def get_view_name(self, name):
+        '''Return the name of a view using the Jankins API.
+
+        :param name: Name of Jenkins view. ``str``
+        :returns: Name of view or None
+        '''
+        if hasattr(name, '__iter__'):
+            name = '/'.join(name)
+
+        try:
+            response = self.jenkins_open(
+                Request(self.server + VIEW_NAME %
+                        self._get_encoded_params(locals())))
+        except NotFoundException:
+            return None
+        else:
+            actual = json.loads(response)['name']
+
+    def get_view(self, name):
+        ''' Get configuration of existing Jenkins view.
+
+        :param name: Name of Jenkins view. ``str``
+        '''
+        url = self.server + VIEW % self._get_encoded_params(locals())
+        return self.jenkins_open(Request(url))
+
+    def reconfig_view(self, name, config_xml):
+        ''' Change configuration of existing Jenkins view.
+
+        :param name: Name of Jenkins view. ``str``
+        :param config_xml: XML describing view configuration. ``str``
+        '''
+        url = self.server + VIEW % self._get_encoded_params(locals())
+        self.jenkins_open(Request(url, config_xml, DEFAULT_HEADERS))
+
+    def create_view(self, name, config_xml):
+        ''' Create a sweet new Jenkins view.
+
+        :param name: Name of Jenkins view. ``str``
+        :param config_xml: XML describing view configuration. ``str``
+        '''
+        if self.view_exists(name):
+            raise JenkinsException('view[%s] already exists' % (name))
+
+        url = self.server + CREATE_VIEW % self._get_encoded_params(locals())
+        self.jenkins_open(Request(url, config_xml, DEFAULT_HEADERS))
 
     def get_node_info(self, name, depth=0):
         '''Get node information dictionary
