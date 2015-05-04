@@ -51,11 +51,17 @@ import re
 import socket
 
 import six
-from six.moves.http_client import BadStatusLine
-from six.moves.urllib.error import HTTPError
-from six.moves.urllib.error import URLError
-from six.moves.urllib.parse import quote, urlencode
-from six.moves.urllib.request import Request, urlopen
+try:
+    from six.moves.http_client import BadStatusLine
+    from six.moves.urllib.error import HTTPError
+    from six.moves.urllib.error import URLError
+    from six.moves.urllib.parse import quote, urlencode
+    from six.moves.urllib.request import Request, urlopen
+except ImportError:
+    # six 1.3
+    from httplib import BadStatusLine
+    from urllib import quote, urlencode
+    from urllib2 import HTTPError, URLError, Request, urlopen
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
