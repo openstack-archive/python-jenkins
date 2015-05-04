@@ -8,7 +8,11 @@ else:
 
 from mock import patch, Mock
 import six
-from six.moves.urllib.error import HTTPError
+try:
+    from six.moves.urllib.error import HTTPError
+except ImportError:
+    # six 1.3
+    from urllib2 import HTTPError
 
 from tests.helper import jenkins
 
