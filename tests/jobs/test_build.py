@@ -20,6 +20,19 @@ class JenkinsBuildJobTest(JenkinsJobsTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            {'foo': 'bar'},
+        ]
+
+        build_info = self.j.build_job(u'a Folder/Test Job')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/a%20Folder/job/Test%20Job/build')
+        self.assertEqual(build_info, {'foo': 'bar'})
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_with_token(self, jenkins_mock):
         jenkins_mock.side_effect = [
             {'foo': 'bar'},
@@ -29,6 +42,19 @@ class JenkinsBuildJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/job/TestJob/build?token=some_token')
+        self.assertEqual(build_info, {'foo': 'bar'})
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_in_folder_with_token(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            {'foo': 'bar'},
+        ]
+
+        build_info = self.j.build_job(u'a Folder/TestJob', token='some_token')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/a%20Folder/job/TestJob/build?token=some_token')
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
 
