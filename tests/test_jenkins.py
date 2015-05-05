@@ -120,6 +120,16 @@ class JenkinsTest(unittest.TestCase):
             u'http://example.com/job/Test%20Job/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_config_encodes_job_name_in_folder(self, jenkins_mock):
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.get_job_config(u'a folder/Test Job')
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20folder/job/Test%20Job/config.xml')
+        self._check_requests(jenkins_mock.call_args_list)
+
     @patch('jenkins.urlopen')
     def test_maybe_add_crumb(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.NotFoundException()
@@ -306,12 +316,33 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_assert_job_exists__job_missing_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.NotFoundException()
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.assert_job_exists('a Folder/NonExistent')
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[a Folder/NonExistent] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_assert_job_exists__job_exists(self, jenkins_mock):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'ExistingJob'}),
         ]
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         j.assert_job_exists('ExistingJob')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_assert_job_exists__job_exists_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'ExistingJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.assert_job_exists('a Folder/ExistingJob')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -336,6 +367,27 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_job__in_folder(self, jenkins_mock):
+        config_xml = """
+            <matrix-project>
+                <actions/>
+                <description>Foo</description>
+            </matrix-project>"""
+        jenkins_mock.side_effect = [
+            jenkins.NotFoundException(),
+            None,
+            json.dumps({'name': 'Test Job'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.create_job(u'a Folder/Test Job', config_xml)
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/createItem?name=Test%20Job')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_create_job__already_exists(self, jenkins_mock):
         config_xml = """
             <matrix-project>
@@ -356,6 +408,29 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] already exists')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_job__already_exists_in_folder(self, jenkins_mock):
+        config_xml = """
+            <matrix-project>
+                <actions/>
+                <description>Foo</description>
+            </matrix-project>"""
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.create_job(u'a Folder/TestJob', config_xml)
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/TestJob/api/json?tree=name')
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[a Folder/TestJob] already exists')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -386,6 +461,33 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_create_job__create_failed_in_folder(self, jenkins_mock):
+        config_xml = """
+            <matrix-project>
+                <actions/>
+                <description>Foo</description>
+            </matrix-project>"""
+        jenkins_mock.side_effect = [
+            jenkins.NotFoundException(),
+            None,
+            jenkins.NotFoundException(),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.create_job(u'a Folder/TestJob', config_xml)
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/TestJob/api/json?tree=name')
+        self.assertEqual(
+            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/createItem?name=TestJob')
+        self.assertEqual(
+            str(context_manager.exception),
+            'create[a Folder/TestJob] failed')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_reconfig_job(self, jenkins_mock):
         config_xml = """
             <matrix-project>
@@ -405,6 +507,25 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_reconfig_job__in_folder(self, jenkins_mock):
+        config_xml = """
+            <matrix-project>
+                <actions/>
+                <description>Foo</description>
+            </matrix-project>"""
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'Test Job'}),
+            None,
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.reconfig_job(u'a Folder/Test Job', config_xml)
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/a%20Folder/job/Test%20Job/config.xml')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
             {'foo': 'bar'},
@@ -419,6 +540,20 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job__in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            {'foo': 'bar'},
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.build_job(u'a Folder/Test Job')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/a%20Folder/job/Test%20Job/build')
+        self.assertEqual(build_info, {'foo': 'bar'})
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_build_job__with_token(self, jenkins_mock):
         jenkins_mock.side_effect = [
             {'foo': 'bar'},
@@ -429,6 +564,20 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
                          u'http://example.com/job/TestJob/build?token=some_token')
+        self.assertEqual(build_info, {'foo': 'bar'})
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job__in_folder_with_token(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            {'foo': 'bar'},
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.build_job(u'a Folder/TestJob', token='some_token')
+
+        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+                         u'http://example.com/job/a%20Folder/job/TestJob/build?token=some_token')
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -451,6 +600,24 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_build_job__in_folder_with_parameters_and_token(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            {'foo': 'bar'},
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.build_job(
+            u'a Folder/TestJob',
+            parameters={'when': 'now', 'why': 'because I felt like it'},
+            token='some_token')
+
+        self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('when=now' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertEqual(build_info, {'foo': 'bar'})
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_stop_build(self, jenkins_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
@@ -459,6 +626,17 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/Test%20Job/52/stop')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_stop_build__in_folder(self, jenkins_mock):
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.stop_build(u'a Folder/Test Job', number=52)
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/Test%20Job/52/stop')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -475,6 +653,19 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_outputi__in_folder(self, jenkins_mock):
+        jenkins_mock.return_value = "build console output..."
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.get_build_console_output(u'a Folder/Test Job', number=52)
+
+        self.assertEqual(build_info, jenkins_mock.return_value)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/Test%20Job/52/consoleText')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_console_output__None(self, jenkins_mock):
         jenkins_mock.return_value = None
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -484,6 +675,18 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] number[52] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__None_in_folder(self, jenkins_mock):
+        jenkins_mock.return_value = None
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_build_console_output(u'A Folder/TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[A Folder/TestJob] number[52] does not exist')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -516,6 +719,26 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_console_output__HTTPError_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/a%20Folder/job/TestJob/52/consoleText',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_build_console_output(u'a Folder/TestJob', number=52)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/TestJob/52/consoleText')
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[a Folder/TestJob] number[52] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info(self, jenkins_mock):
         build_info_to_return = {
             u'building': False,
@@ -532,6 +755,25 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/Test%20Job/52/api/json?depth=0')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_info__in_folder(self, jenkins_mock):
+        build_info_to_return = {
+            u'building': False,
+            u'msg': u'test',
+            u'revision': 66,
+            u'user': u'unknown'
+        }
+        jenkins_mock.return_value = json.dumps(build_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.get_build_info(u'a Folder/Test Job', number=52)
+
+        self.assertEqual(build_info, build_info_to_return)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/Test%20Job/52/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -576,6 +818,23 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_build_info__HTTPError_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/a%20Folder/job/TestJob/api/json?depth=0',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_build_info(u'a Folder/TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[a Folder/TestJob] number[52] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info(self, jenkins_mock):
         job_info_to_return = {
             u'building': False,
@@ -592,6 +851,25 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/Test%20Job/api/json?depth=0')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_info__in_folder(self, jenkins_mock):
+        job_info_to_return = {
+            u'building': False,
+            u'msg': u'test',
+            u'revision': 66,
+            u'user': u'unknown'
+        }
+        jenkins_mock.return_value = json.dumps(job_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        job_info = j.get_job_info(u'a Folder/Test Job')
+
+        self.assertEqual(job_info, job_info_to_return)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -666,6 +944,26 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_info__HTTPError_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/a%20Folder/job/TestJob/api/json?depth=0',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_job_info(u'a Folder/TestJob')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/TestJob/api/json?depth=0')
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[a Folder/TestJob] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_debug_job_info(self, jenkins_mock):
         job_info_to_return = {
             u'building': False,
@@ -681,6 +979,24 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/Test%20Job/api/json?depth=0')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_debug_job_info__in_folder(self, jenkins_mock):
+        job_info_to_return = {
+            u'building': False,
+            u'msg': u'test',
+            u'revision': 66,
+            u'user': u'unknown'
+        }
+        jenkins_mock.return_value = json.dumps(job_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.debug_job_info(u'a Folder/Test Job')
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch('jenkins.urlopen')
@@ -1053,6 +1369,24 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_copy_job__in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.copy_job(u'a Folder/Test Job', u'a Folder/Test Job_2')
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/createItem'
+            '?name=Test%20Job_2&mode=copy&from=Test%20Job')
+        self.assertTrue(j.job_exists('a Folder/Test Job_2'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_copy_job__create_failed(self, jenkins_mock):
         jenkins_mock.side_effect = [
             None,
@@ -1072,6 +1406,39 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_copy_job__in_folder_create_failed(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            None,
+            jenkins.NotFoundException(),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.copy_job(u'a Folder/TestJob', u'a Folder/TestJob_2')
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/createItem'
+            '?name=TestJob_2&mode=copy&from=TestJob')
+        self.assertEqual(
+            str(context_manager.exception),
+            'create[a Folder/TestJob_2] failed')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_copy_job__in_another_folder_create_failed(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            jenkins.JenkinsException()
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.copy_job(u'a Folder/TestJob', u'another Folder/TestJob_2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'copy[a Folder/TestJob to another Folder/TestJob_2] failed, source and destination folder must be the same')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_rename_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'Test Job_2'}),
@@ -1085,6 +1452,23 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
+        self.assertTrue(j.job_exists('Test Job_2'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_rename_job__in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
+            json.dumps({'name': 'Test Job_2'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.rename_job(u'a Folder/Test Job', u'a Folder/Test Job_2')
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/Test%20Job/doRename?newName=Test%20Job_2')
         self.assertTrue(j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1107,6 +1491,38 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_rename_job__rename__in_folder_failed(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            None,
+            jenkins.NotFoundException(),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.rename_job(u'a Folder/TestJob', u'a Folder/TestJob_2')
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/TestJob/doRename?newName=TestJob_2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'rename[a Folder/TestJob_2] failed')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_rename_job__rename__in_another_folder_failed(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            jenkins.JenkinsException()
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.rename_job(u'a Folder/TestJob', u'another Folder/TestJob_2')
+        self.assertEqual(
+            str(context_manager.exception),
+            'rename[a Folder/TestJob to another Folder/TestJob_2] failed, source and destination folder must be the same')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_delete_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
             None,
@@ -1119,6 +1535,21 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/Test%20Job/doDelete')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_delete_job__in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            None,
+            jenkins.NotFoundException(),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.delete_job(u'a Folder/Test Job')
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/Test%20Job/doDelete')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -1141,6 +1572,25 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_delete_job__delete_in_folder_failed(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.delete_job(u'a Folder/TestJob')
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/TestJob/doDelete')
+        self.assertEqual(
+            str(context_manager.exception),
+            'delete[a Folder/TestJob] failed')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_enable_job(self, jenkins_mock):
         jenkins_mock.side_effect = [
             json.dumps({'name': 'TestJob'}),
@@ -1154,6 +1604,22 @@ class JenkinsTest(unittest.TestCase):
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
             'http://example.com/job/TestJob/enable')
         self.assertTrue(j.job_exists('TestJob'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_enable_job__in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'TestJob'}),
+            json.dumps({'name': 'TestJob'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.enable_job(u'a Folder/TestJob')
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/TestJob/enable')
+        self.assertTrue(j.job_exists('a Folder/TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -1173,6 +1639,22 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_disable_job__in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            json.dumps({'name': 'Test Job'}),
+            json.dumps({'name': 'Test Job'}),
+        ]
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        j.disable_job(u'a Folder/Test Job')
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/Test%20Job/disable')
+        self.assertTrue(j.job_exists('a Folder/Test Job'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name(self, jenkins_mock):
         job_name_to_return = {u'name': 'Test Job'}
         jenkins_mock.return_value = json.dumps(job_name_to_return)
@@ -1187,6 +1669,20 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_name__in_folder(self, jenkins_mock):
+        job_name_to_return = {u'name': 'Test Job'}
+        jenkins_mock.return_value = json.dumps(job_name_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        job_name = j.get_job_name(u'a Folder/Test Job')
+
+        self.assertEqual(job_name, 'Test Job')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/Test%20Job/api/json?tree=name')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_name__None(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.NotFoundException()
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -1197,6 +1693,19 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/TestJob/api/json?tree=name')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_name__None_in_folder(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.NotFoundException()
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        job_name = j.get_job_name(u'a Folder/TestJob')
+
+        self.assertEqual(job_name, None)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/a%20Folder/job/TestJob/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -1214,6 +1723,23 @@ class JenkinsTest(unittest.TestCase):
             str(context_manager.exception),
             'Jenkins returned an unexpected job name {0} '
             '(expected: {1})'.format(job_name_to_return['name'], 'TestJob'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_name__unexpected_job_name_in_folder(self, jenkins_mock):
+        job_name_to_return = {u'name': 'not the right name'}
+        jenkins_mock.return_value = json.dumps(job_name_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_job_name(u'a Folder/TestJob')
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            'http://example.com/job/a%20Folder/job/TestJob/api/json?tree=name')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Jenkins returned an unexpected job name {0} '
+            '(expected: {1})'.format(job_name_to_return['name'], 'a Folder/TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
