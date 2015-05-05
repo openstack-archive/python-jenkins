@@ -116,3 +116,17 @@ This is an example showing how to retrieve information on the Jenkins queue.
     queue_info = server.get_queue_info()
     id = queue_info[0].get('id')
     server.cancel_queue(id)
+
+
+Example 7: Working with Jenkins Cloudbees Folders
+-------------------------------------------------
+
+This is an example showing how to create, configure and delete Jenkins folders.
+
+::
+
+    j.create_job('folder', jenkins.EMPTY_FOLDER_XML)
+    j.create_job('folder/empty', jenkins.EMPTY_FOLDER_XML)
+    j.copy_job('folder/empty', 'folder/empty_copy')
+    j.delete_job('folder/empty_copy')
+    j.delete_job('folder')
