@@ -23,6 +23,7 @@ the things you can use it for:
 * Create/delete/reconfig views
 * Put server in shutdown mode (quiet down)
 * List running builds
+* Create/delete/update folders [#f1]_
 * and many more..
 
 To install::
@@ -76,3 +77,11 @@ Then install the required python packages using pip_::
 .. _flake8: https://pypi.python.org/pypi/flake8
 .. _tox: https://testrun.org/tox
 .. _pip: https://pypi.python.org/pypi/pip
+
+
+.. rubric:: Footnotes
+
+.. [#f1] The free `Cloudbees Folders Plugin
+    <https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Folders+Plugin>`_
+    provides support for a subset of the full folders functionality. For the
+    complete capabilities you will need the paid for version of the plugin.
