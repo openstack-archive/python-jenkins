@@ -1,3 +1,4 @@
+import json
 import sys
 
 from six.moves.urllib.request import build_opener
@@ -8,6 +9,25 @@ if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+
+
+def build_jobs_list_responses(jobs_list, server_url):
+    responses = []
+    for jobs in jobs_list:
+        get_jobs_response = []
+        for job in jobs:
+            job_json = {
+                u'url': u'%s/job/%s' % (server_url.rstrip('/'), job['name']),
+                u'name': job['name'],
+                u'color': u'blue'
+            }
+            if 'jobs' in job:
+                job_json[u'jobs'] = "null"
+            get_jobs_response.append(job_json)
+
+        responses.append(json.dumps({u'jobs': get_jobs_response}))
+
+    return responses
 
 
 class JenkinsTestBase(unittest.TestCase):
