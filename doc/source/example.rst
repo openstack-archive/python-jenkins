@@ -15,10 +15,24 @@ Example usage::
     j.delete_job('empty')
     j.delete_job('empty_copy')
 
+    # work with views
     j.get_views()
     j.create_view('EMPTY', jenkins.EMPTY_VIEW_CONFIG_XML)
     j.view_exists('EMPTY')
     j.delete_view('EMPTY')
+
+    # create empty folder
+    j.create_job('folder', jenkins.EMPTY_FOLDER_XML)
+
+    # create subfolder
+    j.create_job('folder/empty', jenkins.EMPTY_FOLDER_XML)
+
+    # copy folder to new name
+    j.copy_job('folder/empty', 'folder/empty_copy')
+
+    # delete folder
+    j.delete_job('folder/empty_copy')
+    j.delete_job('folder')
 
     # build a parameterized job
     # requires setting up api-test job to accept 'param1' & 'param2'
