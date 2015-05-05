@@ -15,6 +15,19 @@ Example usage::
     j.delete_job('empty')
     j.delete_job('empty_copy')
 
+    # create empty folder
+    j.create_job('folder', jenkins.EMPTY_FOLDER_XML)
+
+    # create subfolder
+    j.create_job('folder/empty', jenkins.EMPTY_FOLDER_XML)
+
+    # copy folder to new name
+    j.copy_job('folder/empty', 'folder/empty_copy')
+
+    # delete folder
+    j.delete_job('folder/empty_copy')
+    j.delete_job('folder')
+
     # build a parameterized job
     # requires setting up api-test job to accept 'param1' & 'param2'
     j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
