@@ -198,7 +198,7 @@ class Jenkins(object):
             except (NotFoundException, EmptyResponseException):
                 self.crumb = False
             else:
-                self.crumb = json.loads(response.decode('utf-8'))
+                self.crumb = json.loads(response)
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
@@ -282,7 +282,7 @@ class Jenkins(object):
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
-            return response
+            return response.decode('utf-8')
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
@@ -415,7 +415,13 @@ class Jenkins(object):
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
-            return response.info().getheader('X-Jenkins')
+
+            if six.PY2:
+                return response.info().getheader('X-Jenkins')
+
+            if six.PY3:
+                return response.getheader('X-Jenkins')
+
         except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
