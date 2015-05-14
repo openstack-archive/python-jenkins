@@ -76,7 +76,7 @@ class JenkinsTest(unittest.TestCase):
         j = jenkins.Jenkins('http://example.com', long_str, long_str)
 
         self.assertNotIn(b"\n", j.auth)
-        self.assertEqual(j.auth.decode(), 'Basic %s' % (
+        self.assertEqual(j.auth.decode('utf-8'), 'Basic %s' % (
             long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
 
     def test_constructor_default_timeout(self):
@@ -162,7 +162,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
-        self.assertEqual(response, json.dumps(data).encode('utf-8'))
+        self.assertEqual(response, json.dumps(data))
         self.assertEqual(j.crumb, crumb_data)
         self.assertEqual(request.headers['.crumb'], crumb_data['crumb'])
 
@@ -631,7 +631,12 @@ class JenkinsTest(unittest.TestCase):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
         mock_response = Mock()
-        config = {'info.return_value.getheader.return_value': 'Version42'}
+        if six.PY2:
+            config = {'info.return_value.getheader.return_value': 'Version42'}
+
+        if six.PY3:
+            config = {'getheader.return_value': 'Version42'}
+
         mock_response.configure_mock(**config)
         urlopen_mock.side_effect = [mock_response]
         self.assertEqual(j.get_version(), 'Version42')
