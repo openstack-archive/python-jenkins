@@ -1,0 +1,10 @@
+Verified+2: Jenkins
+Code-Review+1: Kevin L. Mitchell <kevin.mitchell@rackspace.com>
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Workflow+1: Antoine Musso <hashar@free.fr>
+Code-Review+1: Richard Pijnenburg <richard.pijnenburg@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Thu, 14 May 2015 19:58:06 +0000
+Reviewed-on: https://review.openstack.org/165628
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
