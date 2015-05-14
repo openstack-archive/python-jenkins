@@ -280,7 +280,7 @@ class Jenkins(object):
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
-            return response
+            return response.decode('utf-8')
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
