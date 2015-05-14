@@ -76,7 +76,7 @@ class JenkinsTest(unittest.TestCase):
         j = jenkins.Jenkins('http://example.com', long_str, long_str)
 
         self.assertNotIn(b"\n", j.auth)
-        self.assertEqual(j.auth.decode(), 'Basic %s' % (
+        self.assertEqual(j.auth.decode('utf-8'), 'Basic %s' % (
             long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
 
     def test_constructor_default_timeout(self):
