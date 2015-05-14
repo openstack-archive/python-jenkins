@@ -76,7 +76,7 @@ class JenkinsTest(unittest.TestCase):
         j = jenkins.Jenkins('http://example.com', long_str, long_str)
 
         self.assertNotIn(b"\n", j.auth)
-        self.assertEqual(j.auth.decode(), 'Basic %s' % (
+        self.assertEqual(j.auth.decode('utf-8'), 'Basic %s' % (
             long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
 
     def test_constructor_default_timeout(self):
@@ -162,7 +162,7 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             'http://example.com/job/TestJob')
-        self.assertEqual(response, json.dumps(data).encode('utf-8'))
+        self.assertEqual(response, json.dumps(data))
         self.assertEqual(j.crumb, crumb_data)
         self.assertEqual(request.headers['.crumb'], crumb_data['crumb'])
 
