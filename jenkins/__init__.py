@@ -275,7 +275,7 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
+            response = urlopen(req, timeout=self.timeout).read().decode("utf-8")
             if response is None:
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
