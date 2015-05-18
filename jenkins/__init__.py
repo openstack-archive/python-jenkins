@@ -596,9 +596,12 @@ class Jenkins(object):
         if self.job_exists(name):
             raise JenkinsException('job[%s] already exists' % (name))
 
-        self.jenkins_open(Request(
-            self.server + CREATE_JOB % self._get_encoded_params(locals()),
-            config_xml.encode('utf-8'), DEFAULT_HEADERS))
+        self.jenkins_open(
+            Request(
+              self.server + CREATE_JOB % self._get_encoded_params(locals()),
+              config_xml.encode('utf-8'),
+              DEFAULT_HEADERS),
+            b'')
         self.assert_job_exists(name, 'create[%s] failed')
 
     def get_job_config(self, name):
@@ -619,8 +622,12 @@ class Jenkins(object):
         :param config_xml: New XML configuration, ``str``
         '''
         reconfig_url = self.server + CONFIG_JOB % self._get_encoded_params(locals())
-        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
-                                  DEFAULT_HEADERS))
+        self.jenkins_open(
+            Request(
+                reconfig_url,
+                config_xml.encode('utf-8'),
+                DEFAULT_HEADERS),
+            b'')
 
     def build_job_url(self, name, parameters=None, token=None):
         '''Get URL to trigger build job.
@@ -659,7 +666,10 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param number: Jenkins build number for the job, ``int``
         '''
-        self.jenkins_open(Request(self.server + STOP_BUILD % self._get_encoded_params(locals())))
+        self.jenkins_open(
+            Request(
+                self.server + STOP_BUILD % self._get_encoded_params(locals())),
+            b'')
 
     def get_nodes(self):
         '''Get a list of nodes connected to the Master
@@ -806,8 +816,10 @@ class Jenkins(object):
             'json': json.dumps(inner_params)
         }
 
-        self.jenkins_open(Request(
-            self.server + CREATE_NODE % urlencode(params)))
+        self.jenkins_open(
+            Request(
+                self.server + CREATE_NODE % urlencode(params)),
+            b'')
 
         self.assert_node_exists(name, 'create[%s] failed')
 
@@ -826,7 +838,12 @@ class Jenkins(object):
         :param config_xml: New XML configuration, ``str``
         '''
         reconfig_url = self.server + CONFIG_NODE % self._get_encoded_params(locals())
-        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'), DEFAULT_HEADERS))
+        self.jenkins_open(
+            Request(
+                reconfig_url,
+                config_xml.encode('utf-8'),
+                DEFAULT_HEADERS),
+            b'')
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
