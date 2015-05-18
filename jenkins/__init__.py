@@ -826,7 +826,7 @@ class Jenkins(object):
         :param config_xml: New XML configuration, ``str``
         '''
         reconfig_url = self.server + CONFIG_NODE % self._get_encoded_params(locals())
-        self.jenkins_open(Request(reconfig_url, config_xml, DEFAULT_HEADERS))
+        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'), DEFAULT_HEADERS))
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
