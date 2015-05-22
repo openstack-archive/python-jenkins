@@ -659,7 +659,7 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         :param number: Jenkins build number for the job, ``int``
         '''
-        self.jenkins_open(Request(self.server + STOP_BUILD % self._get_encoded_params(locals())))
+        self.jenkins_open(Request(self.server + STOP_BUILD % self._get_encoded_params(locals())), b'')
 
     def get_nodes(self):
         '''Get a list of nodes connected to the Master
@@ -807,7 +807,7 @@ class Jenkins(object):
         }
 
         self.jenkins_open(Request(
-            self.server + CREATE_NODE % urlencode(params)))
+            self.server + CREATE_NODE % urlencode(params)), b'')
 
         self.assert_node_exists(name, 'create[%s] failed')
 
