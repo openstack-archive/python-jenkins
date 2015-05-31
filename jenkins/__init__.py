@@ -67,22 +67,22 @@ DEFAULT_HEADERS = {'Content-Type': 'text/xml; charset=utf-8'}
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
-JOB_INFO = 'job/%(name)s/api/json?depth=%(depth)s'
-JOB_NAME = 'job/%(name)s/api/json?tree=name'
+JOB_INFO = '%(folder)s' + 'job/%(name)s/api/json?depth=%(depth)s'
+JOB_NAME = '%(folder)s' + 'job/%(name)s/api/json?tree=name'
 Q_INFO = 'queue/api/json?depth=0'
 CANCEL_QUEUE = 'queue/cancelItem?id=%(id)s'
-CREATE_JOB = 'createItem?name=%(name)s'  # also post config.xml
-CONFIG_JOB = 'job/%(name)s/config.xml'
-DELETE_JOB = 'job/%(name)s/doDelete'
-ENABLE_JOB = 'job/%(name)s/enable'
-DISABLE_JOB = 'job/%(name)s/disable'
-COPY_JOB = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
-RENAME_JOB = 'job/%(from_name)s/doRename?newName=%(to_name)s'
-BUILD_JOB = 'job/%(name)s/build'
-STOP_BUILD = 'job/%(name)s/%(number)s/stop'
-BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
-BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=%(depth)s'
-BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
+CREATE_JOB = '%(folder)s' + 'createItem?name=%(name)s'  # also post config.xml
+CONFIG_JOB = '%(folder)s' + 'job/%(name)s/config.xml'
+DELETE_JOB = '%(folder)s' + 'job/%(name)s/doDelete'
+ENABLE_JOB = '%(folder)s' + 'job/%(name)s/enable'
+DISABLE_JOB = '%(folder)s' + 'job/%(name)s/disable'
+COPY_JOB = '%(folder)s' + 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
+RENAME_JOB = '%(folder)s' + 'job/%(from_name)s/doRename?newName=%(to_name)s'
+BUILD_JOB = '%(folder)s' + 'job/%(name)s/build'
+STOP_BUILD = '%(folder)s' + 'job/%(name)s/%(number)s/stop'
+BUILD_WITH_PARAMS_JOB = '%(folder)s' + 'job/%(name)s/buildWithParameters'
+BUILD_INFO = '%(folder)s' + 'job/%(name)s/%(number)d/api/json?depth=%(depth)s'
+BUILD_CONSOLE_OUTPUT = '%(folder)s' + 'job/%(name)s/%(number)d/consoleText'
 NODE_LIST = 'computer/api/json'
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
@@ -165,6 +165,7 @@ class Jenkins(object):
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
         '''Create handle to Jenkins instance.
 
+        :rtype : object
         All methods will raise :class:`JenkinsException` on failure.
 
         :param username: Server username, ``str``
@@ -185,9 +186,18 @@ class Jenkins(object):
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
-            if k in ["name", "to_name", "from_name", "msg"]:
+            if k in ["name", "to_name", "from_name", "msg", "folder"]:
                 params[k] = quote(v)
         return params
+
+    def _get_folder_path(self, folder):
+        if (folder is None) or (str(folder) is ""):
+            folder_path = ""
+        elif not "/job/" in folder:
+            folder_path = "job/" + folder.replace("/", "/job/") + "/"
+        else:
+            folder_path = folder
+        return folder_path
 
     def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
@@ -202,14 +212,16 @@ class Jenkins(object):
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
-    def get_job_info(self, name, depth=0):
+    def get_job_info(self, name, depth=0, folder=None):
         '''Get job information dictionary.
 
         :param name: Job name, ``str``
         :param depth: JSON depth, ``int``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: dictionary of job information
         '''
         try:
+            folder = self._get_folder_path(folder)
             response = self.jenkins_open(Request(
                 self.server + JOB_INFO % self._get_encoded_params(locals())))
             if response:
@@ -222,15 +234,17 @@ class Jenkins(object):
             raise JenkinsException(
                 "Could not parse JSON info for job[%s]" % name)
 
-    def get_job_info_regex(self, pattern, depth=0):
+    def get_job_info_regex(self, pattern, depth=0, folder=None):
         '''Get a list of jobs information that contain names which match the
            regex pattern.
 
         :param pattern: regex pattern, ``str``
         :param depth: JSON depth, ``int``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: List of jobs info, ``list``
         '''
         result = []
+        folder = self._get_folder_path(folder)
         jobs = self.get_jobs()
         for job in jobs:
             if re.search(pattern, job['name']):
@@ -238,7 +252,7 @@ class Jenkins(object):
 
         return result
 
-    def get_job_name(self, name):
+    def get_job_name(self, name, folder=None):
         '''Return the name of a job using the API.
 
         That is roughly an identity method which can be used to quickly verify
@@ -246,9 +260,11 @@ class Jenkins(object):
         server side.
 
         :param name: Job name, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: Name of job or None
         '''
         try:
+            folder = self._get_folder_path(folder)
             response = self.jenkins_open(
                 Request(self.server + JOB_NAME %
                         self._get_encoded_params(locals())))
@@ -303,12 +319,14 @@ class Jenkins(object):
         except URLError as e:
             raise JenkinsException('Error in request: %s' % (e.reason))
 
-    def get_build_info(self, name, number, depth=0):
+    def get_build_info(self, name, number, depth=0, folder=None):
         '''Get build information dictionary.
 
         :param name: Job name, ``str``
         :param name: Build number, ``int``
         :param depth: JSON depth, ``int``
+        :param folder: (optional) Jenkins job folder(s), ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: dictionary of build information, ``dict``
 
         Example::
@@ -322,6 +340,7 @@ class Jenkins(object):
             {u'building': False, u'changeSet': {u'items': [{u'date': u'2011-12-19T18:01:52.540557Z', u'msg': u'test', u'revision': 66, u'user': u'unknown', u'paths': [{u'editType': u'edit', u'file': u'/branches/demo/index.html'}]}], u'kind': u'svn', u'revisions': [{u'module': u'http://eaas-svn01.i3.level3.com/eaas', u'revision': 66}]}, u'builtOn': u'', u'description': None, u'artifacts': [{u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war', u'fileName': u'eaas-87-2011-12-19_18-01-57.war'}, {u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war.zip', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war.zip', u'fileName': u'eaas-87-2011-12-19_18-01-57.war.zip'}], u'timestamp': 1324317717000, u'number': 87, u'actions': [{u'parameters': [{u'name': u'SERVICE_NAME', u'value': u'eaas'}, {u'name': u'PROJECT_NAME', u'value': u'demo'}]}, {u'causes': [{u'userName': u'anonymous', u'shortDescription': u'Started by user anonymous'}]}, {}, {}, {}], u'id': u'2011-12-19_18-01-57', u'keepLog': False, u'url': u'http://eaas-jenkins01.i3.level3.com:9080/job/build_war/87/', u'culprits': [{u'absoluteUrl': u'http://eaas-jenkins01.i3.level3.com:9080/user/unknown', u'fullName': u'unknown'}], u'result': u'SUCCESS', u'duration': 8826, u'fullDisplayName': u'build_war #87'}
         '''
         try:
+            folder = self._get_folder_path(folder)
             response = self.jenkins_open(Request(
                 self.server + BUILD_INFO % self._get_encoded_params(locals())))
             if response:
@@ -506,66 +525,78 @@ class Jenkins(object):
         """
         return self.get_info()['jobs']
 
-    def copy_job(self, from_name, to_name):
+    def copy_job(self, from_name, to_name, folder=None):
         '''Copy a Jenkins job
 
         :param from_name: Name of Jenkins job to copy from, ``str``
         :param to_name: Name of Jenkins job to copy to, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         self.jenkins_open(Request(
             self.server + COPY_JOB % self._get_encoded_params(locals()),
             b''))
-        self.assert_job_exists(to_name, 'create[%s] failed')
+        self.assert_job_exists(to_name, 'create[%s] failed', folder)
 
-    def rename_job(self, from_name, to_name):
+    def rename_job(self, from_name, to_name, folder=None):
         '''Rename an existing Jenkins job
 
         :param from_name: Name of Jenkins job to rename, ``str``
         :param to_name: New Jenkins job name, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         self.jenkins_open(Request(
             self.server + RENAME_JOB % self._get_encoded_params(locals()),
             b''))
-        self.assert_job_exists(to_name, 'rename[%s] failed')
+        self.assert_job_exists(to_name, 'rename[%s] failed', folder)
 
-    def delete_job(self, name):
+    def delete_job(self, name, folder=None):
         '''Delete Jenkins job permanently.
 
         :param name: Name of Jenkins job, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         self.jenkins_open(Request(
             self.server + DELETE_JOB % self._get_encoded_params(locals()),
             b''))
-        if self.job_exists(name):
+        if self.job_exists(name, folder):
             raise JenkinsException('delete[%s] failed' % (name))
 
-    def enable_job(self, name):
+    def enable_job(self, name, folder=None):
         '''Enable Jenkins job.
 
         :param name: Name of Jenkins job, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         self.jenkins_open(Request(
             self.server + ENABLE_JOB % self._get_encoded_params(locals()),
             b''))
 
-    def disable_job(self, name):
+    def disable_job(self, name, folder=None):
         '''Disable Jenkins job.
 
         To re-enable, call :meth:`Jenkins.enable_job`.
 
         :param name: Name of Jenkins job, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         self.jenkins_open(Request(
             self.server + DISABLE_JOB % self._get_encoded_params(locals()),
             b''))
 
-    def job_exists(self, name):
+    def job_exists(self, name, folder=None):
         '''Check whether a job exists
 
         :param name: Name of Jenkins job, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: ``True`` if Jenkins job exists
         '''
-        if self.get_job_name(name) == name:
+        folder = self._get_folder_path(folder)
+        if self.get_job_name(name, folder) == name:
             return True
 
     def jobs_count(self):
@@ -576,53 +607,61 @@ class Jenkins(object):
         return len(self.get_jobs())
 
     def assert_job_exists(self, name,
-                          exception_message='job[%s] does not exist'):
+                          exception_message='job[%s] does not exist',
+                          folder=None):
         '''Raise an exception if a job does not exist
 
         :param name: Name of Jenkins job, ``str``
         :param exception_message: Message to use for the exception. Formatted
                                   with ``name``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :throws: :class:`JenkinsException` whenever the job does not exist
         '''
-        if not self.job_exists(name):
+        if not self.job_exists(name, folder):
             raise JenkinsException(exception_message % name)
 
-    def create_job(self, name, config_xml):
+    def create_job(self, name, config_xml, folder=None):
         '''Create a new Jenkins job
 
         :param name: Name of Jenkins job, ``str``
         :param config_xml: config file text, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
-        if self.job_exists(name):
+        folder = self._get_folder_path(folder)
+        if self.job_exists(name, folder):
             raise JenkinsException('job[%s] already exists' % (name))
 
         self.jenkins_open(Request(
             self.server + CREATE_JOB % self._get_encoded_params(locals()),
             config_xml.encode('utf-8'), DEFAULT_HEADERS))
-        self.assert_job_exists(name, 'create[%s] failed')
+        self.assert_job_exists(name, 'create[%s] failed', folder)
 
-    def get_job_config(self, name):
+    def get_job_config(self, name, folder=None):
         '''Get configuration of existing Jenkins job.
 
         :param name: Name of Jenkins job, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: job configuration (XML format)
         '''
+        folder = self._get_folder_path(folder)
         request = Request(self.server + CONFIG_JOB % self._get_encoded_params(locals()))
         return self.jenkins_open(request)
 
-    def reconfig_job(self, name, config_xml):
+    def reconfig_job(self, name, config_xml, folder=None):
         '''Change configuration of existing Jenkins job.
 
         To create a new job, see :meth:`Jenkins.create_job`.
 
         :param name: Name of Jenkins job, ``str``
         :param config_xml: New XML configuration, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         reconfig_url = self.server + CONFIG_JOB % self._get_encoded_params(locals())
         self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
                                   DEFAULT_HEADERS))
 
-    def build_job_url(self, name, parameters=None, token=None):
+    def build_job_url(self, name, parameters=None, token=None, folder=None):
         '''Get URL to trigger build job.
 
         Authenticated setups may require configuring a token on the server
@@ -630,8 +669,10 @@ class Jenkins(object):
 
         :param parameters: parameters for job, or None., ``dict``
         :param token: (optional) token for building job, ``str``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: URL for building job
         '''
+
         if parameters:
             if token:
                 parameters['token'] = token
@@ -643,22 +684,26 @@ class Jenkins(object):
         else:
             return self.server + BUILD_JOB % self._get_encoded_params(locals())
 
-    def build_job(self, name, parameters=None, token=None):
+    def build_job(self, name, parameters=None, token=None, folder=None):
         '''Trigger build job.
 
         :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         return self.jenkins_open(Request(
-            self.build_job_url(name, parameters, token), b''))
+            self.build_job_url(name, parameters, token, folder), b''))
 
-    def stop_build(self, name, number):
+    def stop_build(self, name, number, folder=None):
         '''Stop a running Jenkins build.
 
         :param name: Name of Jenkins job, ``str``
         :param number: Jenkins build number for the job, ``int``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         '''
+        folder = self._get_folder_path(folder)
         self.jenkins_open(Request(self.server + STOP_BUILD % self._get_encoded_params(locals())), b'')
 
     def get_nodes(self):
@@ -828,14 +873,16 @@ class Jenkins(object):
         reconfig_url = self.server + CONFIG_NODE % self._get_encoded_params(locals())
         self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'), DEFAULT_HEADERS))
 
-    def get_build_console_output(self, name, number):
+    def get_build_console_output(self, name, number, folder=None):
         '''Get build console text.
 
         :param name: Job name, ``str``
         :param name: Build number, ``int``
+        :param folder: (optional) Jenkins job folder(s), ``str``
         :returns: Build console output,  ``str``
         '''
         try:
+            folder = self._get_folder_path(folder)
             response = self.jenkins_open(Request(
                 self.server + BUILD_CONSOLE_OUTPUT % self._get_encoded_params(locals())))
             if response:
