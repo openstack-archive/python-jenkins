@@ -195,7 +195,8 @@ def auth_headers(username, password):
 class Jenkins(object):
 
     def __init__(self, url, username=None, password=None,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
+                 err_handle='strict'):
         '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
@@ -204,6 +205,8 @@ class Jenkins(object):
         :param password: Server password, ``str``
         :param url: URL of Jenkins server, ``str``
         :param timeout: Server connection timeout in secs (default: not set), ``int``
+        :param err_handle: the error handling method to decode the response \
+                           (default strict,can be ignore or replace) ``str``
         '''
         if url[-1] == '/':
             self.server = url
@@ -215,6 +218,7 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
         self.timeout = timeout
+        self.err_handle = err_handle
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -315,7 +319,7 @@ class Jenkins(object):
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
-            return response.decode('utf-8')
+            return response.decode('utf-8', self.err_handle)
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
