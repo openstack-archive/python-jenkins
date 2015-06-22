@@ -90,6 +90,11 @@ NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
+VIEW_NAME = 'view/%(name)s/api/json?tree=name'
+CREATE_VIEW = 'createView?name=%(name)s'
+CONFIG_VIEW = 'view/%(name)s/config.xml'
+DELETE_VIEW = 'view/%(name)s/doDelete'
+RENAME_VIEW = 'view/%(from_name)s/doRename?newName=%(to_name)s'
 
 # for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -846,3 +851,114 @@ class Jenkins(object):
         except HTTPError:
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
+
+    def get_view_name(self, name):
+        '''Return the name of a view using the API.
+
+        That is roughly an identity method which can be used to quickly verify
+        a view exists or is accessible without causing too much stress on the
+        server side.
+
+        :param name: View name, ``str``
+        :returns: Name of view or None
+        '''
+        try:
+            response = self.jenkins_open(
+                Request(self.server + VIEW_NAME %
+                        self._get_encoded_params(locals())))
+        except NotFoundException:
+            return None
+        else:
+            actual = json.loads(response)['name']
+            if actual != name:
+                raise JenkinsException(
+                    'Jenkins returned an unexpected view name %s '
+                    '(expected: %s)' % (actual, name))
+            return actual
+
+    def assert_view_exists(self, name,
+                           exception_message='view[%s] does not exist'):
+        '''Raise an exception if a view does not exist
+
+        :param name: Name of Jenkins view, ``str``
+        :param exception_message: Message to use for the exception. Formatted
+                                  with ``name``
+        :throws: :class:`JenkinsException` whenever the view does not exist
+        '''
+        if not self.view_exists(name):
+            raise JenkinsException(exception_message % name)
+
+    def view_exists(self, name):
+        '''Check whether a view exists
+
+        :param name: Name of Jenkins view, ``str``
+        :returns: ``True`` if Jenkins view exists
+        '''
+        if self.get_view_name(name) == name:
+            return True
+
+    def get_views(self):
+        """Get list of views running.
+
+        Each view is a dictionary with 'name' and 'url' keys.
+
+        :returns: list of views, ``[ { str: str} ]``
+        """
+        return self.get_info()['views']
+
+    def rename_view(self, from_name, to_name):
+        '''Rename an existing Jenkins view
+
+        :param from_name: Name of Jenkins view to rename, ``str``
+        :param to_name: New Jenkins view name, ``str``
+        '''
+        self.jenkins_open(Request(
+            self.server + RENAME_VIEW % self._get_encoded_params(locals()),
+            b''))
+        self.assert_view_exists(to_name, 'rename[%s] failed')
+
+    def delete_view(self, name):
+        '''Delete Jenkins view permanently.
+
+        :param name: Name of Jenkins view, ``str``
+        '''
+        self.jenkins_open(Request(
+            self.server + DELETE_VIEW % self._get_encoded_params(locals()),
+            b''))
+        if self.view_exists(name):
+            raise JenkinsException('delete[%s] failed' % (name))
+
+    def create_view(self, name, config_xml):
+        '''Create a new Jenkins view
+
+        :param name: Name of Jenkins view, ``str``
+        :param config_xml: config file text, ``str``
+        '''
+        if self.view_exists(name):
+            raise JenkinsException('view[%s] already exists' % (name))
+
+        self.jenkins_open(Request(
+            self.server + CREATE_VIEW % self._get_encoded_params(locals()),
+            config_xml.encode('utf-8'), DEFAULT_HEADERS))
+        self.assert_view_exists(name, 'create[%s] failed')
+
+    def reconfig_view(self, name, config_xml):
+        '''Change configuration of existing Jenkins view.
+
+        To create a new view, see :meth:`Jenkins.create_view`.
+
+        :param name: Name of Jenkins view, ``str``
+        :param config_xml: New XML configuration, ``str``
+        '''
+        reconfig_url = self.server + CONFIG_VIEW % self._get_encoded_params(locals())
+        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
+                                  DEFAULT_HEADERS))
+
+    def get_view_config(self, name):
+        '''Get configuration of existing Jenkins view.
+
+        :param name: Name of Jenkins view, ``str``
+        :returns: view configuration (XML format)
+        '''
+        request = Request(self.server + CONFIG_VIEW % self._get_encoded_params(locals()))
+        return self.jenkins_open(request)
