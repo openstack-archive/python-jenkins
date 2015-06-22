@@ -15,6 +15,11 @@ Example usage::
     j.delete_job('empty')
     j.delete_job('empty_copy')
 
+    j.get_views()
+    j.create_view('EMPTY', jenkins.EMPTY_VIEW_CONFIG_XML)
+    j.view_exists('EMPTY')
+    j.delete_view('EMPTY')
+
     # build a parameterized job
     # requires setting up api-test job to accept 'param1' & 'param2'
     j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
