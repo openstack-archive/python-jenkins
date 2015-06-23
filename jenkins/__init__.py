@@ -90,6 +90,7 @@ NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
+SCRIPT_TEXT = 'scriptText'
 
 # for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -652,6 +653,23 @@ class Jenkins(object):
         '''
         return self.jenkins_open(Request(
             self.build_job_url(name, parameters, token), b''))
+
+    def run_script(self, script):
+        '''Execute a groovy script on the jenkins master.
+
+        :param script: The groovy script, ``string``
+
+        Example::
+            >>> j = Jenkins()
+            >>> val = j.run_script("println(Jenkins.instance.pluginManager.plugins)")
+            >>> print(val)
+            u'[Plugin:windows-slaves, Plugin:ssh-slaves, Plugin:translation,
+            Plugin:cvs, Plugin:nodelabelparameter, Plugin:external-monitor-job,
+            Plugin:mailer, Plugin:jquery, Plugin:antisamy-markup-formatter,
+            Plugin:maven-plugin, Plugin:pam-auth]\n'
+        '''
+        return self.jenkins_open(Request(self.server + SCRIPT_TEXT,
+                                         "script=" + script.encode('utf-8')), b'')
 
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
