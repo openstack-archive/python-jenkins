@@ -90,6 +90,7 @@ NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
+SCRIPT_TEXT = 'scriptText'
 
 # for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -652,6 +653,32 @@ class Jenkins(object):
         '''
         return self.jenkins_open(Request(
             self.build_job_url(name, parameters, token), b''))
+
+    def run_script(self, script):
+        '''Execute a groovy script on the server, ``string``
+
+        :param script: The groovy script
+
+        Example::
+            >>> j = Jenkins()
+            >>> val = j.run_script('println(Jenkins.instance.pluginManager.plugins)')
+            >>> print(val)
+            [Plugin:windows-slaves, Plugin:ssh-slaves, Plugin:translation,
+             Plugin:cvs, Plugin:nodelabelparameter, Plugin:external-monitor-job,
+             Plugin:subversion, Plugin:ssh-credentials, Plugin:token-macro,
+             Plugin:ldap, Plugin:credentials, Plugin:matrix-auth, Plugin:matrix-project,
+             Plugin:javadoc, Plugin:mailer, Plugin:jquery,
+             Plugin:antisamy-markup-formatter, Plugin:maven-plugin, Plugin:pam-auth]
+        '''
+        try:
+            return self.jenkins_open(Request(self.server + SCRIPT_TEXT, 'script=' +
+                                             script.encode('utf-8'), DEFAULT_HEADERS))
+        except (HTTPError, BadStatusLine):
+            raise BadHTTPException("Error communicating with server[%s]"
+                                   % self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
 
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
