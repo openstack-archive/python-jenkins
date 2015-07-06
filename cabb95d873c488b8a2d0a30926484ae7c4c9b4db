@@ -1,0 +1,10 @@
+Verified+2: Jenkins
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Workflow+1: Khai Do <zaro0508@gmail.com>
+Code-Review+1: Dawid Malinowski <dawidmalina@gmail.com>
+Submitted-by: Jenkins
+Submitted-at: Mon, 06 Jul 2015 16:33:01 +0000
+Reviewed-on: https://review.openstack.org/194307
+Project: stackforge/python-jenkins
+Branch: refs/heads/master
