@@ -20,6 +20,7 @@ the things you can use it for:
 * Create nodes
 * Enable/Disable nodes
 * Get information on nodes
+* Create/delete/reconfig views
 * and many more..
 
 To install::
