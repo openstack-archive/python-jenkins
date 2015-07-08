@@ -12,6 +12,9 @@ from six.moves.urllib.error import HTTPError
 from six.moves.urllib.request import build_opener
 
 import jenkins
+from tests.helper import NullServer
+from tests.helper import time_limit
+from tests.helper import TimeoutException
 
 
 def get_mock_urlopen_return_value(a_dict=None):
@@ -1859,3 +1862,31 @@ class JenkinsTest(unittest.TestCase):
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/view/Test%20View/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
+
+
+class JenkinsRequestTimeoutTests(unittest.TestCase):
+
+    def setUp(self):
+        super(JenkinsRequestTimeoutTests, self).setUp()
+        self.server = NullServer(("127.0.0.1", 0))
+
+    def test_jenkins_open_timeout(self):
+        j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
+                            None, None, timeout=0.1)
+        request = jenkins.Request('http://%s:%s/job/TestJob' %
+                                  self.server.server_address)
+
+        # assert our request times out when no response
+        with self.assertRaises(socket.timeout):
+            j.jenkins_open(request, add_crumb=False)
+
+    def test_jenkins_open_no_timeout(self):
+        j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
+                            None, None)
+        request = jenkins.Request('http://%s:%s/job/TestJob' %
+                                  self.server.server_address)
+
+        # assert we don't timeout quickly like previous test when
+        # no timeout defined.
+        with self.assertRaises(TimeoutException):
+            time_limit(0.5, j.jenkins_open, request, add_crumb=False)
