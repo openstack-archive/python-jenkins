@@ -180,6 +180,10 @@ class BadHTTPException(JenkinsException):
     pass
 
 
+class TimeoutException(JenkinsException):
+    '''A special exception to call out in the case of a socket timeout.'''
+
+
 def auth_headers(username, password):
     '''Simple implementation of HTTP Basic Authentication.
 
@@ -332,7 +336,13 @@ class Jenkins(object):
                 raise NotFoundException('Requested item could not be found')
             else:
                 raise
+        except socket.timeout as e:
+            raise TimeoutException('Error in request: %s' % (e))
         except URLError as e:
+            # python 2.6 compatibility to ensure same exception raised
+            # since URLError wraps a socket timeout on python 2.6.
+            if str(e.reason) == "timed out":
+                raise TimeoutException('Error in request: %s' % (e.reason))
             raise JenkinsException('Error in request: %s' % (e.reason))
 
     def get_build_info(self, name, number, depth=0):
