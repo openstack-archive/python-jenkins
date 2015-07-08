@@ -49,6 +49,8 @@ import base64
 import json
 import re
 import socket
+import sys
+import warnings
 
 import six
 from six.moves.http_client import BadStatusLine
@@ -56,6 +58,10 @@ from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode
 from six.moves.urllib.request import Request, urlopen
+
+if sys.version_info < (2, 7, 0):
+    warnings.warn("Support for python 2.6 is deprecated and will be removed.")
+
 
 LAUNCHER_SSH = 'hudson.plugins.sshslaves.SSHLauncher'
 LAUNCHER_COMMAND = 'hudson.slaves.CommandLauncher'
