@@ -11,7 +11,7 @@ import six
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.request import build_opener
 
-from tests.helper import jenkins
+import jenkins
 
 
 def get_mock_urlopen_return_value(a_dict=None):
