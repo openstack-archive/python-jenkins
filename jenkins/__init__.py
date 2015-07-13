@@ -94,6 +94,7 @@ VIEW_NAME = 'view/%(name)s/api/json?tree=name'
 CREATE_VIEW = 'createView?name=%(name)s'
 CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
+SCRIPT_TEXT = 'scriptText'
 
 # for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -678,6 +679,24 @@ class Jenkins(object):
         '''
         return self.jenkins_open(Request(
             self.build_job_url(name, parameters, token), b''))
+
+    def run_script(self, script):
+        '''Execute a groovy script on the jenkins master.
+
+        :param script: The groovy script, ``string``
+        :returns: The result of the script run.
+
+        Example::
+            >>> j = Jenkins()
+            >>> info = j.run_script("println(Jenkins.instance.pluginManager.plugins)")
+            >>> print(info)
+            u'[Plugin:windows-slaves, Plugin:ssh-slaves, Plugin:translation,
+            Plugin:cvs, Plugin:nodelabelparameter, Plugin:external-monitor-job,
+            Plugin:mailer, Plugin:jquery, Plugin:antisamy-markup-formatter,
+            Plugin:maven-plugin, Plugin:pam-auth]'
+        '''
+        return self.jenkins_open(Request(self.server + SCRIPT_TEXT,
+                                         "script=".encode('utf-8') + script.encode('utf-8')))
 
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
