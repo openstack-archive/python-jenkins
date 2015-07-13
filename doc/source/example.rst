@@ -12,6 +12,9 @@ Example usage::
     j.enable_job('empty_copy')
     j.reconfig_job('empty_copy', jenkins.RECONFIG_XML)
 
+    # shutdown Jenkins safely
+    j.safe_shutdown()
+
     j.delete_job('empty')
     j.delete_job('empty_copy')
 
