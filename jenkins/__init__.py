@@ -50,6 +50,7 @@ import json
 import re
 import socket
 import sys
+import time
 import warnings
 
 import six
@@ -999,3 +1000,39 @@ class Jenkins(object):
         '''
         request = Request(self.server + CONFIG_VIEW % self._get_encoded_params(locals()))
         return self.jenkins_open(request)
+
+    def assert_shutdown(self, exception_message='jenkins is not shutting down'):
+        '''Raise an exception if jenkins is not shutting down or not in quiet down mode.
+
+        When Jenkins is shutdown safely, it waits for completion of ongoing
+        builds. First check is done to see if Jenkins is shutdown directly
+        since there was no ongoing builds. This is done by getting version of Jenkins.
+        If we get an exception, it means that Jenkins is already shutdown.
+        If this it not the case then there are one or more ongoing builds and Jenkins
+        is waiting for their completion and it is taken to quiet down mode.
+        If none is valid then an exception is thrown.
+
+        :throws: :class:`JenkinsException` whenever the Jenkins is not possible
+            to shutdown
+        '''
+
+        try:
+            self.get_version()
+        except URLError:
+            pass
+        else:
+            script = 'hudson.model.Hudson.instance.isTerminating()'
+            if not self.run_script(script):
+                raise JenkinsException(exception_message)
+
+    def safe_shutdown(self):
+        '''Shutdown Jenkins safely while no jobs is running.
+
+        Example::
+            >>> j = Jenkins()
+            >>> j.safe_shutdown()
+        '''
+        script = 'hudson.model.Hudson.instance.doSafeExit(null)'
+        self.run_script(script)
+        time.sleep(2)
+        self.assert_shutdown()
