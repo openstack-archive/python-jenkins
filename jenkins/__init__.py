@@ -999,3 +999,38 @@ class Jenkins(object):
         '''
         request = Request(self.server + CONFIG_VIEW % self._get_encoded_params(locals()))
         return self.jenkins_open(request)
+
+    def assert_restart(self, exception_message='jenkins is not restarting'):
+        '''Raise an exception if jenkins is not restarting or not in quiet down mode
+
+        When Jenkins is restarted safely, it waits for completion of ongoing
+        builds. First check is done to see if Jenkins is restarted directly
+        since there was no ongoing builds. This is done by getting version of Jenkins.
+        If we get an exception, it means that Jenkins is currently restarting.
+        If this it not the case then there are one or more ongoing builds and Jenkins
+        Jenkins is waiting for their completion and it is taken to quiet down mode.
+        If none is valid then an exception is thrown.
+
+        :throws: :class:`JenkinsException` whenever the Jenkins is not possible
+            to restart
+        '''
+
+        try:
+            self.get_version()
+        except BadHTTPException:
+            pass
+        else:
+            script = 'hudson.model.Hudson.instance.isTerminating()'
+            if not self.run_script(script):
+                raise JenkinsException(exception_message)
+
+    def safe_restart(self):
+        '''Restart Jenkins safely while no jobs is running.
+
+        Example::
+            >>> j = Jenkins()
+            >>> j.safe_restart()
+        '''
+        script = 'hudson.model.Hudson.instance.doSafeRestart(null)'
+        self.run_script(script)
+        self.assert_restart()
