@@ -1870,3 +1870,20 @@ class JenkinsTest(unittest.TestCase):
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/view/Test%20View/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_safe_restart(self, urlopen_mock):
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.safe_restart()
+
+        mock_response = Mock()
+        if six.PY2:
+            config = {'info.return_value.getheader.return_value': 'Version42'}
+
+        if six.PY3:
+            config = {'getheader.return_value': 'Version42'}
+
+        mock_response.configure_mock(**config)
+        urlopen_mock.side_effect = [mock_response]
+        self.assertNotEqual(j.get_version(), 'Version42')
+        self._check_requests(urlopen_mock.call_args_list)
