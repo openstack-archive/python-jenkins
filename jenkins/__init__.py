@@ -233,7 +233,7 @@ class Jenkins(object):
             else:
                 self.crumb = json.loads(response)
         if self.crumb:
-            req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
+            req.add_header(str(self.crumb['crumbRequestField']), str(self.crumb['crumb']))
 
     def get_job_info(self, name, depth=0):
         '''Get job information dictionary.
