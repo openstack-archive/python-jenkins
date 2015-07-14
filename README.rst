@@ -15,6 +15,7 @@ the things you can use it for:
 * Update jobs
 * Get a job's build information
 * Check a job's build status
+* Wait for a job to complete
 * Get Jenkins master version information
 * Get Jenkins plugin information
 * Start a build on a job
