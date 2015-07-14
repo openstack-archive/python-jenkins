@@ -373,6 +373,7 @@ class Jenkins(object):
                 % (name, number)
             )
 
+
     def get_last_build_info(self, name, depth=0):
         '''Get the last executed build information for a job.
 
@@ -409,6 +410,18 @@ class Jenkins(object):
         except ValueError:
             raise JenkinsException(
                 "Could not parse JSON info for job[%s]" % name)
+
+    def is_building(self, name):
+        '''Checks whether a job is currently building
+
+        :param name: Job name, ``str``
+        :returns: True means job is currently building, otherwise false, ``bool``
+
+        Example::
+            >>> j = Jenkins()
+            >>> last_build = j.is_building('TestJob')
+        '''
+        return self.get_last_build_info(name)['building']
 
     def get_queue_info(self):
         ''':returns: list of job dictionaries, ``[dict]``

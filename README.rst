@@ -14,6 +14,7 @@ the things you can use it for:
 * Delete jobs
 * Update jobs
 * Get a job's build information
+* Check a job's build status
 * Get Jenkins master version information
 * Get Jenkins plugin information
 * Start a build on a job
