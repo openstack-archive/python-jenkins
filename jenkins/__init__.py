@@ -88,6 +88,7 @@ BUILD_JOB = 'job/%(name)s/build'
 STOP_BUILD = 'job/%(name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = 'job/%(name)s/buildWithParameters'
 BUILD_INFO = 'job/%(name)s/%(number)d/api/json?depth=%(depth)s'
+LAST_BUILD_INFO = 'job/%(name)s/lastBuild/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = 'job/%(name)s/%(number)d/consoleText'
 NODE_LIST = 'computer/api/json'
 CREATE_NODE = 'computer/doCreateItem?%s'
@@ -245,6 +246,7 @@ class Jenkins(object):
         try:
             response = self.jenkins_open(Request(
                 self.server + JOB_INFO % self._get_encoded_params(locals())))
+
             if response:
                 return json.loads(response)
             else:
@@ -337,7 +339,7 @@ class Jenkins(object):
             raise JenkinsException('Error in request: %s' % (e.reason))
 
     def get_build_info(self, name, number, depth=0):
-        '''Get build information dictionary.
+        '''Get the build information for a job.
 
         :param name: Job name, ``str``
         :param name: Build number, ``int``
@@ -370,6 +372,43 @@ class Jenkins(object):
                 'Could not parse JSON info for job[%s] number[%d]'
                 % (name, number)
             )
+
+    def get_last_build_info(self, name, depth=0):
+        '''Get the last executed build information for a job.
+
+        :param name: Job name, ``str``
+        :param depth: JSON depth, ``int``
+        :returns: information about the last build of the job, ``dict``
+        :raises: :class:`JenkinsException` whenever there are no builds.
+
+        Example::
+            >>> j = Jenkins()
+            >>> info = j.get_last_build_info('test_job')
+            >>> print(info)
+            {u'building': False, u'changeSet': {u'items': [], u'kind': None},
+            u'builtOn': u'linux-slave2', u'description': None, u'artifacts': [],
+            u'timestamp': 1436900175434, u'number': 8, u'actions':
+            [{u'causes': [{u'userName': u'anonymous', u'userId': None,
+            u'shortDescription': u'Started by user anonymous'}]}],
+            u'id': u'2015-07-14_18-56-15', u'keepLog': False,
+            u'url': u'http://15.125.107.245:8080/job/test-job/8/',
+            u'culprits': [], u'result': u'SUCCESS', u'executor': None,
+            u'duration': 30804, u'fullDisplayName': u'test-job #8',
+            u'estimatedDuration': 30566}
+        '''
+        try:
+            response = self.jenkins_open(Request(
+                self.server + LAST_BUILD_INFO % self._get_encoded_params(locals())))
+
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('job[%s] does not exist' % name)
+        except HTTPError:
+            raise JenkinsException('job[%s] does not exist' % name)
+        except ValueError:
+            raise JenkinsException(
+                "Could not parse JSON info for job[%s]" % name)
 
     def get_queue_info(self):
         ''':returns: list of job dictionaries, ``[dict]``
