@@ -50,6 +50,7 @@ import json
 import re
 import socket
 import sys
+import time
 import warnings
 
 import six
@@ -421,6 +422,24 @@ class Jenkins(object):
             >>> last_build = j.is_building('TestJob')
         '''
         return self.get_last_build_info(name)['building']
+
+    def wait_for_build(self, name, timeout=10):
+        '''Wait a period of time for a build to complete OR when the timeout
+           period ends.  For concurrently running jobs this will wait until
+           the last build completes.
+
+        :param name: Job name, ``str``
+        :param timeout: timeout in seconds (default: 10), ``int``
+
+        Example::
+            >>> j = Jenkins()
+            >>> last_build = j.wait_for_build('TestJob')
+        '''
+        while self.is_building(name):
+            time.sleep(1)
+            timeout = timeout - 1
+            if timeout <= 0:
+                break
 
     def get_queue_info(self):
         ''':returns: list of job dictionaries, ``[dict]``
