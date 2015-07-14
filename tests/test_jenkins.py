@@ -587,6 +587,70 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_last_build_info(self, jenkins_mock):
+        build_info_to_return = {
+            "artifacts": '[]',
+            "building": 'true',
+            "description": 'null',
+            "duration": '0',
+            "estimatedDuration": '30529',
+            "executor": '{}',
+            "fullDisplayName": "TestJob",
+            "id": "2015-07-14_18-56-15",
+            "keepLog": 'false',
+            "number": '8',
+            "result": 'null',
+            "timestamp": '1436900175434',
+            "url": "http://example.com/job/TestJob/1/",
+            "builtOn": "slave1",
+        }
+        jenkins_mock.return_value = json.dumps(build_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        build_info = j.get_last_build_info(u'TestJob')
+
+        self.assertEqual(build_info, build_info_to_return)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/TestJob/lastBuild/api/json?depth=0')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_last_build_info__invalid_json(self, jenkins_mock):
+        jenkins_mock.return_value = 'Invalid JSON'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_last_build_info(u'TestJob')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/TestJob/lastBuild/api/json?depth=0')
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for job[TestJob]')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_get_job_last_build_info__HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            'http://example.com/job/TestJob/api/json?depth=0',
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            j.get_last_build_info(u'TestJob')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/job/TestJob/lastBuild/api/json?depth=0')
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[TestJob] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info(self, jenkins_mock):
         job_info_to_return = {
             u'building': False,
