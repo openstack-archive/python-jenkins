@@ -23,6 +23,7 @@ Example usage::
     # build a parameterized job
     # requires setting up api-test job to accept 'param1' & 'param2'
     j.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
+    job_status = j.is_building('api-test')
     last_build_number = j.get_job_info('api-test')['lastCompletedBuild']['number']
     build_info = j.get_job_info('api-test', last_build_number)
     print(build_info)

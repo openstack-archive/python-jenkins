@@ -826,6 +826,16 @@ class JenkinsTest(unittest.TestCase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_is_building(self, jenkins_mock):
+        build_info_to_return = {
+            "building": False,
+        }
+        jenkins_mock.return_value = json.dumps(build_info_to_return)
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.assertFalse(j.is_building('TestJob'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_jobs(self, jenkins_mock):
         jobs = {
             u'url': u'http://your_url_here/job/my_job/',
