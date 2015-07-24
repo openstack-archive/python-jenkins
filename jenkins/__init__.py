@@ -55,12 +55,12 @@ import time
 import warnings
 
 import multi_key_dict
+import requests
+import requests.exceptions as req_exc
 import six
 from six.moves.http_client import BadStatusLine
-from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
-from six.moves.urllib.request import Request, urlopen
 
 from jenkins import plugins
 
@@ -99,7 +99,7 @@ BUILD_WITH_PARAMS_JOB = '%(folder_url)sjob/%(short_name)s/buildWithParameters'
 BUILD_INFO = '%(folder_url)sjob/%(short_name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = '%(folder_url)sjob/%(short_name)s/%(number)d/consoleText'
 NODE_LIST = 'computer/api/json'
-CREATE_NODE = 'computer/doCreateItem?%s'
+CREATE_NODE = 'computer/doCreateItem'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
@@ -229,21 +229,19 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
         self.timeout = timeout
+        self._session = requests.Session()
 
     def _get_encoded_params(self, params):
-        for k, v in params.items():
+        for k in list(params.keys()):
             if k in ["name", "msg", "short_name", "from_short_name",
                      "to_short_name", "folder_url", "from_folder_url", "to_folder_url"]:
-                params[k] = quote(v)
+                params[k] = quote(params[k])
         return params
 
     def _build_url(self, format_spec, variables=None):
 
         if variables:
-            if format_spec == CREATE_NODE:
-                url_path = format_spec % urlencode(self._get_encoded_params(variables))
-            else:
-                url_path = format_spec % self._get_encoded_params(variables)
+            url_path = format_spec % self._get_encoded_params(variables)
         else:
             url_path = format_spec
 
@@ -253,14 +251,14 @@ class Jenkins(object):
         # We don't know yet whether we need a crumb
         if self.crumb is None:
             try:
-                response = self.jenkins_open(Request(
-                    self._build_url(CRUMB_URL)), add_crumb=False)
+                response = self.jenkins_open(requests.Request(
+                    'GET', self._build_url(CRUMB_URL)), add_crumb=False)
             except (NotFoundException, EmptyResponseException):
                 self.crumb = False
             else:
                 self.crumb = json.loads(response)
         if self.crumb:
-            req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
+            req.headers[self.crumb['crumbRequestField']] = self.crumb['crumb']
 
     def get_job_info(self, name, depth=0):
         '''Get job information dictionary.
@@ -271,14 +269,14 @@ class Jenkins(object):
         '''
         folder_url, short_name = self._get_job_folder(name)
         try:
-            response = self.jenkins_open(Request(
-                self._build_url(JOB_INFO, locals())
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(JOB_INFO, locals())
             ))
             if response:
                 return json.loads(response)
             else:
                 raise JenkinsException('job[%s] does not exist' % name)
-        except HTTPError:
+        except (req_exc.HTTPError, NotFoundException):
             raise JenkinsException('job[%s] does not exist' % name)
         except ValueError:
             raise JenkinsException(
@@ -313,8 +311,8 @@ class Jenkins(object):
         '''
         folder_url, short_name = self._get_job_folder(name)
         try:
-            response = self.jenkins_open(Request(
-                self._build_url(JOB_NAME, locals())
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(JOB_NAME, locals())
             ))
         except NotFoundException:
             return None
@@ -331,6 +329,29 @@ class Jenkins(object):
         for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
+    def _response_handler(self, response):
+        '''Handle response objects'''
+
+        # raise exceptions if occurred
+        response.raise_for_status()
+
+        headers = response.headers
+        if (headers.get('content-length') is None and
+                headers.get('transfer-encoding') is None):
+            # response body should only exist if one of these is provided
+            raise EmptyResponseException(
+                "Error communicating with server[%s]: "
+                "empty response" % self.server)
+
+        # Reponse objects will automatically return unicode encoded
+        # when accessing .text property
+        return response
+
+    def _request(self, req):
+
+        r = req.prepare()
+        return self._session.send(r, timeout=self.timeout)
+
     def jenkins_open(self, req, add_crumb=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
@@ -338,33 +359,27 @@ class Jenkins(object):
         '''
         try:
             if self.auth:
-                req.add_header('Authorization', self.auth)
+                req.headers['Authorization'] = self.auth
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
-            if response is None:
-                raise EmptyResponseException(
-                    "Error communicating with server[%s]: "
-                    "empty response" % self.server)
-            return response.decode('utf-8')
-        except HTTPError as e:
+
+            return self._response_handler(
+                self._request(req)).text.decode('utf-8')
+
+        except req_exc.HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
-            if e.code in [401, 403, 500]:
-                # six.moves.urllib.error.HTTPError provides a 'reason'
-                # attribute for all python version except for ver 2.6
-                # Falling back to HTTPError.msg since it contains the
-                # same info as reason
+            if e.response.status_code in [401, 403, 500]:
                 raise JenkinsException(
                     'Error in request. ' +
                     'Possibly authentication failed [%s]: %s' % (
-                        e.code, e.msg)
+                        e.response.status_code, e.response.reason)
                 )
-            elif e.code == 404:
+            elif e.response.status_code == 404:
                 raise NotFoundException('Requested item could not be found')
             else:
                 raise
-        except socket.timeout as e:
+        except req_exc.Timeout as e:
             raise TimeoutException('Error in request: %s' % (e))
         except URLError as e:
             # python 2.6 compatibility to ensure same exception raised
@@ -392,15 +407,15 @@ class Jenkins(object):
         '''
         folder_url, short_name = self._get_job_folder(name)
         try:
-            response = self.jenkins_open(Request(
-                self._build_url(BUILD_INFO, locals())
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(BUILD_INFO, locals())
             ))
             if response:
                 return json.loads(response)
             else:
                 raise JenkinsException('job[%s] number[%d] does not exist'
                                        % (name, number))
-        except HTTPError:
+        except (req_exc.HTTPError, NotFoundException):
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
         except ValueError:
@@ -418,7 +433,7 @@ class Jenkins(object):
             {u'task': {u'url': u'http://your_url/job/my_job/', u'color': u'aborted_anime', u'name': u'my_job'}, u'stuck': False, u'actions': [{u'causes': [{u'shortDescription': u'Started by timer'}]}], u'buildable': False, u'params': u'', u'buildableStartMilliseconds': 1315087293316, u'why': u'Build #2,532 is already in progress (ETA:10 min)', u'blocked': True}
         '''
         return json.loads(self.jenkins_open(
-            Request(self._build_url(Q_INFO))
+            requests.Request('GET', self._build_url(Q_INFO))
         ))['items']
 
     def cancel_queue(self, id):
@@ -430,8 +445,9 @@ class Jenkins(object):
         # https://issues.jenkins-ci.org/browse/JENKINS-21311
         try:
             self.jenkins_open(
-                Request(self._build_url(CANCEL_QUEUE, locals()), b'',
-                        headers={'Referer': self.server}))
+                requests.Request(
+                    'POST', self._build_url(CANCEL_QUEUE, locals()),
+                    headers={'Referer': self.server}))
         except NotFoundException:
             # Exception is expected; cancel_queue() is a best-effort
             # mechanism, so ignore it
@@ -461,9 +477,9 @@ class Jenkins(object):
             url += query
         try:
             return json.loads(self.jenkins_open(
-                Request(self._build_url(url))
+                requests.Request('GET', self._build_url(INFO))
             ))
-        except (HTTPError, BadStatusLine):
+        except (req_exc.HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
@@ -483,21 +499,13 @@ class Jenkins(object):
 
         """
         try:
-            request = Request(self._build_url(''))
-            request.add_header('X-Jenkins', '0.0')
-            response = urlopen(request, timeout=self.timeout)
-            if response is None:
-                raise EmptyResponseException(
-                    "Error communicating with server[%s]: "
-                    "empty response" % self.server)
+            request = requests.Request('GET', self._build_url(''))
+            request.headers['X-Jenkins'] = '0.0'
+            response = self._response_handler(self._request(request))
 
-            if six.PY2:
-                return response.info().getheader('X-Jenkins')
+            return response.headers['X-Jenkins']
 
-            if six.PY3:
-                return response.getheader('X-Jenkins')
-
-        except (HTTPError, BadStatusLine):
+        except (req_exc.HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
 
@@ -599,8 +607,8 @@ class Jenkins(object):
 
         try:
             plugins_info_json = json.loads(self.jenkins_open(
-                Request(self._build_url(PLUGIN_INFO, locals()))))
-        except (HTTPError, BadStatusLine):
+                requests.Request('GET', self._build_url(PLUGIN_INFO, locals()))))
+        except (req_exc.HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
@@ -714,8 +722,9 @@ class Jenkins(object):
             raise JenkinsException('copy[%s to %s] failed, source and destination '
                                    'folder must be the same' % (from_name, to_name))
 
-        self.jenkins_open(Request(
-            self._build_url(COPY_JOB, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(COPY_JOB, locals())
+        ))
         self.assert_job_exists(to_name, 'create[%s] failed')
 
     def rename_job(self, from_name, to_name):
@@ -734,8 +743,9 @@ class Jenkins(object):
         if from_folder_url != to_folder_url:
             raise JenkinsException('rename[%s to %s] failed, source and destination folder '
                                    'must be the same' % (from_name, to_name))
-        self.jenkins_open(Request(
-            self._build_url(RENAME_JOB, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(RENAME_JOB, locals())
+        ))
         self.assert_job_exists(to_name, 'rename[%s] failed')
 
     def delete_job(self, name):
@@ -744,8 +754,9 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         '''
         folder_url, short_name = self._get_job_folder(name)
-        self.jenkins_open(Request(
-            self._build_url(DELETE_JOB, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(DELETE_JOB, locals())
+        ))
         if self.job_exists(name):
             raise JenkinsException('delete[%s] failed' % (name))
 
@@ -755,8 +766,9 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         '''
         folder_url, short_name = self._get_job_folder(name)
-        self.jenkins_open(Request(
-            self._build_url(ENABLE_JOB, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(ENABLE_JOB, locals())
+        ))
 
     def disable_job(self, name):
         '''Disable Jenkins job.
@@ -766,8 +778,9 @@ class Jenkins(object):
         :param name: Name of Jenkins job, ``str``
         '''
         folder_url, short_name = self._get_job_folder(name)
-        self.jenkins_open(Request(
-            self._build_url(DISABLE_JOB, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(DISABLE_JOB, locals())
+        ))
 
     def set_next_build_number(self, name, number):
         '''Set a job's next build number.
@@ -790,9 +803,9 @@ class Jenkins(object):
             >>> server.set_next_build_number('job_name', next_bn + 50)
         '''
         folder_url, short_name = self._get_job_folder(name)
-        self.jenkins_open(
-            Request(self._build_url(SET_JOB_BUILD_NUMBER, locals()),
-                    ("nextBuildNumber=%d" % number).encode('utf-8')))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(SET_JOB_BUILD_NUMBER, locals()),
+            data=("nextBuildNumber=%d" % number).encode('utf-8')))
 
     def job_exists(self, name):
         '''Check whether a job exists
@@ -850,9 +863,11 @@ class Jenkins(object):
             raise JenkinsException('job[%s] already exists' % (name))
 
         try:
-            self.jenkins_open(Request(
-                self._build_url(CREATE_JOB, locals()),
-                config_xml.encode('utf-8'), DEFAULT_HEADERS))
+            self.jenkins_open(requests.Request(
+                'POST', self._build_url(CREATE_JOB, locals()),
+                data=config_xml.encode('utf-8'),
+                headers=DEFAULT_HEADERS
+            ))
         except NotFoundException:
             raise JenkinsException('Cannot create job[%s] because folder '
                                    'for the job does not exist' % (name))
@@ -865,7 +880,7 @@ class Jenkins(object):
         :returns: job configuration (XML format)
         '''
         folder_url, short_name = self._get_job_folder(name)
-        request = Request(self._build_url(CONFIG_JOB, locals()))
+        request = requests.Request('GET', self._build_url(CONFIG_JOB, locals()))
         return self.jenkins_open(request)
 
     def reconfig_job(self, name, config_xml):
@@ -878,8 +893,11 @@ class Jenkins(object):
         '''
         folder_url, short_name = self._get_job_folder(name)
         reconfig_url = self._build_url(CONFIG_JOB, locals())
-        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
-                                  DEFAULT_HEADERS))
+        self.jenkins_open(requests.Request(
+            'POST', reconfig_url,
+            data=config_xml.encode('utf-8'),
+            headers=DEFAULT_HEADERS
+        ))
 
     def build_job_url(self, name, parameters=None, token=None):
         '''Get URL to trigger build job.
@@ -910,8 +928,8 @@ class Jenkins(object):
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
         '''
-        return self.jenkins_open(Request(
-            self.build_job_url(name, parameters, token), b''))
+        return self.jenkins_open(requests.Request(
+            'POST', self.build_job_url(name, parameters, token)))
 
     def run_script(self, script):
         '''Execute a groovy script on the jenkins master.
@@ -927,8 +945,10 @@ class Jenkins(object):
             Plugin:mailer, Plugin:jquery, Plugin:antisamy-markup-formatter,
             Plugin:maven-plugin, Plugin:pam-auth]'
         '''
-        return self.jenkins_open(Request(self._build_url(SCRIPT_TEXT),
-                                         "script=".encode('utf-8') + script.encode('utf-8')))
+        return self.jenkins_open(
+            requests.Request(
+                'POST', self._build_url(SCRIPT_TEXT),
+                data="script=".encode('utf-8') + script.encode('utf-8')))
 
     def install_plugin(self, name, include_dependencies=True):
         '''Install a plugin and its dependencies from the Jenkins public
@@ -970,8 +990,9 @@ class Jenkins(object):
         :param number: Jenkins build number for the job, ``int``
         '''
         folder_url, short_name = self._get_job_folder(name)
-        self.jenkins_open(Request(
-            self._build_url(STOP_BUILD, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(STOP_BUILD, locals())
+        ))
 
     def get_running_builds(self):
         '''Return list of running builds.
@@ -1030,10 +1051,11 @@ class Jenkins(object):
         :returns: List of nodes, ``[ { str: str, str: bool} ]``
         '''
         try:
-            nodes_data = json.loads(self.jenkins_open(Request(self._build_url(NODE_LIST))))
+            nodes_data = json.loads(self.jenkins_open(
+                requests.Request('GET', self._build_url(NODE_LIST))))
             return [{'name': c["displayName"], 'offline': c["offline"]}
                     for c in nodes_data["computer"]]
-        except (HTTPError, BadStatusLine):
+        except (req_exc.HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
@@ -1048,13 +1070,14 @@ class Jenkins(object):
         :returns: Dictionary of node info, ``dict``
         '''
         try:
-            response = self.jenkins_open(Request(
-                self._build_url(NODE_INFO, locals())))
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(NODE_INFO, locals())
+            ))
             if response:
                 return json.loads(response)
             else:
                 raise JenkinsException('node[%s] does not exist' % name)
-        except HTTPError:
+        except (req_exc.HTTPError, NotFoundException):
             raise JenkinsException('node[%s] does not exist' % name)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for node[%s]"
@@ -1090,8 +1113,9 @@ class Jenkins(object):
         :param name: Name of Jenkins node, ``str``
         '''
         self.get_node_info(name)
-        self.jenkins_open(Request(
-            self._build_url(DELETE_NODE, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(DELETE_NODE, locals())
+        ))
         if self.node_exists(name):
             raise JenkinsException('delete[%s] failed' % (name))
 
@@ -1104,8 +1128,9 @@ class Jenkins(object):
         info = self.get_node_info(name)
         if info['offline']:
             return
-        self.jenkins_open(Request(
-            self._build_url(TOGGLE_OFFLINE, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(TOGGLE_OFFLINE, locals())
+        ))
 
     def enable_node(self, name):
         '''Enable a node
@@ -1116,8 +1141,9 @@ class Jenkins(object):
         if not info['offline']:
             return
         msg = ''
-        self.jenkins_open(Request(
-            self._build_url(TOGGLE_OFFLINE, locals()), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(TOGGLE_OFFLINE, locals())
+        ))
 
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
@@ -1161,11 +1187,12 @@ class Jenkins(object):
         params = {
             'name': name,
             'type': NODE_TYPE,
-            'json': json.dumps(inner_params)
+            'json': inner_params
         }
 
-        self.jenkins_open(Request(
-            self._build_url(CREATE_NODE, params), b''))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(CREATE_NODE, locals()), data=params)
+        )
 
         self.assert_node_exists(name, 'create[%s] failed')
 
@@ -1175,7 +1202,7 @@ class Jenkins(object):
         :param name: Jenkins node name, ``str``
         '''
         get_config_url = self._build_url(CONFIG_NODE, locals())
-        return self.jenkins_open(Request(get_config_url))
+        return self.jenkins_open(requests.Request('GET', get_config_url))
 
     def reconfig_node(self, name, config_xml):
         '''Change the configuration for an existing node.
@@ -1184,7 +1211,11 @@ class Jenkins(object):
         :param config_xml: New XML configuration, ``str``
         '''
         reconfig_url = self._build_url(CONFIG_NODE, locals())
-        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'), DEFAULT_HEADERS))
+        self.jenkins_open(requests.Request(
+            'POST', reconfig_url,
+            data=config_xml.encode('utf-8'),
+            headers=DEFAULT_HEADERS
+        ))
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
@@ -1195,15 +1226,15 @@ class Jenkins(object):
         '''
         folder_url, short_name = self._get_job_folder(name)
         try:
-            response = self.jenkins_open(Request(
-                self._build_url(BUILD_CONSOLE_OUTPUT, locals())
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(BUILD_CONSOLE_OUTPUT, locals())
             ))
             if response:
                 return response
             else:
                 raise JenkinsException('job[%s] number[%d] does not exist'
                                        % (name, number))
-        except HTTPError:
+        except (req_exc.HTTPError, NotFoundException):
             raise JenkinsException('job[%s] number[%d] does not exist'
                                    % (name, number))
 
@@ -1236,8 +1267,8 @@ class Jenkins(object):
         :returns: Name of view or None
         '''
         try:
-            response = self.jenkins_open(Request(
-                self._build_url(VIEW_NAME, locals())))
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(VIEW_NAME, locals())))
         except NotFoundException:
             return None
         else:
@@ -1283,8 +1314,8 @@ class Jenkins(object):
 
         :param name: Name of Jenkins view, ``str``
         '''
-        self.jenkins_open(Request(
-            self._build_url(DELETE_VIEW, locals()), b''
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(DELETE_VIEW, locals())
         ))
         if self.view_exists(name):
             raise JenkinsException('delete[%s] failed' % (name))
@@ -1298,9 +1329,11 @@ class Jenkins(object):
         if self.view_exists(name):
             raise JenkinsException('view[%s] already exists' % (name))
 
-        self.jenkins_open(Request(
-            self._build_url(CREATE_VIEW, locals()),
-            config_xml.encode('utf-8'), DEFAULT_HEADERS))
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(CREATE_VIEW, locals()),
+            data=config_xml.encode('utf-8'),
+            headers=DEFAULT_HEADERS
+        ))
         self.assert_view_exists(name, 'create[%s] failed')
 
     def reconfig_view(self, name, config_xml):
@@ -1312,8 +1345,11 @@ class Jenkins(object):
         :param config_xml: New XML configuration, ``str``
         '''
         reconfig_url = self._build_url(CONFIG_VIEW, locals())
-        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
-                                  DEFAULT_HEADERS))
+        self.jenkins_open(requests.Request(
+            'POST', reconfig_url,
+            data=config_xml.encode('utf-8'),
+            headers=DEFAULT_HEADERS
+        ))
 
     def get_view_config(self, name):
         '''Get configuration of existing Jenkins view.
@@ -1321,7 +1357,7 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :returns: view configuration (XML format)
         '''
-        request = Request(self._build_url(CONFIG_VIEW, locals()))
+        request = requests.Request('GET', self._build_url(CONFIG_VIEW, locals()))
         return self.jenkins_open(request)
 
     def quiet_down(self):
@@ -1330,7 +1366,7 @@ class Jenkins(object):
         No new builds will be started allowing running builds to complete
         prior to shutdown of the server.
         '''
-        request = Request(self._build_url(QUIET_DOWN))
+        request = requests.Request('POST', self._build_url(QUIET_DOWN))
         self.jenkins_open(request)
         info = self.get_info()
         if not info['quietingDown']:

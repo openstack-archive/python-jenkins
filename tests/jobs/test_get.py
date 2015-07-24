@@ -23,8 +23,8 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         jobs[u'fullname'] = jobs[u'name']
         self.assertEqual(job_info, [jobs])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
-            self.make_url('api/json?tree=jobs[url,color,name,jobs]'))
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('api/json'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')

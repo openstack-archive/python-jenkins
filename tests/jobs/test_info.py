@@ -3,6 +3,7 @@ from mock import patch
 
 import jenkins
 from tests.jobs.base import JenkinsJobsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
@@ -21,7 +22,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/Test%20Job/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -39,7 +40,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/a%20Folder/job/Test%20Job/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -70,7 +71,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
@@ -84,47 +85,41 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for job[TestJob]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            self.make_url('job/TestJob/api/json?depth=0'),
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             self.make_url('job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_in_folder_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            self.make_url('job/a%20Folder/job/TestJob/api/json?depth=0'),
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_in_folder_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_job_info(u'a Folder/TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             self.make_url('job/a%20Folder/job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'job[a Folder/TestJob] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
