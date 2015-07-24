@@ -20,6 +20,6 @@ class JenkinsDebugJobInfoTest(JenkinsJobsTestBase):
         self.j.debug_job_info(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)

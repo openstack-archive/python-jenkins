@@ -17,7 +17,7 @@ class JenkinsDisableJobTest(JenkinsJobsTestBase):
         self.j.disable_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/disable')
         self.assertTrue(self.j.job_exists('Test Job'))
         self._check_requests(jenkins_mock.call_args_list)

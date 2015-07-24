@@ -16,7 +16,7 @@ class JenkinsGetJobNameTest(JenkinsJobsTestBase):
 
         self.assertEqual(job_name, 'Test Job')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -28,7 +28,7 @@ class JenkinsGetJobNameTest(JenkinsJobsTestBase):
 
         self.assertEqual(job_name, None)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -40,7 +40,7 @@ class JenkinsGetJobNameTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_job_name(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),

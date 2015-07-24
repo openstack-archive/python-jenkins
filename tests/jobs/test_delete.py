@@ -17,7 +17,7 @@ class JenkinsDeleteJobTest(JenkinsJobsTestBase):
         self.j.delete_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/doDelete')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -32,7 +32,7 @@ class JenkinsDeleteJobTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.delete_job(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/doDelete')
         self.assertEqual(
             str(context_manager.exception),

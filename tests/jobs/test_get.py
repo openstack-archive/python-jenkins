@@ -21,6 +21,6 @@ class JenkinsGetJobsTest(JenkinsJobsTestBase):
 
         self.assertEqual(job_info, jobs)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)

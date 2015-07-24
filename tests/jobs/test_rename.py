@@ -18,7 +18,7 @@ class JenkinsRenameJobTest(JenkinsJobsTestBase):
         self.j.rename_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
         self.assertTrue(self.j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -33,7 +33,7 @@ class JenkinsRenameJobTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/doRename?newName=TestJob_2')
         self.assertEqual(
             str(context_manager.exception),

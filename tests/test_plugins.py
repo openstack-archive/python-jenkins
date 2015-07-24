@@ -3,6 +3,7 @@ from mock import patch
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsPluginsBase(JenkinsTestBase):
@@ -40,7 +41,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         plugins_info = self.j.get_plugins_info()
         self.assertEqual(plugins_info, self.plugin_info_json['plugins'])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -60,7 +61,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
 
         self.j.get_plugins_info(depth=1)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=1')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -71,7 +72,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             self.j.get_plugins_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
@@ -85,28 +86,23 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_plugins_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            499, reason="Unhandled Error")
 
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             self.j.get_plugins_info(depth=52)
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
 
 class JenkinsPluginInfoTest(JenkinsPluginsBase):
@@ -144,7 +140,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
 
         self.j.get_plugin_info('test', depth=1)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=1')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -155,7 +151,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_plugin_info('test')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
@@ -169,25 +165,22 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_plugin_info('test')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_plugin_info(u'TestPlugin', depth=52)
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)

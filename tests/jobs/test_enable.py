@@ -17,7 +17,7 @@ class JenkinsEnableJobTest(JenkinsJobsTestBase):
         self.j.enable_job(u'TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/enable')
         self.assertTrue(self.j.job_exists('TestJob'))
         self._check_requests(jenkins_mock.call_args_list)

@@ -18,7 +18,7 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
         self.j.create_job(u'Test Job', self.config_xml)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createItem?name=Test%20Job')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -32,7 +32,7 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.create_job(u'TestJob', self.config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -50,10 +50,10 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.create_job(u'TestJob', self.config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createItem?name=TestJob')
         self.assertEqual(
             str(context_manager.exception),
