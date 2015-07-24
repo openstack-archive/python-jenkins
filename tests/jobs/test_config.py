@@ -11,7 +11,7 @@ class JenkinsGetJobConfigTest(JenkinsJobsTestBase):
         self.j.get_job_config(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/Test%20Job/config.xml'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -20,6 +20,6 @@ class JenkinsGetJobConfigTest(JenkinsJobsTestBase):
         self.j.get_job_config(u'a folder/Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/a%20folder/job/Test%20Job/config.xml'))
         self._check_requests(jenkins_mock.call_args_list)
