@@ -1,12 +1,12 @@
 import json
 import socket
 
-from mock import patch, Mock
+from mock import patch
 import six
-from six.moves.urllib.error import HTTPError
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 def get_mock_urlopen_return_value(a_dict=None):
@@ -63,44 +63,44 @@ class JenkinsConstructorTest(JenkinsTestBase):
 
 class JenkinsMaybeAddCrumbTest(JenkinsTestBase):
 
-    @patch('jenkins.urlopen')
-    def test_simple(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.NotFoundException()
-        request = jenkins.Request('http://example.com/job/TestJob')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_simple(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            404, reason="Not Found")
+        request = jenkins.requests.Request('http://example.com/job/TestJob')
 
         self.j.maybe_add_crumb(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/crumbIssuer/api/json')
         self.assertFalse(self.j.crumb)
         self.assertFalse('.crumb' in request.headers)
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_with_data(self, jenkins_mock):
-        jenkins_mock.return_value = get_mock_urlopen_return_value(self.crumb_data)
-        request = jenkins.Request('http://example.com/job/TestJob')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_with_data(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            200, self.crumb_data)
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         self.j.maybe_add_crumb(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/crumbIssuer/api/json')
         self.assertEqual(self.j.crumb, self.crumb_data)
         self.assertEqual(request.headers['.crumb'], self.crumb_data['crumb'])
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_return_empty_response(self, jenkins_mock):
         "Don't try to create crumb header from an empty response"
         jenkins_mock.side_effect = jenkins.EmptyResponseException("empty response")
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         self.j.maybe_add_crumb(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/crumbIssuer/api/json')
         self.assertFalse(self.j.crumb)
         self.assertFalse('.crumb' in request.headers)
@@ -109,34 +109,29 @@ class JenkinsMaybeAddCrumbTest(JenkinsTestBase):
 
 class JenkinsOpenTest(JenkinsTestBase):
 
-    @patch('jenkins.urlopen')
-    def test_simple(self, jenkins_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_simple(self, session_send_mock):
         data = {'foo': 'bar'}
-        jenkins_mock.side_effect = [
-            get_mock_urlopen_return_value(self.crumb_data),
-            get_mock_urlopen_return_value(data),
-        ]
-        request = jenkins.Request('http://example.com/job/TestJob')
+        session_send_mock.side_effect = iter([
+            build_response_mock(200, self.crumb_data),
+            build_response_mock(200, data),
+        ])
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         response = self.j.jenkins_open(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
         self.assertEqual(response, json.dumps(data))
         self.assertEqual(self.j.crumb, self.crumb_data)
         self.assertEqual(request.headers['.crumb'], self.crumb_data['crumb'])
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_response_403(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
-        request = jenkins.Request('http://example.com/job/TestJob')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_response_403(self, session_send_mock):
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            401, reason="basic auth failed")
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.jenkins_open(request, add_crumb=False)
@@ -145,19 +140,14 @@ class JenkinsOpenTest(JenkinsTestBase):
             'Error in request. Possibly authentication failed [401]: '
             'basic auth failed')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_response_404(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=404,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
-        request = jenkins.Request('http://example.com/job/TestJob')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_response_404(self, session_send_mock):
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            404, reason="basic auth failed")
 
         with self.assertRaises(jenkins.NotFoundException) as context_manager:
             self.j.jenkins_open(request, add_crumb=False)
@@ -165,53 +155,46 @@ class JenkinsOpenTest(JenkinsTestBase):
             str(context_manager.exception),
             'Requested item could not be found')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_empty_response(self, jenkins_mock):
-        jenkins_mock.return_value = Mock(**{'read.return_value': None})
-
-        request = jenkins.Request('http://example.com/job/TestJob')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_empty_response(self, session_send_mock):
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            401, reason="basic auth failed")
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.jenkins_open(request, False)
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]: '
-            'empty response')
+            'Error in request. Possibly authentication failed [401]: '
+            'basic auth failed')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_response_501(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=501,
-            msg="Not implemented",
-            hdrs=[],
-            fp=None)
-        request = jenkins.Request('http://example.com/job/TestJob')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_response_501(self, session_send_mock):
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            501, reason="Not implemented")
 
-        with self.assertRaises(HTTPError) as context_manager:
+        with self.assertRaises(jenkins.req_exc.HTTPError) as context_manager:
             self.j.jenkins_open(request, add_crumb=False)
         self.assertEqual(
             str(context_manager.exception),
-            'HTTP Error 501: Not implemented')
+            '501 Server Error: Not implemented')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_timeout(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.URLError(
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_timeout(self, session_send_mock):
+        session_send_mock.side_effect = jenkins.URLError(
             reason="timed out")
         j = jenkins.Jenkins('http://example.com/', 'test', 'test', timeout=1)
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.jenkins_open(request, add_crumb=False)
@@ -219,6 +202,5 @@ class JenkinsOpenTest(JenkinsTestBase):
             str(context_manager.exception),
             'Error in request: timed out')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
