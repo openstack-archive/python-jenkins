@@ -3,6 +3,7 @@ from mock import patch
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsInfoTest(JenkinsTestBase):
@@ -22,28 +23,25 @@ class JenkinsInfoTest(JenkinsTestBase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('api/json'))
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            self.make_url('job/TestJob/api/json?depth=0'),
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             self.j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             self.make_url('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[{0}/]'.format(self.base_url))
-        self._check_requests(jenkins_mock.call_args_list)
+            'Error communicating with server[{0}]'.format(self.make_url('')))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_BadStatusLine(self, jenkins_mock):
@@ -52,11 +50,11 @@ class JenkinsInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             self.j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[{0}/]'.format(self.base_url))
+            'Error communicating with server[{0}]'.format(self.make_url('')))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -66,26 +64,26 @@ class JenkinsInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
+            'Could not parse JSON info for server[{0}]'.format(self.make_url('')))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_return_empty_response(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.JenkinsException(
-            "Error communicating with server[{0}/]: empty response".
-            format(self.base_url))
+            "Error communicating with server[{0}]: empty response".
+            format(self.make_url('')))
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[{0}/]: '
-            'empty response'.format(self.base_url))
+            'Error communicating with server[{0}]: '
+            'empty response'.format(self.make_url('')))
         self._check_requests(jenkins_mock.call_args_list)
