@@ -24,7 +24,7 @@ class JenkinsGetPromotionNameTest(JenkinsPromotionsTestBase):
 
         self.assertEqual(promotion_name, 'Test Promotion')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/Test%20Job/promotion/process/'
                           'Test%20Promotion/api/json?tree=name'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -38,7 +38,7 @@ class JenkinsGetPromotionNameTest(JenkinsPromotionsTestBase):
 
         self.assertEqual(promotion_name, None)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/Test%20Job/promotion/process/'
                           'TestPromotion/api/json?tree=name'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -51,7 +51,7 @@ class JenkinsGetPromotionNameTest(JenkinsPromotionsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_promotion_name(u'TestPromotion', u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/TestJob/promotion/process/TestPromotion'
                           '/api/json?tree=name'))
         self.assertEqual(
@@ -122,7 +122,7 @@ class JenkinsGetPromotionsTest(JenkinsPromotionsTestBase):
 
         self.assertEqual(promotion_info, promotions)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/TestJob/promotion/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -164,7 +164,7 @@ class JenkinsDeletePromotionTest(JenkinsPromotionsTestBase):
         self.j.delete_promotion(u'Test Promotion', 'TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/TestJob/promotion/process/'
                           'Test%20Promotion/doDelete'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -180,7 +180,7 @@ class JenkinsDeletePromotionTest(JenkinsPromotionsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.delete_promotion(u'TestPromotion', 'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/TestJob/promotion/process/'
                           'TestPromotion/doDelete'))
         self.assertEqual(
@@ -202,7 +202,7 @@ class JenkinsCreatePromotionTest(JenkinsPromotionsTestBase):
         self.j.create_promotion(u'Test Promotion', 'Test Job', self.config_xml)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             self.make_url('job/Test%20Job/promotion/'
                           'createProcess?name=Test%20Promotion'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -218,7 +218,7 @@ class JenkinsCreatePromotionTest(JenkinsPromotionsTestBase):
             self.j.create_promotion(u'TestPromotion', 'TestJob',
                                     self.config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/TestJob/promotion/process/'
                           'TestPromotion/api/json?tree=name'))
         self.assertEqual(
@@ -238,11 +238,11 @@ class JenkinsCreatePromotionTest(JenkinsPromotionsTestBase):
             self.j.create_promotion(u'TestPromotion', 'TestJob',
                                     self.config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/TestJob/promotion/process/'
                           'TestPromotion/api/json?tree=name'))
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             self.make_url('job/TestJob/promotion/'
                           'createProcess?name=TestPromotion'))
         self.assertEqual(
@@ -263,7 +263,7 @@ class JenkinsReconfigPromotionTest(JenkinsPromotionsTestBase):
         self.j.reconfig_promotion(u'Test Promotion', u'Test Job',
                                   self.config_xml)
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          self.make_url('job/Test%20Job/promotion/process/'
                                        'Test%20Promotion/config.xml'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -276,7 +276,7 @@ class JenkinsGetPromotionConfigTest(JenkinsPromotionsTestBase):
         self.j.get_promotion_config(u'Test Promotion', u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/Test%20Job/promotion/process/'
                           'Test%20Promotion/config.xml'))
         self._check_requests(jenkins_mock.call_args_list)
