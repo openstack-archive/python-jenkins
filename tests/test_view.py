@@ -17,7 +17,7 @@ class JenkinsGetViewNameTest(JenkinsTestBase):
 
         self.assertEqual(view_name, 'Test View')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/view/Test%20View/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -30,7 +30,7 @@ class JenkinsGetViewNameTest(JenkinsTestBase):
 
         self.assertEqual(view_name, None)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/view/TestView/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -43,7 +43,7 @@ class JenkinsGetViewNameTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_view_name(u'TestView')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -92,7 +92,7 @@ class JenkinsGetViewsTest(JenkinsTestBase):
 
         self.assertEqual(view_info, views)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -110,7 +110,7 @@ class JenkinsDeleteViewTest(JenkinsTestBase):
         j.delete_view(u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/Test%20View/doDelete')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -126,7 +126,7 @@ class JenkinsDeleteViewTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_view(u'TestView')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -153,7 +153,7 @@ class JenkinsCreateViewTest(JenkinsTestBase):
         j.create_view(u'Test View', config_xml)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createView?name=Test%20View')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -173,7 +173,7 @@ class JenkinsCreateViewTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_view(u'TestView', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -197,10 +197,10 @@ class JenkinsCreateViewTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_view(u'TestView', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/api/json?tree=name')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createView?name=TestView')
         self.assertEqual(
             str(context_manager.exception),
@@ -225,7 +225,7 @@ class JenkinsReconfigViewTest(JenkinsTestBase):
 
         j.reconfig_view(u'Test View', config_xml)
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/view/Test%20View/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -238,6 +238,6 @@ class JenkinsGetViewConfigTest(JenkinsTestBase):
         j.get_view_config(u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/view/Test%20View/config.xml')
         self._check_requests(jenkins_mock.call_args_list)

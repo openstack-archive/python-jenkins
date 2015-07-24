@@ -3,6 +3,7 @@ from mock import patch
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsGetJobConfigTest(JenkinsTestBase):
@@ -13,7 +14,7 @@ class JenkinsGetJobConfigTest(JenkinsTestBase):
         j.get_job_config(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -61,7 +62,7 @@ class JenkinsCreateJobTest(JenkinsTestBase):
         j.create_job(u'Test Job', config_xml)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createItem?name=Test%20Job')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -81,7 +82,7 @@ class JenkinsCreateJobTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_job(u'TestJob', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -105,10 +106,10 @@ class JenkinsCreateJobTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_job(u'TestJob', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createItem?name=TestJob')
         self.assertEqual(
             str(context_manager.exception),
@@ -133,7 +134,7 @@ class JenkinsGetJobInfoTest(JenkinsTestBase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -166,7 +167,7 @@ class JenkinsGetJobInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
@@ -181,32 +182,29 @@ class JenkinsGetJobInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for job[TestJob]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
 
 class JenkinsDebugJobInfoTest(JenkinsTestBase):
@@ -225,7 +223,7 @@ class JenkinsDebugJobInfoTest(JenkinsTestBase):
         j.debug_job_info(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -247,7 +245,7 @@ class JenkinsReconfigJobTest(JenkinsTestBase):
 
         j.reconfig_job(u'Test Job', config_xml)
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/job/Test%20Job/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -263,7 +261,7 @@ class JenkinsBuildJobTest(JenkinsTestBase):
 
         build_info = j.build_job(u'Test Job')
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/job/Test%20Job/build')
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
@@ -277,7 +275,7 @@ class JenkinsBuildJobTest(JenkinsTestBase):
 
         build_info = j.build_job(u'TestJob', token='some_token')
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/job/TestJob/build?token=some_token')
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
@@ -294,9 +292,9 @@ class JenkinsBuildJobTest(JenkinsTestBase):
             parameters={'when': 'now', 'why': 'because I felt like it'},
             token='some_token')
 
-        self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].get_full_url())
-        self.assertTrue('when=now' in jenkins_mock.call_args[0][0].get_full_url())
-        self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].url)
+        self.assertTrue('when=now' in jenkins_mock.call_args[0][0].url)
+        self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].url)
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -318,7 +316,7 @@ class JenkinsGetJobsTest(JenkinsTestBase):
 
         self.assertEqual(job_info, jobs)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -353,7 +351,7 @@ class JenkinsCopyJobTest(JenkinsTestBase):
         j.copy_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/createItem'
             '?name=Test%20Job_2&mode=copy&from=Test%20Job')
         self.assertTrue(j.job_exists('Test Job_2'))
@@ -370,7 +368,7 @@ class JenkinsCopyJobTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.copy_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/createItem'
             '?name=TestJob_2&mode=copy&from=TestJob')
         self.assertEqual(
@@ -393,7 +391,7 @@ class JenkinsRenameJobTest(JenkinsTestBase):
         j.rename_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
         self.assertTrue(j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -409,7 +407,7 @@ class JenkinsRenameJobTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/doRename?newName=TestJob_2')
         self.assertEqual(
             str(context_manager.exception),
@@ -430,7 +428,7 @@ class JenkinsDeleteJobTest(JenkinsTestBase):
         j.delete_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/doDelete')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -446,7 +444,7 @@ class JenkinsDeleteJobTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_job(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -467,7 +465,7 @@ class JenkinsEnableJobTest(JenkinsTestBase):
         j.enable_job(u'TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/enable')
         self.assertTrue(j.job_exists('TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -486,7 +484,7 @@ class JenkinsDisableJobTest(JenkinsTestBase):
         j.disable_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/disable')
         self.assertTrue(j.job_exists('Test Job'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -504,7 +502,7 @@ class JenkinsGetJobNameTest(JenkinsTestBase):
 
         self.assertEqual(job_name, 'Test Job')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -517,7 +515,7 @@ class JenkinsGetJobNameTest(JenkinsTestBase):
 
         self.assertEqual(job_name, None)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -530,7 +528,7 @@ class JenkinsGetJobNameTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_name(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),

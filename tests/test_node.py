@@ -3,6 +3,7 @@ from mock import patch
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsGetNodesTest(JenkinsTestBase):
@@ -30,43 +31,40 @@ class JenkinsGetNodesTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_nodes()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_raise_BadStatusLine(self, urlopen_mock):
-        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_BadStatusLine(self, session_send_mock):
+        session_send_mock.side_effect = jenkins.BadStatusLine(
+            'not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_nodes()
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(urlopen_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_nodes()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             'http://example.com/computer/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
 
 class JenkinsGetNodeInfoTest(JenkinsTestBase):
@@ -84,7 +82,7 @@ class JenkinsGetNodeInfoTest(JenkinsTestBase):
 
         self.assertEqual(j.get_node_info('test node'), node_info)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test%20node/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -98,32 +96,29 @@ class JenkinsGetNodeInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_node_info('test_node')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test_node/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for node[test_node]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_node_info('test_node')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             'http://example.com/computer/test_node/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'node[test_node] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
 
 class JenkinsAssertNodeExistsTest(JenkinsTestBase):
@@ -169,7 +164,7 @@ class JenkinsDeleteNodeTest(JenkinsTestBase):
         j.delete_node('test node')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/computer/test%20node/doDelete')
         self.assertFalse(j.node_exists('test node'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -190,7 +185,7 @@ class JenkinsDeleteNodeTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_node('test_node')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/computer/test_node/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -217,7 +212,7 @@ class JenkinsCreateNodeTest(JenkinsTestBase):
         j.create_node('test node', exclusive=True)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
+            jenkins_mock.call_args_list[1][0][0].url.split('?')[0],
             'http://example.com/computer/doCreateItem')
         self.assertTrue(j.node_exists('test node'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -253,7 +248,7 @@ class JenkinsCreateNodeTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_node('test_node')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
+            jenkins_mock.call_args_list[1][0][0].url.split('?')[0],
             'http://example.com/computer/doCreateItem')
         self.assertEqual(
             str(context_manager.exception),
@@ -279,7 +274,7 @@ class JenkinsEnableNodeTest(JenkinsTestBase):
         j.enable_node('test node')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test%20node/' +
             'toggleOffline?offlineMessage=')
 
@@ -311,7 +306,7 @@ class JenkinsEnableNodeTest(JenkinsTestBase):
         # Node was not offline; so enable_node skips toggle
         # Last call to jenkins was to check status
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test_node/api/json?depth=0')
 
         expected_node_info = {
@@ -343,7 +338,7 @@ class JenkinsDisableNodeTest(JenkinsTestBase):
         j.disable_node('test node')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test%20node/' +
             'toggleOffline?offlineMessage=')
 
@@ -375,7 +370,7 @@ class JenkinsDisableNodeTest(JenkinsTestBase):
         # Node was already offline; so disable_node skips toggle
         # Last call to jenkins was to check status
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test_node/api/json?depth=0')
 
         expected_node_info = {

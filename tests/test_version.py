@@ -1,57 +1,47 @@
-from mock import patch, Mock
-import six
+from mock import patch
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsVersionTest(JenkinsTestBase):
 
-    @patch('jenkins.urlopen')
-    def test_some_version(self, urlopen_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_some_version(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        mock_response = Mock()
-        if six.PY2:
-            config = {'info.return_value.getheader.return_value': 'Version42'}
-
-        if six.PY3:
-            config = {'getheader.return_value': 'Version42'}
-
-        mock_response.configure_mock(**config)
-        urlopen_mock.side_effect = [mock_response]
+        session_send_mock.return_value = build_response_mock(
+            200, headers={'X-Jenkins': 'Version42', 'Content-Length': 0})
         self.assertEqual(j.get_version(), 'Version42')
-        self._check_requests(urlopen_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_raise_HTTPError(self, urlopen_mock):
-        urlopen_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/',
-            code=503,
-            msg="internal server error",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
+
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
+            j.get_version()
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_BadStatusLine(self, session_send_mock):
+        session_send_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_version()
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(urlopen_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_raise_BadStatusLine(self, urlopen_mock):
-        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
-            j.get_version()
-        self.assertEqual(
-            str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
-        self._check_requests(urlopen_mock.call_args_list)
-
-    @patch('jenkins.urlopen', return_value=None)
-    def test_return_empty_response(self, urlopen_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_return_empty_response(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(0)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         with self.assertRaises(jenkins.EmptyResponseException) as context_manager:
             j.get_version()
@@ -59,4 +49,3 @@ class JenkinsVersionTest(JenkinsTestBase):
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]:'
             ' empty response')
-        self._check_requests(urlopen_mock.call_args_list)

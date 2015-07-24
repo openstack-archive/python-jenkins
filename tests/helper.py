@@ -1,5 +1,8 @@
+import json
 from multiprocessing import Process
 
+from mock import Mock
+import requests
 from six.moves import socketserver
 
 
@@ -31,3 +34,31 @@ class NullServer(socketserver.TCPServer):
         socketserver.TCPServer.__init__(
             self, server_address, socketserver.BaseRequestHandler,
             *args, **kwargs)
+
+
+def build_response_mock(status_code, json_body=None, headers=None, **kwargs):
+    real_response = requests.Response()
+    real_response.status_code = status_code
+
+    text = None
+    if json_body is not None:
+        text = json.dumps(json_body).encode('utf-8')
+        if headers is not {}:
+            real_response.headers['content-length'] = len(text)
+
+    if headers is not None:
+        for k, v in headers.items():
+            real_response.headers[k] = v
+
+    for k, v in kwargs.items():
+        setattr(real_response, k, v)
+
+    response = Mock(wraps=real_response, autospec=True)
+    if text:
+        response.text = text
+
+    # for some reason, wraps cannot handle attributes which are dicts
+    # and accessed by key
+    response.headers = real_response.headers
+
+    return response

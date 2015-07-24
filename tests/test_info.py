@@ -3,6 +3,7 @@ from mock import patch
 
 import jenkins
 from tests.base import JenkinsTestBase
+from tests.helper import build_response_mock
 
 
 class JenkinsInfoTest(JenkinsTestBase):
@@ -23,29 +24,26 @@ class JenkinsInfoTest(JenkinsTestBase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info__BadStatusLine(self, jenkins_mock):
@@ -55,7 +53,7 @@ class JenkinsInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
@@ -70,7 +68,7 @@ class JenkinsInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
@@ -87,7 +85,7 @@ class JenkinsInfoTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
