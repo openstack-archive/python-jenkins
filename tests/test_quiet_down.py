@@ -16,10 +16,10 @@ class JenkinsQuietDownTest(JenkinsTestBase):
         self.j.quiet_down()
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('quietDown'))
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             self.make_url('api/json'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -34,10 +34,10 @@ class JenkinsQuietDownTest(JenkinsTestBase):
             self.j.quiet_down()
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('quietDown'))
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             self.make_url('api/json'))
         self.assertEqual(
             str(context_manager.exception),
@@ -54,6 +54,6 @@ class JenkinsQuietDownTest(JenkinsTestBase):
             self.j.quiet_down()
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('quietDown'))
         self._check_requests(jenkins_mock.call_args_list)
