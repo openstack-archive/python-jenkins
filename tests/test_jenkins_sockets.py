@@ -20,8 +20,8 @@ class JenkinsRequestTimeoutTests(unittest.TestCase):
     def test_jenkins_open_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
                             None, None, timeout=0.1)
-        request = jenkins.Request('http://%s:%s/job/TestJob' %
-                                  self.server.server_address)
+        request = jenkins.requests.Request('GET', 'http://%s:%s/job/TestJob' %
+                                           self.server.server_address)
 
         # assert our request times out when no response
         with self.assertRaises(jenkins.TimeoutException):
@@ -30,8 +30,8 @@ class JenkinsRequestTimeoutTests(unittest.TestCase):
     def test_jenkins_open_no_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
                             None, None)
-        request = jenkins.Request('http://%s:%s/job/TestJob' %
-                                  self.server.server_address)
+        request = jenkins.requests.Request('GET', 'http://%s:%s/job/TestJob' %
+                                           self.server.server_address)
 
         # assert we don't timeout quickly like previous test when
         # no timeout defined.
