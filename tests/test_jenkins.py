@@ -8,16 +8,37 @@ else:
 
 from mock import patch, Mock
 import six
-from six.moves.urllib.error import HTTPError
 from six.moves.urllib.request import build_opener
 
 import jenkins
 
 
-def get_mock_urlopen_return_value(a_dict=None):
-    if a_dict is None:
-        a_dict = {}
-    return six.BytesIO(json.dumps(a_dict).encode('utf-8'))
+def build_response_mock(status_code, json_body=None, headers=None, **kwargs):
+    real_response = jenkins.requests.Response()
+    real_response.status_code = status_code
+
+    text = None
+    if json_body is not None:
+        text = json.dumps(json_body).encode('utf-8')
+        if headers is not {}:
+            real_response.headers['content-length'] = len(text)
+
+    if headers is not None:
+        for k, v in headers.items():
+            real_response.headers[k] = v
+
+    for k, v in kwargs.items():
+        setattr(real_response, k, v)
+
+    response = Mock(wraps=real_response, autospec=True)
+    if text:
+        response.text = text
+
+    # for some reason, wraps cannot handle attributes which are dicts
+    # and accessed by key
+    response.headers = real_response.headers
+
+    return response
 
 
 class JenkinsTest(unittest.TestCase):
@@ -50,21 +71,9 @@ class JenkinsTest(unittest.TestCase):
 
     def _check_requests(self, requests):
 
+        # check that prepping any requests doesn't throw an exception
         for req in requests:
-            self._check_request(req[0][0])
-
-    def _check_request(self, request):
-
-        # taken from opener.open() in request
-        # attribute request.type is only set automatically for python 3
-        # requests, must use request.get_type() for python 2.7
-        protocol = request.type or request.get_type()
-
-        # check that building the request doesn't throw any exception
-        meth_name = protocol + "_request"
-        for processor in self.opener.process_request.get(protocol, []):
-            meth = getattr(processor, meth_name)
-            request = meth(request)
+            req[0][0].prepare()
 
     def test_constructor_url_with_trailing_slash(self):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
@@ -116,94 +125,90 @@ class JenkinsTest(unittest.TestCase):
         j.get_job_config(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_maybe_add_crumb(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.NotFoundException()
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_maybe_add_crumb(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            404, reason="Not Found")
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         j.maybe_add_crumb(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/crumbIssuer/api/json')
         self.assertFalse(j.crumb)
         self.assertFalse('.crumb' in request.headers)
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_maybe_add_crumb__with_data(self, jenkins_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_maybe_add_crumb__with_data(self, session_send_mock):
         crumb_data = {
             "crumb": "dab177f483b3dd93483ef6716d8e792d",
             "crumbRequestField": ".crumb",
         }
-        jenkins_mock.return_value = get_mock_urlopen_return_value(crumb_data)
+        session_send_mock.return_value = build_response_mock(
+            200, crumb_data)
+
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         j.maybe_add_crumb(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/crumbIssuer/api/json')
         self.assertEqual(j.crumb, crumb_data)
         self.assertEqual(request.headers['.crumb'], crumb_data['crumb'])
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_maybe_add_crumb__empty_response(self, jenkins_mock):
         "Don't try to create crumb header from an empty response"
         jenkins_mock.side_effect = jenkins.EmptyResponseException("empty response")
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         j.maybe_add_crumb(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/crumbIssuer/api/json')
         self.assertFalse(j.crumb)
         self.assertFalse('.crumb' in request.headers)
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_jenkins_open(self, jenkins_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_jenkins_open(self, session_send_mock):
         crumb_data = {
             "crumb": "dab177f483b3dd93483ef6716d8e792d",
             "crumbRequestField": ".crumb",
         }
         data = {'foo': 'bar'}
-        jenkins_mock.side_effect = [
-            get_mock_urlopen_return_value(crumb_data),
-            get_mock_urlopen_return_value(data),
-        ]
+        session_send_mock.side_effect = iter([
+            build_response_mock(200, crumb_data),
+            build_response_mock(200, data),
+        ])
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         response = j.jenkins_open(request)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
         self.assertEqual(response, json.dumps(data))
         self.assertEqual(j.crumb, crumb_data)
         self.assertEqual(request.headers['.crumb'], crumb_data['crumb'])
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_jenkins_open__403(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_jenkins_open__403(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            401, reason="basic auth failed")
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.jenkins_open(request, add_crumb=False)
@@ -212,20 +217,15 @@ class JenkinsTest(unittest.TestCase):
             'Error in request. Possibly authentication failed [401]: '
             'basic auth failed')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_jenkins_open__404(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=404,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_jenkins_open__404(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            404, reason="basic auth failed")
 
         with self.assertRaises(jenkins.NotFoundException) as context_manager:
             j.jenkins_open(request, add_crumb=False)
@@ -233,16 +233,15 @@ class JenkinsTest(unittest.TestCase):
             str(context_manager.exception),
             'Requested item could not be found')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_jenkins_open__empty_response(self, jenkins_mock):
-        jenkins_mock.return_value = Mock(**{'read.return_value': None})
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_jenkins_open__empty_response(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(0)
 
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.jenkins_open(request, False)
@@ -251,37 +250,31 @@ class JenkinsTest(unittest.TestCase):
             'Error communicating with server[http://example.com/]: '
             'empty response')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_jenkins_open__501(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=501,
-            msg="Not implemented",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_jenkins_open__501(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+        session_send_mock.return_value = build_response_mock(
+            501, reason="Not implemented")
 
-        with self.assertRaises(HTTPError) as context_manager:
+        with self.assertRaises(jenkins.req_exc.HTTPError) as context_manager:
             j.jenkins_open(request, add_crumb=False)
         self.assertEqual(
             str(context_manager.exception),
-            'HTTP Error 501: Not implemented')
+            '501 Server Error: Not implemented')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_jenkins_open__timeout(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.URLError(
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_jenkins_open__timeout(self, session_send_mock):
+        session_send_mock.side_effect = jenkins.URLError(
             reason="timed out")
         j = jenkins.Jenkins('http://example.com/', 'test', 'test', timeout=1)
-        request = jenkins.Request('http://example.com/job/TestJob')
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.jenkins_open(request, add_crumb=False)
@@ -289,9 +282,8 @@ class JenkinsTest(unittest.TestCase):
             str(context_manager.exception),
             'Error in request: timed out')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args[0][1].url,
             'http://example.com/job/TestJob')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_assert_job_exists__job_missing(self, jenkins_mock):
@@ -331,7 +323,7 @@ class JenkinsTest(unittest.TestCase):
         j.create_job(u'Test Job', config_xml)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createItem?name=Test%20Job')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -351,7 +343,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_job(u'TestJob', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -375,10 +367,10 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_job(u'TestJob', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createItem?name=TestJob')
         self.assertEqual(
             str(context_manager.exception),
@@ -400,7 +392,7 @@ class JenkinsTest(unittest.TestCase):
 
         j.reconfig_job(u'Test Job', config_xml)
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/job/Test%20Job/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -413,7 +405,7 @@ class JenkinsTest(unittest.TestCase):
 
         build_info = j.build_job(u'Test Job')
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/job/Test%20Job/build')
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
@@ -427,7 +419,7 @@ class JenkinsTest(unittest.TestCase):
 
         build_info = j.build_job(u'TestJob', token='some_token')
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/job/TestJob/build?token=some_token')
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
@@ -444,9 +436,9 @@ class JenkinsTest(unittest.TestCase):
             parameters={'when': 'now', 'why': 'because I felt like it'},
             token='some_token')
 
-        self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].get_full_url())
-        self.assertTrue('when=now' in jenkins_mock.call_args[0][0].get_full_url())
-        self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].get_full_url())
+        self.assertTrue('token=some_token' in jenkins_mock.call_args[0][0].url)
+        self.assertTrue('when=now' in jenkins_mock.call_args[0][0].url)
+        self.assertTrue('why=because+I+felt+like+it' in jenkins_mock.call_args[0][0].url)
         self.assertEqual(build_info, {'foo': 'bar'})
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -457,7 +449,7 @@ class JenkinsTest(unittest.TestCase):
         j.run_script(u'println(\"Hello World!\")')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/scriptText')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -468,7 +460,7 @@ class JenkinsTest(unittest.TestCase):
         j.stop_build(u'Test Job', number=52)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/52/stop')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -481,7 +473,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(build_info, jenkins_mock.return_value)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/52/consoleText')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -506,25 +498,22 @@ class JenkinsTest(unittest.TestCase):
         self.assertEqual(console_output, jenkins_mock.return_value)
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_build_console_output__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/52/consoleText',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send')
+    def test_get_build_console_output__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_build_console_output(u'TestJob', number=52)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][0].url,
             u'http://example.com/job/TestJob/52/consoleText')
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] number[52] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_build_info(self, jenkins_mock):
@@ -541,7 +530,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(build_info, build_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/52/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -569,22 +558,19 @@ class JenkinsTest(unittest.TestCase):
             'Could not parse JSON info for job[TestJob] number[52]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_build_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_build_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_build_info(u'TestJob', number=52)
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] number[52] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_job_info(self, jenkins_mock):
@@ -601,7 +587,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -634,7 +620,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
@@ -649,32 +635,29 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for job[TestJob]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_job_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_job_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_info(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             u'http://example.com/job/TestJob/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_debug_job_info(self, jenkins_mock):
@@ -690,55 +673,45 @@ class JenkinsTest(unittest.TestCase):
         j.debug_job_info(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_get_version__some_version(self, urlopen_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_version__some_version(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
 
-        mock_response = Mock()
-        if six.PY2:
-            config = {'info.return_value.getheader.return_value': 'Version42'}
-
-        if six.PY3:
-            config = {'getheader.return_value': 'Version42'}
-
-        mock_response.configure_mock(**config)
-        urlopen_mock.side_effect = [mock_response]
+        session_send_mock.return_value = build_response_mock(
+            200, headers={'X-Jenkins': 'Version42', 'Content-Length': 0})
         self.assertEqual(j.get_version(), 'Version42')
-        self._check_requests(urlopen_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_get_version__HTTPError(self, urlopen_mock):
-        urlopen_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/',
-            code=503,
-            msg="internal server error",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_version__HTTPError(self, session_send_mock):
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
+
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
+            j.get_version()
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[http://example.com/]')
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_version__BadStatusLine(self, session_send_mock):
+        session_send_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_version()
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(urlopen_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_get_version__BadStatusLine(self, urlopen_mock):
-        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
-        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
-            j.get_version()
-        self.assertEqual(
-            str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
-        self._check_requests(urlopen_mock.call_args_list)
-
-    @patch('jenkins.urlopen', return_value=None)
-    def test_get_version__empty_response(self, urlopen_mock):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_version__empty_response(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(0)
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         with self.assertRaises(jenkins.EmptyResponseException) as context_manager:
             j.get_version()
@@ -746,7 +719,6 @@ class JenkinsTest(unittest.TestCase):
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]:'
             ' empty response')
-        self._check_requests(urlopen_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_jobs_count(self, jenkins_mock):
@@ -776,7 +748,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(job_info, jobs)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -796,7 +768,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -810,7 +782,7 @@ class JenkinsTest(unittest.TestCase):
         plugins_info = j.get_plugins_info()
         self.assertEqual(plugins_info, self.plugin_info_json['plugins'])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -834,7 +806,7 @@ class JenkinsTest(unittest.TestCase):
 
         j.get_plugins_info(depth=1)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=1')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -846,7 +818,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_plugins_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
@@ -861,29 +833,26 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_plugins_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_plugins_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_plugins_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_plugins_info(depth=52)
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_plugin_info_shortname(self, jenkins_mock):
@@ -926,7 +895,7 @@ class JenkinsTest(unittest.TestCase):
 
         j.get_plugin_info('test', depth=1)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=1')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -938,7 +907,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_plugin_info('test')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
@@ -953,49 +922,41 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_plugin_info('test')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/pluginManager/api/json?depth=2')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_plugin_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_plugin_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.return_value = build_response_mock(
+            499, reason="Unhandled Error")
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_plugin_info(u'TestPlugin', depth=52)
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info__BadStatusLine(self, jenkins_mock):
@@ -1005,12 +966,11 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_info__ValueError(self, jenkins_mock):
@@ -1020,7 +980,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
@@ -1037,7 +997,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_info()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self.assertEqual(
             str(context_manager.exception),
@@ -1057,7 +1017,7 @@ class JenkinsTest(unittest.TestCase):
         j.copy_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/createItem'
             '?name=Test%20Job_2&mode=copy&from=Test%20Job')
         self.assertTrue(j.job_exists('Test Job_2'))
@@ -1074,7 +1034,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.copy_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/createItem'
             '?name=TestJob_2&mode=copy&from=TestJob')
         self.assertEqual(
@@ -1094,7 +1054,7 @@ class JenkinsTest(unittest.TestCase):
         j.rename_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
         self.assertTrue(j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -1110,7 +1070,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/doRename?newName=TestJob_2')
         self.assertEqual(
             str(context_manager.exception),
@@ -1128,7 +1088,7 @@ class JenkinsTest(unittest.TestCase):
         j.delete_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/doDelete')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1144,7 +1104,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_job(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -1162,7 +1122,7 @@ class JenkinsTest(unittest.TestCase):
         j.enable_job(u'TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/enable')
         self.assertTrue(j.job_exists('TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -1178,7 +1138,7 @@ class JenkinsTest(unittest.TestCase):
         j.disable_job(u'Test Job')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/Test%20Job/disable')
         self.assertTrue(j.job_exists('Test Job'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -1193,7 +1153,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(job_name, 'Test Job')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/Test%20Job/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1206,7 +1166,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(job_name, None)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/job/TestJob/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1219,7 +1179,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_job_name(u'TestJob')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/job/TestJob/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -1236,7 +1196,7 @@ class JenkinsTest(unittest.TestCase):
         j.cancel_queue(52)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/queue/cancelItem?id=52')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1250,7 +1210,7 @@ class JenkinsTest(unittest.TestCase):
         j.cancel_queue(52)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/queue/cancelItem?id=52')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1277,43 +1237,40 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_nodes()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[http://example.com/]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch('jenkins.urlopen')
-    def test_get_nodes__BadStatusLine(self, urlopen_mock):
-        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_nodes__BadStatusLine(self, session_send_mock):
+        session_send_mock.side_effect = jenkins.BadStatusLine(
+            'not a valid status line')
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
         with self.assertRaises(jenkins.BadHTTPException) as context_manager:
             j.get_nodes()
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(urlopen_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_nodes__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_nodes__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),        # crumb
+            build_response_mock(499, reason="Unhandled Error"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_nodes()
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             'http://example.com/computer/api/json')
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[http://example.com/]')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_get_node_info(self, jenkins_mock):
@@ -1328,7 +1285,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(j.get_node_info('test node'), node_info)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test%20node/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1342,32 +1299,29 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_node_info('test_node')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test_node/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for node[test_node]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_node_info__HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_node_info__HTTPError(self, session_send_mock):
         j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_node_info('test_node')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             'http://example.com/computer/test_node/api/json?depth=0')
         self.assertEqual(
             str(context_manager.exception),
             'node[test_node] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_assert_node_exists__node_missing(self, jenkins_mock):
@@ -1407,7 +1361,7 @@ class JenkinsTest(unittest.TestCase):
         j.delete_node('test node')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/computer/test%20node/doDelete')
         self.assertFalse(j.node_exists('test node'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -1428,7 +1382,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_node('test_node')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/computer/test_node/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -1452,7 +1406,7 @@ class JenkinsTest(unittest.TestCase):
         j.create_node('test node', exclusive=True)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
+            jenkins_mock.call_args_list[1][0][0].url.split('?')[0],
             'http://example.com/computer/doCreateItem')
         self.assertTrue(j.node_exists('test node'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -1488,7 +1442,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_node('test_node')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
+            jenkins_mock.call_args_list[1][0][0].url.split('?')[0],
             'http://example.com/computer/doCreateItem')
         self.assertEqual(
             str(context_manager.exception),
@@ -1511,7 +1465,7 @@ class JenkinsTest(unittest.TestCase):
         j.enable_node('test node')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test%20node/' +
             'toggleOffline?offlineMessage=')
 
@@ -1543,7 +1497,7 @@ class JenkinsTest(unittest.TestCase):
         # Node was not offline; so enable_node skips toggle
         # Last call to jenkins was to check status
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test_node/api/json?depth=0')
 
         expected_node_info = {
@@ -1572,7 +1526,7 @@ class JenkinsTest(unittest.TestCase):
         j.disable_node('test node')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test%20node/' +
             'toggleOffline?offlineMessage=')
 
@@ -1604,7 +1558,7 @@ class JenkinsTest(unittest.TestCase):
         # Node was already offline; so disable_node skips toggle
         # Last call to jenkins was to check status
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             'http://example.com/computer/test_node/api/json?depth=0')
 
         expected_node_info = {
@@ -1650,7 +1604,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(queue_info, queue_info_to_return['items'])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/queue/api/json?depth=0')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1664,7 +1618,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(view_name, 'Test View')
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/view/Test%20View/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1677,7 +1631,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(view_name, None)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/view/TestView/api/json?tree=name')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1690,7 +1644,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.get_view_name(u'TestView')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -1733,7 +1687,7 @@ class JenkinsTest(unittest.TestCase):
 
         self.assertEqual(view_info, views)
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/api/json')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1748,7 +1702,7 @@ class JenkinsTest(unittest.TestCase):
         j.delete_view(u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/Test%20View/doDelete')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1764,7 +1718,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.delete_view(u'TestView')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/doDelete')
         self.assertEqual(
             str(context_manager.exception),
@@ -1788,7 +1742,7 @@ class JenkinsTest(unittest.TestCase):
         j.create_view(u'Test View', config_xml)
 
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createView?name=Test%20View')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1808,7 +1762,7 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_view(u'TestView', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/api/json?tree=name')
         self.assertEqual(
             str(context_manager.exception),
@@ -1832,10 +1786,10 @@ class JenkinsTest(unittest.TestCase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             j.create_view(u'TestView', config_xml)
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             'http://example.com/view/TestView/api/json?tree=name')
         self.assertEqual(
-            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            jenkins_mock.call_args_list[1][0][0].url,
             'http://example.com/createView?name=TestView')
         self.assertEqual(
             str(context_manager.exception),
@@ -1857,7 +1811,7 @@ class JenkinsTest(unittest.TestCase):
 
         j.reconfig_view(u'Test View', config_xml)
 
-        self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
+        self.assertEqual(jenkins_mock.call_args[0][0].url,
                          u'http://example.com/view/Test%20View/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -1867,6 +1821,6 @@ class JenkinsTest(unittest.TestCase):
         j.get_view_config(u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             u'http://example.com/view/Test%20View/config.xml')
         self._check_requests(jenkins_mock.call_args_list)
