@@ -17,7 +17,7 @@ class JenkinsEnableJobTest(JenkinsJobsTestBase):
         self.j.enable_job(u'TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/TestJob/enable'))
         self.assertTrue(self.j.job_exists('TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -32,7 +32,7 @@ class JenkinsEnableJobTest(JenkinsJobsTestBase):
         self.j.enable_job(u'a Folder/TestJob')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/a%20Folder/job/TestJob/enable'))
         self.assertTrue(self.j.job_exists('a Folder/TestJob'))
         self._check_requests(jenkins_mock.call_args_list)

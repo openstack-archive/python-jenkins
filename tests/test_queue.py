@@ -15,7 +15,7 @@ class JenkinsCancelQueueTest(JenkinsTestBase):
         self.j.cancel_queue(52)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('queue/cancelItem?id=52'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -28,7 +28,7 @@ class JenkinsCancelQueueTest(JenkinsTestBase):
         self.j.cancel_queue(52)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('queue/cancelItem?id=52'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -67,6 +67,6 @@ class JenkinsQueueInfoTest(JenkinsTestBase):
 
         self.assertEqual(queue_info, queue_info_to_return['items'])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('queue/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)

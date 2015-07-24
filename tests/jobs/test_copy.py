@@ -18,7 +18,7 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
         self.j.copy_job(u'Test Job', u'Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('createItem?name=Test%20Job_2&mode=copy&from=Test%20Job'))
         self.assertTrue(self.j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
@@ -34,7 +34,7 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
         self.j.copy_job(u'a Folder/Test Job', u'a Folder/Test Job_2')
 
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/a%20Folder/createItem?name=Test%20Job_2'
                           '&mode=copy&from=Test%20Job'))
         self.assertTrue(self.j.job_exists('a Folder/Test Job_2'))
@@ -50,7 +50,7 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.copy_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('createItem?name=TestJob_2&mode=copy&from=TestJob'))
         self.assertEqual(
             str(context_manager.exception),
@@ -67,7 +67,7 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.copy_job(u'a Folder/TestJob', u'a Folder/TestJob_2')
         self.assertEqual(
-            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            jenkins_mock.call_args_list[0][0][0].url,
             self.make_url('job/a%20Folder/createItem?name=TestJob_2&mode=copy'
                           '&from=TestJob'))
         self.assertEqual(
