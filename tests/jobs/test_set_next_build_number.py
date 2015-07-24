@@ -11,7 +11,7 @@ class JenkinsSetNextBuildNumberTest(JenkinsJobsTestBase):
         self.j.set_next_build_number('TestJob', 1234)
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url('job/TestJob/nextbuildnumber/submit'))
         self.assertEqual(
             jenkins_mock.call_args[0][0].data,
