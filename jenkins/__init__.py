@@ -714,6 +714,21 @@ class Jenkins(object):
         return self.jenkins_open(Request(self.server + SCRIPT_TEXT,
                                          "script=".encode('utf-8') + script.encode('utf-8')))
 
+    def install_plugin(self, name):
+        '''Install a plugin from the Jenkins public repository at
+        http://repo.jenkins-ci.org/repo/org/jenkins-ci/plugins
+
+        :param name: The plugin short name, ``string``
+
+        Example::
+            >>> info = server.install_plugin("jabber")
+        '''
+        # using a groovy script because Jenkins does not provide a REST endpoint
+        # for installing plugins.
+        script = 'Jenkins.instance.updateCenter.getPlugin(\"' + name + '\").deploy()'
+
+        self.run_script(script)
+
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
 
