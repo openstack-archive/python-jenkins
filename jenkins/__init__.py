@@ -51,6 +51,7 @@ import json
 import re
 import socket
 import sys
+import time
 import warnings
 
 import six
@@ -716,6 +717,39 @@ class Jenkins(object):
         '''
         return self.jenkins_open(Request(self._build_url(SCRIPT_TEXT),
                                          "script=".encode('utf-8') + script.encode('utf-8')))
+
+    def install_plugin(self, name, include_dependencies=True):
+        '''Install a plugin and its dependencies from the Jenkins public
+        repository at http://repo.jenkins-ci.org/repo/org/jenkins-ci/plugins
+
+        :param name: The plugin short name, ``string``
+        :param include_dependencies: Install the plugin's dependencies, ``bool``
+        :returns: Whether a Jenkins restart is required, ``bool``
+
+        Example::
+            >>> info = server.install_plugin("jabber")
+            >>> print(info)
+            True
+        '''
+        # using a groovy script because Jenkins does not provide a REST endpoint
+        # for installing plugins.
+        install = ('Jenkins.instance.updateCenter.getPlugin(\"' + name + '\")'
+            '.deploy();')
+        if include_dependencies:
+            install = ('Jenkins.instance.updateCenter.getPlugin(\"' + name + '\")'
+                '.getNeededDependencies().each{it.deploy()};') + install
+
+        self.run_script(install)
+        # run_script is an async call to run groovy. we need to wait a little
+        # before we can get a reliable response on whether a restart is needed
+        time.sleep(2);
+        is_restart_required = ('Jenkins.instance.updateCenter'
+            '.isRestartRequiredForCompletion()')
+
+        # response is a string (i.e. u'Result: true\n'), return a bool instead
+        response_str = self.run_script(is_restart_required)
+        response = response_str.split(':')[1].strip().lower() == 'true'
+        return response
 
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.

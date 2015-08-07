@@ -14,3 +14,65 @@ class JenkinsScriptTest(JenkinsTestBase):
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/scriptText')
         self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_install_plugin(self, jenkins_mock):
+        '''
+            Installation of plugins is done with the run_script method
+        '''
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.install_plugin("jabber")
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            u'http://example.com/scriptText')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    @patch.object(jenkins.Jenkins, 'run_script')
+    def test_install_plugin_with_dependencies(self, run_script_mock, jenkins_mock):
+        '''
+            verify install plugins with dependencies
+        '''
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.install_plugin("jabber")
+        self.assertEquals(len(run_script_mock.call_args_list), 2)
+        self.assertEquals(run_script_mock.call_args_list[0][0][0],
+            ('Jenkins.instance.updateCenter.getPlugin(\"jabber\")'
+             '.getNeededDependencies().each{it.deploy()};Jenkins'
+             '.instance.updateCenter.getPlugin(\"jabber\").deploy();'))
+        self.assertEquals(run_script_mock.call_args_list[1][0][0],
+            ('Jenkins.instance.updateCenter.isRestartRequiredForCompletion()'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    @patch.object(jenkins.Jenkins, 'run_script')
+    def test_install_plugin_without_dependencies(self, run_script_mock, jenkins_mock):
+        '''
+            verify install plugins without dependencies
+        '''
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j.install_plugin("jabber", include_dependencies=False)
+        self.assertEquals(len(run_script_mock.call_args_list), 2)
+        self.assertEquals(run_script_mock.call_args_list[0][0][0],
+            ('Jenkins.instance.updateCenter.getPlugin(\"jabber\").deploy();'))
+        self.assertEquals(run_script_mock.call_args_list[1][0][0],
+            ('Jenkins.instance.updateCenter.isRestartRequiredForCompletion()'))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    @patch.object(jenkins.Jenkins, 'run_script')
+    def test_install_plugin_no_restart(self, run_script_mock, jenkins_mock):
+        '''
+            verify install plugin does not need a restart
+        '''
+        run_script_mock.return_value = u'Result: false\n'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.assertFalse(j.install_plugin("jabber"))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    @patch.object(jenkins.Jenkins, 'run_script')
+    def test_install_plugin_restart(self, run_script_mock, jenkins_mock ):
+        '''
+            verify install plugin needs a restart
+        '''
+        run_script_mock.return_value = u'Result: true\n'
+        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.assertTrue(j.install_plugin("jabber"))
