@@ -21,6 +21,7 @@ the things you can use it for:
 * Enable/Disable nodes
 * Get information on nodes
 * Create/delete/reconfig views
+* Install plugins
 * and many more..
 
 To install::

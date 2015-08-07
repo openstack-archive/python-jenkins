@@ -714,6 +714,30 @@ class Jenkins(object):
         return self.jenkins_open(Request(self.server + SCRIPT_TEXT,
                                          "script=".encode('utf-8') + script.encode('utf-8')))
 
+    def install_plugin(self, name, include_dependencies=True):
+        '''Install a plugin and its dependencies from the Jenkins public
+        repository at http://repo.jenkins-ci.org/repo/org/jenkins-ci/plugins
+
+        :param name: The plugin short name, ``string``
+        :param include_dependencies: Install the plugin's dependencies, ``bool``
+        :returns: Whether a Jenkins restart is required, ``bool``
+
+        Example::
+            >>> info = server.install_plugin("jabber")
+            True
+        '''
+        # using a groovy script because Jenkins does not provide a REST endpoint
+        # for installing plugins.
+        script = ('Jenkins.instance.updateCenter.getPlugin(\"' + name + '\").deploy();'
+                  'Jenkins.instance.updateCenter.isRestartRequiredForCompletion()')
+        if include_dependencies:
+           script = ('Jenkins.instance.updateCenter.getPlugin(\"' + name + '\").getNeededDependencies().each'
+                     '{it.deploy()}' + ';' + script)
+
+        response = self.run_script(script)
+        # response is a string, u'Result: true\n', return a bool instead
+        return bool(response.replace(' ','').split(':')[1])
+
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
 
