@@ -25,6 +25,7 @@ the things you can use it for:
 * List running builds
 * Create/delete/update folders [#f1]_
 * Set the next build number [#f2]_
+* Install plugins
 * and many more..
 
 To install::
