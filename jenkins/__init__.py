@@ -42,7 +42,7 @@
     :platform: Unix, Windows
     :synopsis: Python API to interact with Jenkins
 
-See examples at :doc:`example`
+See examples at :doc:`examples`
 '''
 
 import base64
@@ -356,11 +356,10 @@ class Jenkins(object):
 
         Example::
 
-            >>> j = Jenkins()
-            >>> next_build_number = j.get_job_info('build_name')['nextBuildNumber']
-            >>> output = j.build_job('build_name')
+            >>> next_build_number = server.get_job_info('build_name')['nextBuildNumber']
+            >>> output = server.build_job('build_name')
             >>> from time import sleep; sleep(10)
-            >>> build_info = j.get_build_info('build_name', next_build_number)
+            >>> build_info = server.get_build_info('build_name', next_build_number)
             >>> print(build_info)
             {u'building': False, u'changeSet': {u'items': [{u'date': u'2011-12-19T18:01:52.540557Z', u'msg': u'test', u'revision': 66, u'user': u'unknown', u'paths': [{u'editType': u'edit', u'file': u'/branches/demo/index.html'}]}], u'kind': u'svn', u'revisions': [{u'module': u'http://eaas-svn01.i3.level3.com/eaas', u'revision': 66}]}, u'builtOn': u'', u'description': None, u'artifacts': [{u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war', u'fileName': u'eaas-87-2011-12-19_18-01-57.war'}, {u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war.zip', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war.zip', u'fileName': u'eaas-87-2011-12-19_18-01-57.war.zip'}], u'timestamp': 1324317717000, u'number': 87, u'actions': [{u'parameters': [{u'name': u'SERVICE_NAME', u'value': u'eaas'}, {u'name': u'PROJECT_NAME', u'value': u'demo'}]}, {u'causes': [{u'userName': u'anonymous', u'shortDescription': u'Started by user anonymous'}]}, {}, {}, {}], u'id': u'2011-12-19_18-01-57', u'keepLog': False, u'url': u'http://eaas-jenkins01.i3.level3.com:9080/job/build_war/87/', u'culprits': [{u'absoluteUrl': u'http://eaas-jenkins01.i3.level3.com:9080/user/unknown', u'fullName': u'unknown'}], u'result': u'SUCCESS', u'duration': 8826, u'fullDisplayName': u'build_war #87'}
         '''
@@ -385,8 +384,7 @@ class Jenkins(object):
         ''':returns: list of job dictionaries, ``[dict]``
 
         Example::
-            >>> j = Jenkins()
-            >>> queue_info = j.get_queue_info()
+            >>> queue_info = server.get_queue_info()
             >>> print(queue_info[0])
             {u'task': {u'url': u'http://your_url/job/my_job/', u'color': u'aborted_anime', u'name': u'my_job'}, u'stuck': False, u'actions': [{u'causes': [{u'shortDescription': u'Started by timer'}]}], u'buildable': False, u'params': u'', u'buildableStartMilliseconds': 1315087293316, u'why': u'Build #2,532 is already in progress (ETA:10 min)', u'blocked': True}
         '''
@@ -419,8 +417,7 @@ class Jenkins(object):
 
         Example::
 
-            >>> j = Jenkins()
-            >>> info = j.get_info()
+            >>> info = server.get_info()
             >>> jobs = info['jobs']
             >>> print(jobs[0])
             {u'url': u'http://your_url_here/job/my_job/', u'color': u'blue',
@@ -444,8 +441,7 @@ class Jenkins(object):
 
         Example::
 
-            >>> j = Jenkins()
-            >>> info = j.get_version()
+            >>> info = server.get_version()
             >>> print info
             >>> 1.541
 
@@ -480,8 +476,7 @@ class Jenkins(object):
 
         Example::
 
-            >>> j = Jenkins()
-            >>> info = j.get_plugins_info()
+            >>> info = server.get_plugins_info()
             >>> print(info)
             [{u'backupVersion': None, u'version': u'0.0.4', u'deleted': False,
             u'supportsDynamicLoad': u'MAYBE', u'hasUpdate': True,
@@ -515,8 +510,7 @@ class Jenkins(object):
 
         Example::
 
-            >>> j = Jenkins()
-            >>> info = j.get_plugin_info("Gearman Plugin")
+            >>> info = server.get_plugin_info("Gearman Plugin")
             >>> print(info)
             {u'backupVersion': None, u'version': u'0.0.4', u'deleted': False,
             u'supportsDynamicLoad': u'MAYBE', u'hasUpdate': True,
@@ -703,8 +697,7 @@ class Jenkins(object):
         :returns: The result of the script run.
 
         Example::
-            >>> j = Jenkins()
-            >>> info = j.run_script("println(Jenkins.instance.pluginManager.plugins)")
+            >>> info = server.run_script("println(Jenkins.instance.pluginManager.plugins)")
             >>> print(info)
             u'[Plugin:windows-slaves, Plugin:ssh-slaves, Plugin:translation,
             Plugin:cvs, Plugin:nodelabelparameter, Plugin:external-monitor-job,
