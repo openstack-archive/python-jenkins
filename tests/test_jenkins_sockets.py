@@ -1,21 +1,25 @@
-import sys
+import io
+
+import testtools
+from testtools.content import text_content
 
 import jenkins
 from tests.helper import NullServer
 from tests.helper import TestsTimeoutException
 from tests.helper import time_limit
 
-if sys.version_info < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
 
-
-class JenkinsRequestTimeoutTests(unittest.TestCase):
+class JenkinsRequestTimeoutTests(testtools.TestCase):
 
     def setUp(self):
         super(JenkinsRequestTimeoutTests, self).setUp()
         self.server = NullServer(("127.0.0.1", 0))
+        self.messages = io.StringIO()
+        self.addOnException(self._get_messages)
+
+    def _get_messages(self, exc_info):
+        self.addDetail('timeout-tests-messages',
+                       text_content(self.messages.getvalue()))
 
     def test_jenkins_open_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
@@ -24,7 +28,7 @@ class JenkinsRequestTimeoutTests(unittest.TestCase):
                                   self.server.server_address)
 
         # assert our request times out when no response
-        with self.assertRaises(jenkins.TimeoutException):
+        with testtools.ExpectedException(jenkins.TimeoutException):
             j.jenkins_open(request, add_crumb=False)
 
     def test_jenkins_open_no_timeout(self):
@@ -35,5 +39,6 @@ class JenkinsRequestTimeoutTests(unittest.TestCase):
 
         # assert we don't timeout quickly like previous test when
         # no timeout defined.
-        with self.assertRaises(TestsTimeoutException):
-            time_limit(0.5, j.jenkins_open, request, add_crumb=False)
+        with testtools.ExpectedException(TestsTimeoutException):
+            time_limit(0.5, self.messages,
+                       j.jenkins_open, request, add_crumb=False)
