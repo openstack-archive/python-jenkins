@@ -1,4 +1,7 @@
+import functools
 from multiprocessing import Process
+from multiprocessing import Queue
+import traceback
 
 from six.moves import socketserver
 
@@ -7,15 +10,54 @@ class TestsTimeoutException(Exception):
     pass
 
 
-def time_limit(seconds, func, *args, **kwargs):
+def time_limit(seconds, fp, func, *args, **kwargs):
+
+    if fp:
+        if not hasattr(fp, 'write'):
+            raise TypeError("Expected 'file-like' object, got '%s'" % fp)
+        else:
+            def record(msg):
+                fp.write(msg)
+    else:
+        def record(msg):
+            return
+
+    def capture_results(msg_queue, func, *args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except Exception as e:
+            msg_queue.put(
+                "Running function '%s' resulted in exception '%s' with "
+                "message: '%s'\n" % (func.__name__, e.__class__.__name__, e))
+            # no point re-raising an exception from the subprocess, instead
+            # return False
+            return False
+        else:
+            msg_queue.put(
+                "Running function '%s' finished with result '%s', and"
+                "stack:\n%s\n" % (func.__name__, result,
+                                  traceback.format_stack()))
+            return result
+
+    messages = Queue()
     # although creating a separate process is expensive it's the only way to
     # ensure cross platform that we can cleanly terminate after timeout
-    p = Process(target=func, args=args, kwargs=kwargs)
+    p = Process(target=functools.partial(capture_results, messages, func),
+                args=args, kwargs=kwargs)
     p.start()
     p.join(seconds)
-    p.terminate()
-    if p.exitcode is None:
+    if p.is_alive():
+        p.terminate()
+        while not messages.empty():
+            record(messages.get())
+        record("Running function '%s' did not finish\n" % func.__name__)
+
         raise TestsTimeoutException
+    else:
+        while not messages.empty():
+            record(messages.get())
+        record("Running function '%s' finished with exit code '%s'\n"
+               % (func.__name__, p.exitcode))
 
 
 class NullServer(socketserver.TCPServer):
