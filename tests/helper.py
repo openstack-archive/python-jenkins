@@ -1,6 +1,13 @@
+import functools
+import logging
 from multiprocessing import Process
+import traceback
 
 from six.moves import socketserver
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class TestsTimeoutException(Exception):
@@ -8,14 +15,34 @@ class TestsTimeoutException(Exception):
 
 
 def time_limit(seconds, func, *args, **kwargs):
+    def capture_exceptions(func, *args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except Exception as e:
+            logger.info("Running function '%s' resulted in exception '%s' "
+                        "with message: '%s'" % (func.__name__,
+                                                e.__class__.__name__,
+                                                e.message))
+            raise
+        else:
+            logger.info("Running function '%s' finished with result '%s', "
+                        "and stack:\n" % (func.__name__, result,
+                                          traceback.format_stack()))
+            return result
+
     # although creating a separate process is expensive it's the only way to
     # ensure cross platform that we can cleanly terminate after timeout
-    p = Process(target=func, args=args, kwargs=kwargs)
+    p = Process(target=functools.partial(capture_exceptions, func),
+                args=args, kwargs=kwargs)
     p.start()
     p.join(seconds)
     p.terminate()
     if p.exitcode is None:
+        logger.info("Running function '%s' did not finish" % func.__name__)
         raise TestsTimeoutException
+    else:
+        logger.info("Running function '%s' finished with exit code '%s' " %
+                    (func.__name__, p.exitcode))
 
 
 class NullServer(socketserver.TCPServer):
