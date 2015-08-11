@@ -1,3 +1,4 @@
+import functools
 from multiprocessing import Process
 
 from six.moves import socketserver
@@ -8,9 +9,17 @@ class TestsTimeoutException(Exception):
 
 
 def time_limit(seconds, func, *args, **kwargs):
+    def capture_exceptions(func, *args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            print("Running function '%s' resulted in exception '%s' with "
+                  "message: %s" % (func.__name__, e, e.msg))
+
     # although creating a separate process is expensive it's the only way to
     # ensure cross platform that we can cleanly terminate after timeout
-    p = Process(target=func, args=args, kwargs=kwargs)
+    p = Process(target=functools.partial(capture_exceptions, func),
+                args=args, kwargs=kwargs)
     p.start()
     p.join(seconds)
     p.terminate()
