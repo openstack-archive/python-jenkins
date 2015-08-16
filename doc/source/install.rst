@@ -50,6 +50,15 @@ every module.  To run the unit tests, execute the command::
 
 * Note: View ``tox.ini`` to run tests on other versions of Python.
 
+Due to how the tests are split up into a dedicated class per API method, it is
+possible to execute tests against a single API at a time. To execute the tests
+for the :py:meth:`.Jenkins.get_version` API execute the command::
+
+    tox -e py27 -- tests.test_version.JenkinsVersionTest
+
+For further details on how to list tests available and different ways to
+execute them, see https://wiki.openstack.org/wiki/Testr.
+
 Test Coverage
 -------------
 
