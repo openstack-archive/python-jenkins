@@ -41,6 +41,7 @@
 .. module:: jenkins
     :platform: Unix, Windows
     :synopsis: Python API to interact with Jenkins
+    :noindex:
 
 See examples at :doc:`examples`
 '''

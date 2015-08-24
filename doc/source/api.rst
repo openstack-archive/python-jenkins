@@ -5,5 +5,4 @@ API reference
 
 .. automodule:: jenkins
     :members:
-    :noindex:
     :undoc-members:
