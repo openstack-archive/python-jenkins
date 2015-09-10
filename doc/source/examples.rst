@@ -17,7 +17,7 @@ retrieve the Jenkins server version.
 
     import jenkins
 
-    server = jenkins.Jenkins('localhost:8080', username='myuser', password='mypassword')
+    server = jenkins.Jenkins('http://localhost:8080', username='myuser', password='mypassword')
     version = server.get_version()
     print version
 
