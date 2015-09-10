@@ -102,6 +102,7 @@ CREATE_VIEW = 'createView?name=%(name)s'
 CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
+QUIET_DOWN = 'quietDown'
 
 # for testing only
 EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
@@ -1007,3 +1008,15 @@ class Jenkins(object):
         '''
         request = Request(self._build_url(CONFIG_VIEW, locals()))
         return self.jenkins_open(request)
+
+    def quiet_down(self):
+        '''Prepare Jenkins for shutdown.
+
+        No new builds will be started allowing running builds to complete
+        prior to shutdown of the server.
+        '''
+        request = Request(self._build_url(QUIET_DOWN))
+        self.jenkins_open(request)
+        info = self.get_info()
+        if not info['quietingDown']:
+            raise JenkinsException('quiet down failed')
