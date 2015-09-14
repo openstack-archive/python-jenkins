@@ -127,3 +127,186 @@ class JenkinsStopBuildTest(JenkinsTestBase):
             jenkins_mock.call_args[0][0].get_full_url(),
             u'http://example.com/job/Test%20Job/52/stop')
         self._check_requests(jenkins_mock.call_args_list)
+
+
+class JenkinsListRunningBuildsTest(JenkinsTestBase):
+    @patch.object(jenkins.Jenkins, 'get_node_info')
+    @patch.object(jenkins.Jenkins, 'get_nodes')
+    def test_with_builds_master(self, nodes_mock, node_info_mock):
+        nodes_to_return = [{
+            'name': "master", 'offline': False
+        }]
+        nodes_mock.return_value = nodes_to_return
+        build = {
+            "actions": [
+                {
+                    "parameters": [
+                        {
+                            "name": "FOO",
+                            "value": "foo"
+                        },
+                        {
+                            "name": "BAR",
+                            "value": "bar"
+                        }
+                    ]
+                },
+                {
+                    "causes": [
+                        {
+                            "shortDescription": "Started by user foo",
+                            "userId": "foo",
+                            "userName": "Foo Bar"
+                        }
+                    ]
+                }
+            ],
+            "artifacts": [],
+            "building": True,
+            "description": None,
+            "duration": 0,
+            "estimatedDuration": 20148,
+            "executor": {},
+            "fullDisplayName": "test #1",
+            "id": "2015-09-14_20-25-42",
+            "keepLog": False,
+            "number": 1,
+            "result": None,
+            "timestamp": 1442262342729,
+            "url": "https://localhost/job/test/1/",
+            "builtOn": "",
+            "changeSet": {
+                "items": [],
+                "kind": None
+            },
+            "culprits": []
+        }
+        node_info_to_return = {
+            "executors": [
+                {
+                    "currentExecutable": None,
+                    "currentWorkUnit": None,
+                    "idle": True,
+                    "likelyStuck": False,
+                    "number": 0,
+                    "progress": -1
+                },
+                {
+                    "currentExecutable": build,
+                    "currentWorkUnit": {},
+                    "idle": False,
+                    "likelyStuck": False,
+                    "number": 1,
+                    "progress": 14
+                }
+            ],
+        }
+        node_info_mock.return_value = node_info_to_return
+        builds = self.j.get_running_builds()
+        self.assertEqual([{'name': 'test',
+                           'number': 1,
+                           'node': '(master)',
+                           'executor': 1,
+                           'url': 'https://localhost/job/test/1/'}], builds)
+
+    @patch.object(jenkins.Jenkins, 'get_node_info')
+    @patch.object(jenkins.Jenkins, 'get_nodes')
+    def test_with_builds_non_master(self, nodes_mock, node_info_mock):
+        nodes_to_return = [{
+            'name': "foo-slave", 'offline': False
+        }]
+        nodes_mock.return_value = nodes_to_return
+        build = {
+            "actions": [
+                {
+                    "parameters": [
+                        {
+                            "name": "FOO",
+                            "value": "foo"
+                        },
+                        {
+                            "name": "BAR",
+                            "value": "bar"
+                        }
+                    ]
+                },
+                {
+                    "causes": [
+                        {
+                            "shortDescription": "Started by user foo",
+                            "userId": "foo",
+                            "userName": "Foo Bar"
+                        }
+                    ]
+                }
+            ],
+            "artifacts": [],
+            "building": True,
+            "description": None,
+            "duration": 0,
+            "estimatedDuration": 20148,
+            "executor": {},
+            "fullDisplayName": "test #1",
+            "id": "2015-09-14_20-25-42",
+            "keepLog": False,
+            "number": 15,
+            "result": None,
+            "timestamp": 1442262342729,
+            "url": "https://localhost/job/test/15/",
+            "builtOn": "",
+            "changeSet": {
+                "items": [],
+                "kind": None
+            },
+            "culprits": []
+        }
+        node_info_to_return = {
+            "executors": [
+                {
+                    "currentExecutable": None,
+                    "currentWorkUnit": None,
+                    "idle": True,
+                    "likelyStuck": False,
+                    "number": 1,
+                    "progress": -1
+                },
+                {
+                    "currentExecutable": build,
+                    "currentWorkUnit": {},
+                    "idle": False,
+                    "likelyStuck": False,
+                    "number": 0,
+                    "progress": 14
+                }
+            ],
+        }
+        node_info_mock.return_value = node_info_to_return
+        builds = self.j.get_running_builds()
+        self.assertEqual([{'name': 'test',
+                           'number': 15,
+                           'node': 'foo-slave',
+                           'executor': 0,
+                           'url': 'https://localhost/job/test/15/'}], builds)
+
+    @patch.object(jenkins.Jenkins, 'get_node_info')
+    @patch.object(jenkins.Jenkins, 'get_nodes')
+    def test_with_no_builds(self, nodes_mock, node_info_mock):
+        nodes_to_return = [{
+            'name': "master", 'offline': False
+        }]
+        nodes_mock.return_value = nodes_to_return
+        node_info_to_return = {
+            "executors": [
+                {
+                    "currentExecutable": None,
+                    "currentWorkUnit": None,
+                    "idle": True,
+                    "likelyStuck": False,
+                    "number": 0,
+                    "progress": -1
+                }
+            ]
+        }
+        node_info_mock.return_value = node_info_to_return
+        builds = self.j.get_running_builds()
+        self.assertEqual([], builds)

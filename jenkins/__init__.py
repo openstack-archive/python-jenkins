@@ -57,7 +57,7 @@ import six
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
-from six.moves.urllib.parse import quote, urlencode, urljoin
+from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
 from six.moves.urllib.request import Request, urlopen
 
 if sys.version_info < (2, 7, 0):
@@ -725,6 +725,46 @@ class Jenkins(object):
         '''
         self.jenkins_open(Request(
             self._build_url(STOP_BUILD, locals()), b''))
+
+    def get_running_builds(self):
+        '''Return list of running builds.
+
+        Each build is a dict with keys 'name', 'number', 'url', 'node',
+        and 'executor'.
+
+        :returns: List of builds,
+          ``[ { str: str, str: int, str:str, str: str, str: int} ]``
+
+        Example::
+            >>> builds = server.get_running_builds()
+            >>> print(builds)
+            [{'node': 'foo-slave', 'url': 'https://localhost/job/test/15/',
+              'executor': 0, 'name': 'test', 'number': 15}]
+        '''
+        builds = []
+        nodes = self.get_nodes()
+        for node in nodes:
+            # the name returned is not the name to lookup when
+            # dealing with master :/
+            if node['name'] == 'master':
+                node_name = '(master)'
+            else:
+                node_name = node['name']
+            info = self.get_node_info(node_name, depth=2)
+            for executor in info['executors']:
+                executable = executor['currentExecutable']
+                if executable:
+                    executor_number = executor['number']
+                    build_number = executable['number']
+                    url = executable['url']
+                    m = re.match(r'/job/([^/]+)/.*', urlparse(url).path)
+                    job_name = m.group(1)
+                    builds.append({'name': job_name,
+                                   'number': build_number,
+                                   'url': url,
+                                   'node': node_name,
+                                   'executor': executor_number})
+        return builds
 
     def get_nodes(self):
         '''Get a list of nodes connected to the Master
