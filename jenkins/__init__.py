@@ -726,6 +726,23 @@ class Jenkins(object):
         self.jenkins_open(Request(
             self._build_url(STOP_BUILD, locals()), b''))
 
+    def get_running_builds(self):
+        '''Return list of running builds.'''
+        builds = []
+        nodes = self.get_nodes()
+        for node in nodes:
+            # the name returned is not the name to lookup when
+            # dealing with master :/
+            if node['name'] == 'master':
+                name = '(master)'
+            else:
+                name = node['name']
+            info = self.get_node_info(name, depth=2)
+            for executor in info['executors']:
+                if executor['currentExecutable']:
+                    builds.append(executor['currentExecutable'])
+        return builds
+
     def get_nodes(self):
         '''Get a list of nodes connected to the Master
 

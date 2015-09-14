@@ -22,6 +22,7 @@ the things you can use it for:
 * Get information on nodes
 * Create/delete/reconfig views
 * Put server in shutdown mode (quiet down)
+* List running builds
 * and many more..
 
 To install::
