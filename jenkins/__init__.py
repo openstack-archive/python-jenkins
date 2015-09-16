@@ -83,6 +83,7 @@ CONFIG_JOB = 'job/%(name)s/config.xml'
 DELETE_JOB = 'job/%(name)s/doDelete'
 ENABLE_JOB = 'job/%(name)s/enable'
 DISABLE_JOB = 'job/%(name)s/disable'
+SET_JOB_BUILD_NUMBER = 'job/%(name)s/nextbuildnumber/submit'
 COPY_JOB = 'createItem?name=%(to_name)s&mode=copy&from=%(from_name)s'
 RENAME_JOB = 'job/%(from_name)s/doRename?newName=%(to_name)s'
 BUILD_JOB = 'job/%(name)s/build'
@@ -605,6 +606,30 @@ class Jenkins(object):
         '''
         self.jenkins_open(Request(
             self._build_url(DISABLE_JOB, locals()), b''))
+
+    def set_next_build_number(self, name, number):
+        '''Set a job's next build number.
+
+        The current next build number is contained within the job
+        information retrieved using :meth:`Jenkins.get_job_info`.  The
+        new next build number must be greater than or equal to the
+        number of the most recent build, to maintain the monotonically
+        increasing property of build numbers.
+
+        Note that on older Jenkins installations, the Next Build
+        Number plugin must be installed to enable this functionality.
+
+        :param name: Name of Jenkins job, ``str``
+        :param number: Next build number to set, ``int``
+
+        Example::
+
+            >>> next_bn = server.get_job_info('job_name')['nextBuildNumber']
+            >>> server.set_next_build_number('job_name', next_bn + 50)
+        '''
+        self.jenkins_open(
+            Request(self._build_url(SET_JOB_BUILD_NUMBER, locals()),
+                    ("nextBuildNumber=%d" % number).encode('utf-8')))
 
     def job_exists(self, name):
         '''Check whether a job exists
