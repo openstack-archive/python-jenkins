@@ -24,6 +24,7 @@ the things you can use it for:
 * Put server in shutdown mode (quiet down)
 * List running builds
 * Create/delete/update folders [#f1]_
+* Set the next build number
 * and many more..
 
 To install::
