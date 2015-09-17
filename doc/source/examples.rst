@@ -116,3 +116,19 @@ This is an example showing how to retrieve information on the Jenkins queue.
     queue_info = server.get_queue_info()
     id = queue_info[0].get('id')
     server.cancel_queue(id)
+
+
+Example 7: Updating Next Build Number
+-------------------------------------
+
+Requires the `Next Build Number Plugin
+<https://wiki.jenkins-ci.org/display/JENKINS/Next+Build+Number+Plugin>`_
+for Jenkins.
+
+This is an example showing how to update the next build number for a
+Jenkins job.
+
+::
+
+    next_bn = server.get_job_info('job_name')['nextBuildNumber']
+    server.set_next_build_number('job_name', next_bn + 50)
