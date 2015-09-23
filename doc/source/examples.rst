@@ -134,3 +134,19 @@ This is an example showing how to create, configure and delete Jenkins folders.
     server.copy_job('folder/empty', 'folder/empty_copy')
     server.delete_job('folder/empty_copy')
     server.delete_job('folder')
+
+
+Example 8: Updating Next Build Number
+-------------------------------------
+
+Requires the `Next Build Number Plugin
+<https://wiki.jenkins-ci.org/display/JENKINS/Next+Build+Number+Plugin>`_
+for Jenkins.
+
+This is an example showing how to update the next build number for a
+Jenkins job.
+
+::
+
+    next_bn = server.get_job_info('job_name')['nextBuildNumber']
+    server.set_next_build_number('job_name', next_bn + 50)
