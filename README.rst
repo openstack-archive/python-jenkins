@@ -24,6 +24,7 @@ the things you can use it for:
 * Put server in shutdown mode (quiet down)
 * List running builds
 * Create/delete/update folders [#f1]_
+* Set the next build number [#f2]_
 * and many more..
 
 To install::
@@ -85,3 +86,7 @@ Then install the required python packages using pip_::
     <https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Folders+Plugin>`_
     provides support for a subset of the full folders functionality. For the
     complete capabilities you will need the paid for version of the plugin.
+
+.. [#f2] The `Next Build Number Plugin
+   <https://wiki.jenkins-ci.org/display/JENKINS/Next+Build+Number+Plugin>`_
+   provides support for setting the next build number.
