@@ -54,12 +54,17 @@ import sys
 import time
 import warnings
 
+import multi_key_dict
 import six
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
 from six.moves.urllib.request import Request, urlopen
+
+from jenkins import plugins
+
+warnings.simplefilter("default", DeprecationWarning)
 
 if sys.version_info < (2, 7, 0):
     warnings.warn("Support for python 2.6 is deprecated and will be removed.")
@@ -497,7 +502,10 @@ class Jenkins(object):
         """Get all installed plugins information on this Master.
 
         This method retrieves information about each plugin that is installed
-        on master.
+        on master returning the raw plugin data in a JSON format.
+
+        .. deprecated:: 0.4.9
+           Use :func:`get_plugins` instead.
 
         :param depth: JSON depth, ``int``
         :returns: info on all plugins ``[dict]``
@@ -515,23 +523,23 @@ class Jenkins(object):
             u'gearman-plugin', u'bundled': False}, ..]
 
         """
-        try:
-            plugins_info = json.loads(self.jenkins_open(
-                Request(self._build_url(PLUGIN_INFO, locals()))
-            ))
-            return plugins_info['plugins']
-        except (HTTPError, BadStatusLine):
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
-        except ValueError:
-            raise JenkinsException("Could not parse JSON info for server[%s]"
-                                   % self.server)
+        warnings.warn("get_plugins_info() is deprecated, use get_plugins()",
+                      DeprecationWarning)
+        return [plugin_data for plugin_data in self.get_plugins(depth).values()]
 
     def get_plugin_info(self, name, depth=2):
         """Get an installed plugin information on this Master.
 
-        This method retrieves information about a speicifc plugin.
+        This method retrieves information about a specific plugin and returns
+        the raw plugin data in a JSON format.
         The passed in plugin name (short or long) must be an exact match.
+
+        .. note:: Calling this method will query Jenkins fresh for the
+            information for all plugins on each call. If you need to retrieve
+            information for multiple plugins it's recommended to use
+            :func:`get_plugins` instead, which will return a multi key
+            dictionary that can be accessed via either the short or long name
+            of the plugin.
 
         :param name: Name (short or long) of plugin, ``str``
         :param depth: JSON depth, ``int``
@@ -550,18 +558,58 @@ class Jenkins(object):
             u'gearman-plugin', u'bundled': False}
 
         """
+        plugins_info = self.get_plugins(depth)
         try:
-            plugins_info = json.loads(self.jenkins_open(
+            return plugins_info[name]
+        except KeyError:
+            pass
+
+    def get_plugins(self, depth=2):
+        """Return plugins info using helper class for version comparison
+
+        This method retrieves information about all the installed plugins and
+        uses a Plugin helper class to simplify version comparison. Also uses
+        a multi key dict to allow retrieval via either short or long names.
+
+        When printing/dumping the data, the version will transparently return
+        a unicode string, which is exactly what was previously returned by the
+        API.
+
+        :param depth: JSON depth, ``int``
+        :returns: info on all plugins ``[dict]``
+
+        Example::
+
+            >>> j = Jenkins()
+            >>> info = j.get_plugins()
+            >>> print(info)
+            {('gearman-plugin', 'Gearman Plugin'):
+              {u'backupVersion': None, u'version': u'0.0.4',
+               u'deleted': False, u'supportsDynamicLoad': u'MAYBE',
+               u'hasUpdate': True, u'enabled': True, u'pinned': False,
+               u'downgradable': False, u'dependencies': [], u'url':
+               u'http://wiki.jenkins-ci.org/display/JENKINS/Gearman+Plugin',
+               u'longName': u'Gearman Plugin', u'active': True, u'shortName':
+               u'gearman-plugin', u'bundled': False}, ...}
+
+        """
+
+        try:
+            plugins_info_json = json.loads(self.jenkins_open(
                 Request(self._build_url(PLUGIN_INFO, locals()))))
-            for plugin in plugins_info['plugins']:
-                if plugin['longName'] == name or plugin['shortName'] == name:
-                    return plugin
         except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
+
+        plugins_data = multi_key_dict.multi_key_dict()
+        for plugin_data in plugins_info_json['plugins']:
+            keys = (str(plugin_data['shortName']), str(plugin_data['longName']))
+            plugins_data[keys] = plugins.Plugin(**plugin_data)
+
+        return plugins_data
 
     def get_jobs(self, folder_depth=0):
         """Get list of jobs.
