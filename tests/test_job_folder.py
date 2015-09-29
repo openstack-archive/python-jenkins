@@ -7,6 +7,12 @@ from tests.base import JenkinsTestBase
 class JenkinsGetJobFolderTest(JenkinsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_empty(self, jenkins_mock):
+        folder, name = self.j._get_job_folder('')
+        self.assertEqual(folder, '')
+        self.assertEqual(name, '')
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_simple(self, jenkins_mock):
         folder, name = self.j._get_job_folder('my job')
         self.assertEqual(folder, '')
