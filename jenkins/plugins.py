@@ -67,7 +67,7 @@ class Plugin(dict):
         super(Plugin, self).__setitem__(key, value)
 
 
-class PluginVersion(object):
+class PluginVersion(str):
     '''Class providing comparison capabilities for plugin versions.'''
 
     _VERSION_RE = re.compile(r'(.*)-(?:SNAPSHOT|BETA)')
