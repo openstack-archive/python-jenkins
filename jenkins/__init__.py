@@ -244,6 +244,8 @@ class Jenkins(object):
         else:
             url_path = format_spec
 
+        if url_path.startswith('/'):
+            url_path = url_path[1:]
         return urljoin(self.server, url_path)
 
     def maybe_add_crumb(self, req):
