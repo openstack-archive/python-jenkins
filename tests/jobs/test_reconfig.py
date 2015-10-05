@@ -17,7 +17,7 @@ class JenkinsReconfigJobTest(JenkinsJobsTestBase):
         self.j.reconfig_job(u'Test Job', self.config_xml)
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
-                         u'http://example.com/job/Test%20Job/config.xml')
+                         u'{0}/job/Test%20Job/config.xml'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -30,5 +30,6 @@ class JenkinsReconfigJobTest(JenkinsJobsTestBase):
         self.j.reconfig_job(u'a Folder/Test Job', self.config_xml)
 
         self.assertEqual(jenkins_mock.call_args[0][0].get_full_url(),
-                         u'http://example.com/job/a%20Folder/job/Test%20Job/config.xml')
+                         u'{0}/job/a%20Folder/job/Test%20Job/config.xml'.
+                         format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)

@@ -19,8 +19,8 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/createItem'
-            '?name=Test%20Job_2&mode=copy&from=Test%20Job')
+            '{0}/createItem?name=Test%20Job_2&mode=copy&from=Test%20Job'.
+            format(self.base_url))
         self.assertTrue(self.j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -36,8 +36,8 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/createItem'
-            '?name=Test%20Job_2&mode=copy&from=Test%20Job')
+            '{0}/job/a%20Folder/createItem?name=Test%20Job_2'
+            '&mode=copy&from=Test%20Job'.format(self.base_url))
         self.assertTrue(self.j.job_exists('a Folder/Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -52,8 +52,8 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
             self.j.copy_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/createItem'
-            '?name=TestJob_2&mode=copy&from=TestJob')
+            '{0}/createItem?name=TestJob_2&mode=copy&from=TestJob'.
+            format(self.base_url))
         self.assertEqual(
             str(context_manager.exception),
             'create[TestJob_2] failed')
@@ -70,8 +70,8 @@ class JenkinsCopyJobTest(JenkinsJobsTestBase):
             self.j.copy_job(u'a Folder/TestJob', u'a Folder/TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/createItem'
-            '?name=TestJob_2&mode=copy&from=TestJob')
+            '{0}/job/a%20Folder/createItem?name=TestJob_2&mode=copy'
+            '&from=TestJob'.format(self.base_url))
         self.assertEqual(
             str(context_manager.exception),
             'create[a Folder/TestJob_2] failed')

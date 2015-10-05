@@ -84,7 +84,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         self.assertEqual(plugins_info, self.plugin_info_json['plugins'])
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            u'{0}/pluginManager/api/json?depth=2'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -104,7 +104,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         self.j.get_plugins_info(depth=1)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=1')
+            u'{0}/pluginManager/api/json?depth=1'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -115,10 +115,10 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
             self.j.get_plugins_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            u'{0}/pluginManager/api/json?depth=2'.format(self.base_url))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -129,16 +129,16 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
             self.j.get_plugins_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            u'{0}/pluginManager/api/json?depth=2'.format(self.base_url))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[http://example.com/]')
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
+            '{0}/job/pluginManager/api/json?depth=2'.format(self.base_url),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -148,7 +148,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
             self.j.get_plugins_info(depth=52)
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
 
@@ -179,7 +179,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             json.dumps(self.plugin_info_json),
             json.dumps(self.updated_plugin_info_json)
         ]
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j = jenkins.Jenkins('{0}/'.format(self.base_url), 'test', 'test')
 
         plugins_info = j.get_plugins()
         self.assertEqual(plugins_info["mailer"]["version"],
@@ -210,7 +210,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
         self.j.get_plugin_info('test', depth=1)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=1')
+            u'{0}/pluginManager/api/json?depth=1'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -221,10 +221,10 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             self.j.get_plugin_info('test')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            u'{0}/pluginManager/api/json?depth=2'.format(self.base_url))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -235,16 +235,16 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             self.j.get_plugin_info('test')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            u'{0}/pluginManager/api/json?depth=2'.format(self.base_url))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[http://example.com/]')
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
+            '{0}/job/pluginManager/api/json?depth=2'.format(self.base_url),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -254,7 +254,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             self.j.get_plugin_info(u'TestPlugin', depth=52)
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
 
