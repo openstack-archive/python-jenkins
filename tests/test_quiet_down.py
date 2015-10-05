@@ -17,10 +17,10 @@ class JenkinsQuietDownTest(JenkinsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            u'http://example.com/quietDown')
+            self.make_url('quietDown'))
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.make_url('api/json'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -35,10 +35,10 @@ class JenkinsQuietDownTest(JenkinsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            u'http://example.com/quietDown')
+            self.make_url('quietDown'))
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.make_url('api/json'))
         self.assertEqual(
             str(context_manager.exception),
             'quiet down failed')
@@ -55,5 +55,5 @@ class JenkinsQuietDownTest(JenkinsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/quietDown')
+            self.make_url('quietDown'))
         self._check_requests(jenkins_mock.call_args_list)

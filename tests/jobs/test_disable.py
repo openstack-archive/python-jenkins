@@ -18,7 +18,7 @@ class JenkinsDisableJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/Test%20Job/disable')
+            self.make_url('job/Test%20Job/disable'))
         self.assertTrue(self.j.job_exists('Test Job'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -33,6 +33,6 @@ class JenkinsDisableJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/Test%20Job/disable')
+            self.make_url('job/a%20Folder/job/Test%20Job/disable'))
         self.assertTrue(self.j.job_exists('a Folder/Test Job'))
         self._check_requests(jenkins_mock.call_args_list)
