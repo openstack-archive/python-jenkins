@@ -19,7 +19,7 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=Test%20Job')
+            self.make_url('createItem?name=Test%20Job'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -34,7 +34,7 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/createItem?name=Test%20Job')
+            self.make_url('job/a%20Folder/createItem?name=Test%20Job'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -48,7 +48,7 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
             self.j.create_job(u'TestJob', self.config_xml)
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/TestJob/api/json?tree=name')
+            self.make_url('job/TestJob/api/json?tree=name'))
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] already exists')
@@ -65,7 +65,7 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
             self.j.create_job(u'a Folder/TestJob', self.config_xml)
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/TestJob/api/json?tree=name')
+            self.make_url('job/a%20Folder/job/TestJob/api/json?tree=name'))
         self.assertEqual(
             str(context_manager.exception),
             'job[a Folder/TestJob] already exists')
@@ -83,10 +83,10 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
             self.j.create_job(u'TestJob', self.config_xml)
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/TestJob/api/json?tree=name')
+            self.make_url('job/TestJob/api/json?tree=name'))
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/createItem?name=TestJob')
+            self.make_url('createItem?name=TestJob'))
         self.assertEqual(
             str(context_manager.exception),
             'create[TestJob] failed')
@@ -104,10 +104,10 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
             self.j.create_job(u'a Folder/TestJob', self.config_xml)
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/TestJob/api/json?tree=name')
+            self.make_url('job/a%20Folder/job/TestJob/api/json?tree=name'))
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/createItem?name=TestJob')
+            self.make_url('job/a%20Folder/createItem?name=TestJob'))
         self.assertEqual(
             str(context_manager.exception),
             'create[a Folder/TestJob] failed')

@@ -22,7 +22,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/Test%20Job/api/json?depth=0')
+            self.make_url('job/Test%20Job/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -40,7 +40,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/Test%20Job/api/json?depth=0')
+            self.make_url('job/a%20Folder/job/Test%20Job/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -71,7 +71,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
             self.j.get_job_info(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/api/json?depth=0')
+            self.make_url('job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] does not exist')
@@ -85,7 +85,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
             self.j.get_job_info(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/api/json?depth=0')
+            self.make_url('job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for job[TestJob]')
@@ -94,7 +94,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
+            self.make_url('job/TestJob/api/json?depth=0'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -104,7 +104,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
             self.j.get_job_info(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/api/json?depth=0')
+            self.make_url('job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] does not exist')
@@ -113,7 +113,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_in_folder_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/a%20Folder/job/TestJob/api/json?depth=0',
+            self.make_url('job/a%20Folder/job/TestJob/api/json?depth=0'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -123,7 +123,7 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
             self.j.get_job_info(u'a Folder/TestJob')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/TestJob/api/json?depth=0')
+            self.make_url('job/a%20Folder/job/TestJob/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'job[a Folder/TestJob] does not exist')
