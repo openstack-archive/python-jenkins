@@ -19,7 +19,7 @@ class JenkinsRenameJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/Test%20Job/doRename?newName=Test%20Job_2')
+            self.makeUrl('job/Test%20Job/doRename?newName=Test%20Job_2'))
         self.assertTrue(self.j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -35,7 +35,7 @@ class JenkinsRenameJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/Test%20Job/doRename?newName=Test%20Job_2')
+            self.makeUrl('job/a%20Folder/job/Test%20Job/doRename?newName=Test%20Job_2'))
         self.assertTrue(self.j.job_exists('Test Job_2'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -50,7 +50,7 @@ class JenkinsRenameJobTest(JenkinsJobsTestBase):
             self.j.rename_job(u'TestJob', u'TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/TestJob/doRename?newName=TestJob_2')
+            self.makeUrl('job/TestJob/doRename?newName=TestJob_2'))
         self.assertEqual(
             str(context_manager.exception),
             'rename[TestJob_2] failed')
@@ -67,7 +67,7 @@ class JenkinsRenameJobTest(JenkinsJobsTestBase):
             self.j.rename_job(u'a Folder/TestJob', u'a Folder/TestJob_2')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/TestJob/doRename?newName=TestJob_2')
+            self.makeUrl('job/a%20Folder/job/TestJob/doRename?newName=TestJob_2'))
         self.assertEqual(
             str(context_manager.exception),
             'rename[a Folder/TestJob_2] failed')

@@ -18,7 +18,7 @@ class JenkinsDeleteJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/Test%20Job/doDelete')
+            self.makeUrl('job/Test%20Job/doDelete'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -32,7 +32,7 @@ class JenkinsDeleteJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/Test%20Job/doDelete')
+            self.makeUrl('job/a%20Folder/job/Test%20Job/doDelete'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -47,7 +47,7 @@ class JenkinsDeleteJobTest(JenkinsJobsTestBase):
             self.j.delete_job(u'TestJob')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/TestJob/doDelete')
+            self.makeUrl('job/TestJob/doDelete'))
         self.assertEqual(
             str(context_manager.exception),
             'delete[TestJob] failed')
@@ -65,7 +65,7 @@ class JenkinsDeleteJobTest(JenkinsJobsTestBase):
             self.j.delete_job(u'a Folder/TestJob')
         self.assertEqual(
             jenkins_mock.call_args_list[0][0][0].get_full_url(),
-            'http://example.com/job/a%20Folder/job/TestJob/doDelete')
+            self.makeUrl('job/a%20Folder/job/TestJob/doDelete'))
         self.assertEqual(
             str(context_manager.exception),
             'delete[a Folder/TestJob] failed')

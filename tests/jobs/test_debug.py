@@ -21,7 +21,7 @@ class JenkinsDebugJobInfoTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/Test%20Job/api/json?depth=0')
+            self.makeUrl('job/Test%20Job/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -38,5 +38,5 @@ class JenkinsDebugJobInfoTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/Test%20Job/api/json?depth=0')
+            self.makeUrl('job/a%20Folder/job/Test%20Job/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)

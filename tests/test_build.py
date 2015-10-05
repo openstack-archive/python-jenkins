@@ -16,7 +16,7 @@ class JenkinsBuildConsoleTest(JenkinsTestBase):
         self.assertEqual(build_info, jenkins_mock.return_value)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/Test%20Job/52/consoleText')
+            self.makeUrl('job/Test%20Job/52/consoleText'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -28,7 +28,7 @@ class JenkinsBuildConsoleTest(JenkinsTestBase):
         self.assertEqual(build_info, jenkins_mock.return_value)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/Test%20Job/52/consoleText')
+            self.makeUrl('job/a%20Folder/job/Test%20Job/52/consoleText'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -64,7 +64,7 @@ class JenkinsBuildConsoleTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/52/consoleText',
+            self.makeUrl('job/TestJob/52/consoleText'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -74,7 +74,7 @@ class JenkinsBuildConsoleTest(JenkinsTestBase):
             self.j.get_build_console_output(u'TestJob', number=52)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/TestJob/52/consoleText')
+            self.makeUrl('job/TestJob/52/consoleText'))
         self.assertEqual(
             str(context_manager.exception),
             'job[TestJob] number[52] does not exist')
@@ -83,7 +83,7 @@ class JenkinsBuildConsoleTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_in_folder_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/a%20Folder/job/TestJob/52/consoleText',
+            self.makeUrl('job/a%20Folder/job/TestJob/52/consoleText'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -93,7 +93,7 @@ class JenkinsBuildConsoleTest(JenkinsTestBase):
             self.j.get_build_console_output(u'a Folder/TestJob', number=52)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/TestJob/52/consoleText')
+            self.makeUrl('job/a%20Folder/job/TestJob/52/consoleText'))
         self.assertEqual(
             str(context_manager.exception),
             'job[a Folder/TestJob] number[52] does not exist')
@@ -117,7 +117,7 @@ class JenkinsBuildInfoTest(JenkinsTestBase):
         self.assertEqual(build_info, build_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/Test%20Job/52/api/json?depth=0')
+            self.makeUrl('job/Test%20Job/52/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -135,7 +135,7 @@ class JenkinsBuildInfoTest(JenkinsTestBase):
         self.assertEqual(build_info, build_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/Test%20Job/52/api/json?depth=0')
+            self.makeUrl('job/a%20Folder/job/Test%20Job/52/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -163,7 +163,7 @@ class JenkinsBuildInfoTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
+            self.makeUrl('job/TestJob/api/json?depth=0'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -179,7 +179,7 @@ class JenkinsBuildInfoTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_in_folder_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/a%20Folder/job/TestJob/api/json?depth=0',
+            self.makeUrl('job/a%20Folder/job/TestJob/api/json?depth=0'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -201,7 +201,7 @@ class JenkinsStopBuildTest(JenkinsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/Test%20Job/52/stop')
+            self.makeUrl('job/Test%20Job/52/stop'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -211,7 +211,7 @@ class JenkinsStopBuildTest(JenkinsTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/job/a%20Folder/job/Test%20Job/52/stop')
+            self.makeUrl('job/a%20Folder/job/Test%20Job/52/stop'))
         self._check_requests(jenkins_mock.call_args_list)
 
 

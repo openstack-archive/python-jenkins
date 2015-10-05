@@ -24,7 +24,7 @@ class JenkinsVersionTest(JenkinsTestBase):
     @patch('jenkins.urlopen')
     def test_raise_HTTPError(self, urlopen_mock):
         urlopen_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/',
+            self.makeUrl(''),
             code=503,
             msg="internal server error",
             hdrs=[],
@@ -33,7 +33,7 @@ class JenkinsVersionTest(JenkinsTestBase):
             self.j.get_version()
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(urlopen_mock.call_args_list)
 
     @patch('jenkins.urlopen')
@@ -43,7 +43,7 @@ class JenkinsVersionTest(JenkinsTestBase):
             self.j.get_version()
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(urlopen_mock.call_args_list)
 
     @patch('jenkins.urlopen', return_value=None)
@@ -52,6 +52,6 @@ class JenkinsVersionTest(JenkinsTestBase):
             self.j.get_version()
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]:'
-            ' empty response')
+            'Error communicating with server[{0}/]:'
+            ' empty response'.format(self.base_url))
         self._check_requests(urlopen_mock.call_args_list)

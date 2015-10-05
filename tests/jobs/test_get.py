@@ -24,13 +24,13 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         self.assertEqual(job_info, [jobs])
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json?tree=jobs[url,color,name,jobs]')
+            self.makeUrl('api/json?tree=jobs[url,color,name,jobs]'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_folders_simple(self, jenkins_mock):
         response = build_jobs_list_responses(
-            self.jobs_in_folder, 'http://example.com/')
+            self.jobs_in_folder, self.makeUrl(''))
         jenkins_mock.side_effect = iter(response)
 
         jobs_info = self.j.get_jobs()
@@ -45,7 +45,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_folders_additional_level(self, jenkins_mock):
         response = build_jobs_list_responses(
-            self.jobs_in_folder, 'http://example.com/')
+            self.jobs_in_folder, self.makeUrl(''))
         jenkins_mock.side_effect = iter(response)
 
         jobs_info = self.j.get_jobs(folder_depth=1)

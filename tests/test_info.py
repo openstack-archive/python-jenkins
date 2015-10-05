@@ -23,13 +23,13 @@ class JenkinsInfoTest(JenkinsTestBase):
         self.assertEqual(job_info, job_info_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.makeUrl('api/json'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob/api/json?depth=0',
+            self.makeUrl('job/TestJob/api/json?depth=0'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -39,10 +39,10 @@ class JenkinsInfoTest(JenkinsTestBase):
             self.j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.makeUrl('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -53,10 +53,10 @@ class JenkinsInfoTest(JenkinsTestBase):
             self.j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.makeUrl('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -67,25 +67,25 @@ class JenkinsInfoTest(JenkinsTestBase):
             self.j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.makeUrl('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[http://example.com/]')
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_return_empty_response(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.JenkinsException(
-            "Error communicating with server[http://example.com/]: "
-            "empty response")
+            "Error communicating with server[{0}/]: empty response".
+            format(self.base_url))
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/api/json')
+            self.makeUrl('api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]: '
-            'empty response')
+            'Error communicating with server[{0}/]: '
+            'empty response'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)

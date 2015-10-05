@@ -33,7 +33,7 @@
 
 import json
 from mock import patch
-from testscenarios.testcase import TestWithScenarios
+from testscenarios.scenarios import multiply_scenarios
 
 import jenkins
 from jenkins import plugins
@@ -84,7 +84,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         self.assertEqual(plugins_info, self.plugin_info_json['plugins'])
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            self.makeUrl('pluginManager/api/json?depth=2'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -104,7 +104,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
         self.j.get_plugins_info(depth=1)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=1')
+            self.makeUrl('pluginManager/api/json?depth=1'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -115,10 +115,10 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
             self.j.get_plugins_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            self.makeUrl('pluginManager/api/json?depth=2'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -129,16 +129,16 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
             self.j.get_plugins_info()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            self.makeUrl('pluginManager/api/json?depth=2'))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[http://example.com/]')
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
+            self.makeUrl('job/pluginManager/api/json?depth=2'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -148,7 +148,7 @@ class JenkinsPluginsInfoTest(JenkinsPluginsBase):
             self.j.get_plugins_info(depth=52)
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
 
@@ -179,7 +179,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             json.dumps(self.plugin_info_json),
             json.dumps(self.updated_plugin_info_json)
         ]
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j = jenkins.Jenkins(self.makeUrl(''), 'test', 'test')
 
         plugins_info = j.get_plugins()
         self.assertEqual(plugins_info["mailer"]["version"],
@@ -210,7 +210,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
         self.j.get_plugin_info('test', depth=1)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=1')
+            self.makeUrl('pluginManager/api/json?depth=1'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -221,10 +221,10 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             self.j.get_plugin_info('test')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            self.makeUrl('pluginManager/api/json?depth=2'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -235,16 +235,16 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             self.j.get_plugin_info('test')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            u'http://example.com/pluginManager/api/json?depth=2')
+            self.makeUrl('pluginManager/api/json?depth=2'))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[http://example.com/]')
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/pluginManager/api/json?depth=2',
+            self.makeUrl('job/pluginManager/api/json?depth=2'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -254,26 +254,29 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             self.j.get_plugin_info(u'TestPlugin', depth=52)
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
 
-class PluginsTestScenarios(TestWithScenarios, JenkinsPluginsBase):
-    scenarios = [
-        ('s1', dict(v1='1.0.0', op='__gt__', v2='0.8.0')),
-        ('s2', dict(v1='1.0.1alpha', op='__gt__', v2='1.0.0')),
-        ('s3', dict(v1='1.0', op='__eq__', v2='1.0.0')),
-        ('s4', dict(v1='1.0', op='__eq__', v2='1.0')),
-        ('s5', dict(v1='1.0', op='__lt__', v2='1.8.0')),
-        ('s6', dict(v1='1.0.1alpha', op='__lt__', v2='1.0.1')),
-        ('s7', dict(v1='1.0alpha', op='__lt__', v2='1.0.0')),
-        ('s8', dict(v1='1.0-alpha', op='__lt__', v2='1.0.0')),
-        ('s9', dict(v1='1.1-alpha', op='__gt__', v2='1.0')),
-        ('s10', dict(v1='1.0-SNAPSHOT', op='__lt__', v2='1.0')),
-        ('s11', dict(v1='1.0.preview', op='__lt__', v2='1.0')),
-        ('s12', dict(v1='1.1-SNAPSHOT', op='__gt__', v2='1.0')),
-        ('s13', dict(v1='1.0a-SNAPSHOT', op='__lt__', v2='1.0a')),
-    ]
+class PluginsTestScenarios(JenkinsPluginsBase):
+
+    scenarios = multiply_scenarios(
+        JenkinsPluginsBase.scenarios,
+        [
+            ('s1', dict(v1='1.0.0', op='__gt__', v2='0.8.0')),
+            ('s2', dict(v1='1.0.1alpha', op='__gt__', v2='1.0.0')),
+            ('s3', dict(v1='1.0', op='__eq__', v2='1.0.0')),
+            ('s4', dict(v1='1.0', op='__eq__', v2='1.0')),
+            ('s5', dict(v1='1.0', op='__lt__', v2='1.8.0')),
+            ('s6', dict(v1='1.0.1alpha', op='__lt__', v2='1.0.1')),
+            ('s7', dict(v1='1.0alpha', op='__lt__', v2='1.0.0')),
+            ('s8', dict(v1='1.0-alpha', op='__lt__', v2='1.0.0')),
+            ('s9', dict(v1='1.1-alpha', op='__gt__', v2='1.0')),
+            ('s10', dict(v1='1.0-SNAPSHOT', op='__lt__', v2='1.0')),
+            ('s11', dict(v1='1.0.preview', op='__lt__', v2='1.0')),
+            ('s12', dict(v1='1.1-SNAPSHOT', op='__gt__', v2='1.0')),
+            ('s13', dict(v1='1.0a-SNAPSHOT', op='__lt__', v2='1.0a')),
+        ])
 
     def setUp(self):
         super(PluginsTestScenarios, self).setUp()
@@ -293,7 +296,7 @@ class PluginsTestScenarios(TestWithScenarios, JenkinsPluginsBase):
         equality operator defined for the scenario.
         """
         plugin_name = "Jenkins Mailer Plugin"
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j = jenkins.Jenkins(self.base_url, 'test', 'test')
         plugin_info = j.get_plugins()[plugin_name]
         v1 = plugin_info.get("version")
 
@@ -311,7 +314,7 @@ class PluginsTestScenarios(TestWithScenarios, JenkinsPluginsBase):
         type of PluginVersion before comparing provides the same result.
         """
         plugin_name = "Jenkins Mailer Plugin"
-        j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        j = jenkins.Jenkins(self.base_url, 'test', 'test')
         plugin_info = j.get_plugins()[plugin_name]
         v1 = plugin_info.get("version")
 

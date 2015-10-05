@@ -43,10 +43,10 @@ class JenkinsGetNodesTest(JenkinsNodesTestBase):
             self.j.get_nodes()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/api/json')
+            self.makeUrl('computer/api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Could not parse JSON info for server[http://example.com/]')
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch('jenkins.urlopen')
@@ -56,13 +56,13 @@ class JenkinsGetNodesTest(JenkinsNodesTestBase):
             self.j.get_nodes()
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(urlopen_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
+            self.makeUrl('job/TestJob'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -72,10 +72,10 @@ class JenkinsGetNodesTest(JenkinsNodesTestBase):
             self.j.get_nodes()
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/api/json')
+            self.makeUrl('computer/api/json'))
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[http://example.com/]')
+            'Error communicating with server[{0}/]'.format(self.base_url))
         self._check_requests(jenkins_mock.call_args_list)
 
 
@@ -90,7 +90,7 @@ class JenkinsGetNodeInfoTest(JenkinsNodesTestBase):
         self.assertEqual(self.j.get_node_info('test node'), self.node_info)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test%20node/api/json?depth=0')
+            self.makeUrl('computer/test%20node/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -103,7 +103,7 @@ class JenkinsGetNodeInfoTest(JenkinsNodesTestBase):
             self.j.get_node_info('test_node')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/api/json?depth=0')
+            self.makeUrl('computer/test_node/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for node[test_node]')
@@ -112,7 +112,7 @@ class JenkinsGetNodeInfoTest(JenkinsNodesTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_raise_HTTPError(self, jenkins_mock):
         jenkins_mock.side_effect = jenkins.HTTPError(
-            'http://example.com/job/TestJob',
+            self.makeUrl('job/TestJob'),
             code=401,
             msg="basic auth failed",
             hdrs=[],
@@ -122,7 +122,7 @@ class JenkinsGetNodeInfoTest(JenkinsNodesTestBase):
             self.j.get_node_info('test_node')
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/api/json?depth=0')
+            self.makeUrl('computer/test_node/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'node[test_node] does not exist')
@@ -166,7 +166,7 @@ class JenkinsDeleteNodeTest(JenkinsNodesTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/computer/test%20node/doDelete')
+            self.makeUrl('computer/test%20node/doDelete'))
         self.assertFalse(self.j.node_exists('test node'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -182,7 +182,7 @@ class JenkinsDeleteNodeTest(JenkinsNodesTestBase):
             self.j.delete_node('test_node')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url(),
-            'http://example.com/computer/test_node/doDelete')
+            self.makeUrl('computer/test_node/doDelete'))
         self.assertEqual(
             str(context_manager.exception),
             'delete[test_node] failed')
@@ -204,7 +204,7 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
-            'http://example.com/computer/doCreateItem')
+            self.makeUrl('computer/doCreateItem'))
         self.assertTrue(self.j.node_exists('test node'))
         self._check_requests(jenkins_mock.call_args_list)
 
@@ -234,7 +234,7 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
             self.j.create_node('test_node')
         self.assertEqual(
             jenkins_mock.call_args_list[1][0][0].get_full_url().split('?')[0],
-            'http://example.com/computer/doCreateItem')
+            self.makeUrl('computer/doCreateItem'))
         self.assertEqual(
             str(context_manager.exception),
             'create[test_node] failed')
@@ -254,8 +254,8 @@ class JenkinsEnableNodeTest(JenkinsNodesTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test%20node/' +
-            'toggleOffline?offlineMessage=')
+            '{0}/computer/test%20node/'
+            'toggleOffline?offlineMessage='.format(self.base_url))
 
         jenkins_mock.side_effect = [json.dumps(self.online_node_info)]
         node_info = self.j.get_node_info('test node')
@@ -275,7 +275,7 @@ class JenkinsEnableNodeTest(JenkinsNodesTestBase):
         # Last call to jenkins was to check status
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/api/json?depth=0')
+            self.makeUrl('computer/test_node/api/json?depth=0'))
 
         jenkins_mock.side_effect = [json.dumps(self.online_node_info)]
         node_info = self.j.get_node_info('test_node')
@@ -296,8 +296,8 @@ class JenkinsDisableNodeTest(JenkinsNodesTestBase):
 
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test%20node/' +
-            'toggleOffline?offlineMessage=')
+            '{0}/computer/test%20node/'
+            'toggleOffline?offlineMessage='.format(self.base_url))
 
         jenkins_mock.side_effect = [json.dumps(self.offline_node_info)]
         node_info = self.j.get_node_info('test node')
@@ -317,7 +317,7 @@ class JenkinsDisableNodeTest(JenkinsNodesTestBase):
         # Last call to jenkins was to check status
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            'http://example.com/computer/test_node/api/json?depth=0')
+            self.makeUrl('computer/test_node/api/json?depth=0'))
 
         jenkins_mock.side_effect = [json.dumps(self.offline_node_info)]
         node_info = self.j.get_node_info('test_node')
