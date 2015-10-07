@@ -994,7 +994,16 @@ class Jenkins(object):
                 node_name = '(master)'
             else:
                 node_name = node['name']
-            info = self.get_node_info(node_name, depth=2)
+            try:
+                info = self.get_node_info(node_name, depth=2)
+            except JenkinsException as e:
+                # Jenkins may 500 on depth >0. If the node info comes back
+                # at depth 0 treat it as a node not running any jobs.
+                if ('[500]' in str(e) and
+                        self.get_node_info(node_name, depth=0)):
+                    continue
+                else:
+                    raise
             for executor in info['executors']:
                 executable = executor['currentExecutable']
                 if executable:

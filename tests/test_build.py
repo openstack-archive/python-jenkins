@@ -396,3 +396,24 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
         node_info_mock.return_value = node_info_to_return
         builds = self.j.get_running_builds()
         self.assertEqual([], builds)
+
+    @patch.object(jenkins.Jenkins, 'get_node_info')
+    @patch.object(jenkins.Jenkins, 'get_nodes')
+    def test_broken_slave(self, nodes_mock, node_info_mock):
+        nodes_to_return = [{
+            'name': "foo-slave", 'offline': False
+        }]
+        nodes_mock.return_value = nodes_to_return
+
+        def side_effect(*args, **kwargs):
+            if 'depth' in kwargs and kwargs['depth'] > 0:
+                raise jenkins.JenkinsException(
+                    "Error in request. Possibly authentication failed"
+                    "[500]: Server Error")
+            else:
+                return {"success": True}
+
+        node_info_mock.side_effect = side_effect
+        builds = self.j.get_running_builds()
+        # Should treat the slave as not running any builds
+        self.assertEqual([], builds)
