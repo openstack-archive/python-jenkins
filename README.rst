@@ -1,6 +1,6 @@
 README
 ======
-
+This change is for testing Gerrit hooks
 Python Jenkins is a python wrapper for the `Jenkins <http://jenkins-ci.org/>`_
 REST API which aims to provide a more conventionally pythonic way of controlling
 a Jenkins server.  It provides a higher-level API containing a number of
