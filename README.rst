@@ -44,11 +44,11 @@ Bug report:
 
 Repository:
 
-* https://git.openstack.org/cgit/stackforge/python-jenkins
+* https://git.openstack.org/cgit/openstack/python-jenkins
 
 Cloning:
 
-* git clone https://git.openstack.org/stackforge/python-jenkins
+* git clone https://git.openstack.org/openstack/python-jenkins
 
 Patches are submitted via Gerrit at:
 
