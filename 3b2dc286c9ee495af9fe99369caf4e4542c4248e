@@ -1,0 +1,11 @@
+Verified+2: Jenkins
+Code-Review+2: Darragh Bailey <daragh.bailey@gmail.com>
+Workflow+1: Darragh Bailey <daragh.bailey@gmail.com>
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Code-Review+1: venkatamahesh <venkatamaheshkotha@gmail.com>
+Code-Review+1: Clint Adams <clint@gcfm.net>
+Submitted-by: Jenkins
+Submitted-at: Sun, 18 Oct 2015 12:22:14 +0000
+Reviewed-on: https://review.openstack.org/236560
+Project: openstack/python-jenkins
+Branch: refs/heads/master
