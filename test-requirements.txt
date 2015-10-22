@@ -1,6 +1,7 @@
 coverage>=3.6
 discover
 hacking>=0.5.6,<0.11
+kerberos
 mock<1.1
 unittest2
 python-subunit
