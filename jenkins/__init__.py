@@ -60,7 +60,7 @@ from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
-from six.moves.urllib.request import Request, urlopen
+from six.moves.urllib.request import Request, build_opener, urlopen
 
 from jenkins import plugins
 
@@ -338,7 +338,15 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
+            opener = build_opener()
+            try:
+                import kerberos
+                assert kerberos  # pyflakes
+                import urllib_kerb
+                opener.add_handler(urllib_kerb.HTTPNegotiateHandler())
+            except ImportError:
+                pass
+            response = opener.open(req, timeout=self.timeout).read()
             if response is None:
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
