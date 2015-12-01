@@ -453,7 +453,10 @@ class Jenkins(object):
             u'name': u'my_job'}
 
         """
-        url = "/".join((item, INFO))
+        if item:
+            url = "/".join((item, INFO))
+        else:
+            url = INFO
         if query:
             url += query
         try:
