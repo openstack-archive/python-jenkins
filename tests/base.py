@@ -1,6 +1,7 @@
 import sys
 
 from six.moves.urllib.request import build_opener
+from testscenarios import TestWithScenarios
 
 import jenkins
 
@@ -10,18 +11,26 @@ else:
     import unittest
 
 
-class JenkinsTestBase(unittest.TestCase):
+class JenkinsTestBase(TestWithScenarios, unittest.TestCase):
 
     crumb_data = {
         "crumb": "dab177f483b3dd93483ef6716d8e792d",
         "crumbRequestField": ".crumb",
     }
 
+    scenarios = [
+        ('base_url1', dict(base_url='http://example.com')),
+        ('base_url2', dict(base_url='http://example.com/jenkins'))
+    ]
+
     def setUp(self):
         super(JenkinsTestBase, self).setUp()
         self.opener = build_opener()
 
-        self.j = jenkins.Jenkins('http://example.com/', 'test', 'test')
+        self.j = jenkins.Jenkins(self.base_url, 'test', 'test')
+
+    def make_url(self, path):
+        return u'{0}/{1}'.format(self.base_url, path)
 
     def _check_requests(self, requests):
 
