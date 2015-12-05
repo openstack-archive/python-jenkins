@@ -65,6 +65,8 @@ from six.moves.urllib.request import Request, urlopen
 from jenkins import plugins
 from jenkins.exceptions import (JenkinsException, TimeoutException,
     BadHTTPException, NotFoundException, EmptyResponseException)
+from jenkins.configs import (EMPTY_CONFIG_XML, RECONFIG_XML,
+    EMPTY_VIEW_CONFIG_XML)
 
 warnings.simplefilter("default", DeprecationWarning)
 
@@ -113,64 +115,6 @@ CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
 QUIET_DOWN = 'quietDown'
-
-# for testing only
-EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
-<project>
-  <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class='jenkins.scm.NullSCM'/>
-  <canRoam>true</canRoam>
-  <disabled>false</disabled>
-  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-  <triggers class='vector'/>
-  <concurrentBuild>false</concurrentBuild>
-  <builders/>
-  <publishers/>
-  <buildWrappers/>
-</project>'''
-
-# for testing only
-RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
-<project>
-  <keepDependencies>false</keepDependencies>
-  <properties/>
-  <scm class='jenkins.scm.NullSCM'/>
-  <canRoam>true</canRoam>
-  <disabled>false</disabled>
-  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-  <triggers class='vector'/>
-  <concurrentBuild>false</concurrentBuild>
-  <builders>
-    <jenkins.tasks.Shell>
-      <command>export FOO=bar</command>
-    </jenkins.tasks.Shell>
-  </builders>
-  <publishers/>
-  <buildWrappers/>
-</project>'''
-
-# for testing only
-EMPTY_VIEW_CONFIG_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<hudson.model.ListView>
-  <name>EMPTY</name>
-  <filterExecutors>false</filterExecutors>
-  <filterQueue>false</filterQueue>
-  <properties class="hudson.model.View$PropertyList"/>
-  <jobNames>
-    <comparator class="hudson.util.CaseInsensitiveComparator"/>
-  </jobNames>
-  <jobFilters/>
-  <columns>
-    <hudson.views.StatusColumn/>
-    <hudson.views.WeatherColumn/>
-    <hudson.views.JobColumn/>
-    <hudson.views.LastSuccessColumn/>
-    <hudson.views.LastFailureColumn/>
-    <hudson.views.LastDurationColumn/>
-    <hudson.views.BuildButtonColumn/>
-  </columns>
-</hudson.model.ListView>'''
 
 def auth_headers(username, password):
     '''Simple implementation of HTTP Basic Authentication.
