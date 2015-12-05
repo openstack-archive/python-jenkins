@@ -63,6 +63,9 @@ from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
 from six.moves.urllib.request import Request, urlopen
 
 from jenkins import plugins
+from jenkins.exceptions import (JenkinsException, TimeoutException,
+                                BadHTTPException, NotFoundException,
+                                EmptyResponseException)
 
 warnings.simplefilter("default", DeprecationWarning)
 
@@ -169,30 +172,6 @@ EMPTY_VIEW_CONFIG_XML = '''<?xml version="1.0" encoding="UTF-8"?>
     <hudson.views.BuildButtonColumn/>
   </columns>
 </hudson.model.ListView>'''
-
-
-class JenkinsException(Exception):
-    '''General exception type for jenkins-API-related failures.'''
-    pass
-
-
-class NotFoundException(JenkinsException):
-    '''A special exception to call out the case of receiving a 404.'''
-    pass
-
-
-class EmptyResponseException(JenkinsException):
-    '''A special exception to call out the case receiving an empty response.'''
-    pass
-
-
-class BadHTTPException(JenkinsException):
-    '''A special exception to call out the case of a broken HTTP response.'''
-    pass
-
-
-class TimeoutException(JenkinsException):
-    '''A special exception to call out in the case of a socket timeout.'''
 
 
 def auth_headers(username, password):
