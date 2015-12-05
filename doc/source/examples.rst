@@ -39,14 +39,14 @@ This is an example showing how to create, configure and delete Jenkins jobs.
 
 ::
 
-    server.create_job('empty', jenkins.EMPTY_CONFIG_XML)
+    server.create_job('empty', jenkins.configs.EMPTY_CONFIG_XML)
     jobs = server.get_jobs()
     print jobs
     server.build_job('empty')
     server.disable_job('empty')
     server.copy_job('empty', 'empty_copy')
     server.enable_job('empty_copy')
-    server.reconfig_job('empty_copy', jenkins.RECONFIG_XML)
+    server.reconfig_job('empty_copy', jenkins.configs.RECONFIG_XML)
 
     server.delete_job('empty')
     server.delete_job('empty_copy')
@@ -66,7 +66,7 @@ This is an example showing how to create, configure and delete Jenkins views.
 
 ::
 
-    server.create_view('EMPTY', jenkins.EMPTY_VIEW_CONFIG_XML)
+    server.create_view('EMPTY', jenkins.configs.EMPTY_VIEW_CONFIG_XML)
     view_config = server.get_view_config('EMPTY')
     views = server.get_views()
     server.delete_view('EMPTY')
@@ -129,8 +129,8 @@ This is an example showing how to create, configure and delete Jenkins folders.
 
 ::
 
-    server.create_job('folder', jenkins.EMPTY_FOLDER_XML)
-    server.create_job('folder/empty', jenkins.EMPTY_FOLDER_XML)
+    server.create_job('folder', jenkins.configs.EMPTY_FOLDER_XML)
+    server.create_job('folder/empty', jenkins.configs.EMPTY_FOLDER_XML)
     server.copy_job('folder/empty', 'folder/empty_copy')
     server.delete_job('folder/empty_copy')
     server.delete_job('folder')
