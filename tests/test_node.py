@@ -209,6 +209,50 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_urlencode(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            None,
+            None,
+            json.dumps(self.node_info),
+            json.dumps(self.node_info),
+        ]
+        expect_url = (
+            'computer/doCreateItem?json=%7B%22launcher%22%3A+%7B%22'
+            'username%22%3A+%22juser%22%2C+%22'
+            'stapler-class%22%3A+%22hudson.plugins.sshslaves.SSHLauncher%22%2C+%22'
+            'host%22%3A+%22my.jenkins.slave1%22%2C+%22'
+            'credentialsId%22%3A+%2210f3a3c8-be35-327e-b60b-a3e5edb0e45f%22%2C+%22'
+            'port%22%3A+%2222%22%7D%2C+%22numExecutors%22%3A+2%2C+%22'
+            'nodeProperties%22%3A+%7B%22stapler-class-bag%22%3A+%22true%22%7D%2C+%22'
+            'name%22%3A+%22slave1%22%2C+%22retentionStrategy%22%3A+%7B%22'
+            'stapler-class%22%3A+%22hudson.slaves.RetentionStrategy%24Always%22%7D%2C+%22'
+            'remoteFS%22%3A+%22%2Fhome%2Fjuser%22%2C+%22'
+            'type%22%3A+%22hudson.slaves.DumbSlave%24DescriptorImpl%22%2C+%22'
+            'nodeDescription%22%3A+%22my+test+slave%22%2C+%22'
+            'labelString%22%3A+%22precise%22%2C+%22mode%22%3A+%22EXCLUSIVE%22%7D'
+            '&type=hudson.slaves.DumbSlave%24DescriptorImpl&name=slave1'
+        )
+        params = {
+            'port': '22',
+            'username': 'juser',
+            'credentialsId': '10f3a3c8-be35-327e-b60b-a3e5edb0e45f',
+            'host': 'my.jenkins.slave1'
+        }
+        self.j.create_node(
+            'slave1',
+            nodeDescription='my test slave',
+            remoteFS='/home/juser',
+            labels='precise',
+            exclusive=True,
+            launcher=jenkins.LAUNCHER_SSH,
+            launcher_params=params)
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            self.make_url(expect_url))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_already_exists(self, jenkins_mock):
         jenkins_mock.side_effect = [
             json.dumps(self.node_info),
