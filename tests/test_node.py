@@ -209,6 +209,47 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_urlencode(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            None,
+            None,
+            json.dumps(self.node_info),
+            json.dumps(self.node_info),
+        ]
+        params = {
+            'port': '22',
+            'username': 'juser',
+            'credentialsId': '10f3a3c8-be35-327e-b60b-a3e5edb0e45f',
+            'host': 'my.jenkins.slave1'
+        }
+        self.j.create_node(
+            'slave1',
+            nodeDescription='my test slave',
+            remoteFS='/home/juser',
+            labels='precise',
+            exclusive=True,
+            launcher=jenkins.LAUNCHER_SSH,
+            launcher_params=params)
+
+        actual = jenkins_mock.call_args_list[1][0][0].get_full_url()
+        self.assertIn(u'username%22%3A+%22juser', actual)
+        self.assertIn(
+            u'stapler-class%22%3A+%22hudson.plugins.sshslaves.SSHLauncher',
+            actual)
+        self.assertIn(u'host%22%3A+%22my.jenkins.slave1', actual)
+        self.assertIn(
+            u'credentialsId%22%3A+%2210f3a3c8-be35-327e-b60b-a3e5edb0e45f',
+            actual)
+        self.assertIn(u'port%22%3A+%2222', actual)
+        self.assertIn(u'remoteFS%22%3A+%22%2Fhome%2Fjuser', actual)
+        self.assertIn(u'labelString%22%3A+%22precise', actual)
+        self.assertIn(u'name%22%3A+%22slave1', actual)
+        self.assertIn(
+            u'type%22%3A+%22hudson.slaves.DumbSlave%24DescriptorImpl',
+            actual)
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_already_exists(self, jenkins_mock):
         jenkins_mock.side_effect = [
             json.dumps(self.node_info),
