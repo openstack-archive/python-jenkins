@@ -240,7 +240,10 @@ class Jenkins(object):
     def _build_url(self, format_spec, variables=None):
 
         if variables:
-            url_path = format_spec % self._get_encoded_params(variables)
+            if format_spec == CREATE_NODE:
+                url_path = format_spec % urlencode(self._get_encoded_params(variables))
+            else:
+                url_path = format_spec % self._get_encoded_params(variables)
         else:
             url_path = format_spec
 
