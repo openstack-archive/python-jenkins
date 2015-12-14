@@ -150,3 +150,24 @@ Jenkins job.
 
     next_bn = server.get_job_info('job_name')['nextBuildNumber']
     server.set_next_build_number('job_name', next_bn + 50)
+
+
+Example 9: Working with Build Promotions
+-------------------------------------
+
+Requires the `Promoted Builds Plugin
+<https://wiki.jenkins-ci.org/display/JENKINS/Promoted+Builds+Plugin>`_
+for Jenkins.
+
+This is an example showing how to create, configure and delete a promotion process for an existing job.
+
+::
+
+    server.create_promotion('passed_qa', 'foo', xml)
+    server.promotion_exists('passed_qa', 'foo')
+    print server.get_promotions('foo')
+
+    server.reconfig_promotion('passed_qa', 'foo', new_xml)
+    print server.get_promotion_config('passed_qa', 'foo')
+
+    server.delete_promotion('passed_qa', 'foo')
