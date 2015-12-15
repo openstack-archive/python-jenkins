@@ -61,7 +61,6 @@ from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
 from six.moves.urllib.request import Request, urlopen
-import ssl
 
 from jenkins import plugins
 
