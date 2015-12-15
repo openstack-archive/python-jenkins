@@ -61,6 +61,7 @@ from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
 from six.moves.urllib.request import Request, urlopen
+import ssl
 
 from jenkins import plugins
 
@@ -209,7 +210,7 @@ def auth_headers(username, password):
 class Jenkins(object):
 
     def __init__(self, url, username=None, password=None,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT, context=None):
         '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
@@ -229,6 +230,10 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
         self.timeout = timeout
+        if context is not None:
+            self.context = context
+        else:
+            self.context = None
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -341,7 +346,7 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
+            response = urlopen(req, timeout=self.timeout, context=self.context).read()
             if response is None:
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
