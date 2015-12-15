@@ -1,4 +1,5 @@
 from six.moves import StringIO
+import ssl
 import testtools
 from testtools.content import text_content
 
@@ -15,6 +16,7 @@ class JenkinsRequestTimeoutTests(testtools.TestCase):
         self.server = NullServer(("127.0.0.1", 0))
         self.messages = StringIO()
         self.addOnException(self._get_messages)
+        self.context = None
 
     def _get_messages(self, exc_info):
         self.addDetail('timeout-tests-messages',
@@ -22,7 +24,7 @@ class JenkinsRequestTimeoutTests(testtools.TestCase):
 
     def test_jenkins_open_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
-                            None, None, timeout=0.1)
+                            None, None, timeout=0.1, context=ssl._create_unverified_context())
         request = jenkins.Request('http://%s:%s/job/TestJob' %
                                   self.server.server_address)
 
@@ -32,7 +34,7 @@ class JenkinsRequestTimeoutTests(testtools.TestCase):
 
     def test_jenkins_open_no_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
-                            None, None)
+                            None, None, context=ssl._create_unverified_context())
         request = jenkins.Request('http://%s:%s/job/TestJob' %
                                   self.server.server_address)
 
