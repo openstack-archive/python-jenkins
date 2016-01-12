@@ -110,6 +110,11 @@ CREATE_VIEW = 'createView?name=%(name)s'
 CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
+PROMOTION_NAME = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/api/json?tree=name'
+PROMOTION_INFO = '%(folder_url)sjob/%(short_name)s/promotion/api/json?depth=%(depth)s'
+DELETE_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/doDelete'
+CREATE_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/createProcess?name=%(name)s'
+CONFIG_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/config.xml'
 QUIET_DOWN = 'quietDown'
 
 # for testing only
@@ -169,6 +174,18 @@ EMPTY_VIEW_CONFIG_XML = '''<?xml version="1.0" encoding="UTF-8"?>
     <hudson.views.BuildButtonColumn/>
   </columns>
 </hudson.model.ListView>'''
+
+# for testing only
+EMPTY_PROMO_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<hudson.plugins.promoted__builds.PromotionProcess>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>false</canRoam>
+  <triggers/>
+  <conditions/>
+  <icon>star-gold</icon>
+  <buildSteps/>
+</hudson.plugins.promoted__builds.PromotionProcess>'''
 
 
 class JenkinsException(Exception):
@@ -1322,6 +1339,143 @@ class Jenkins(object):
         :returns: view configuration (XML format)
         '''
         request = Request(self._build_url(CONFIG_VIEW, locals()))
+        return self.jenkins_open(request)
+
+    def get_promotion_name(self, name, job_name):
+        '''Return the name of a promotion using the API.
+
+        That is roughly an identity method which can be used to
+        quickly verify a promotion exists for a job or is accessible
+        without causing too much stress on the server side.
+
+        :param job_name: Job name, ``str``
+        :param name: Promotion name, ``str``
+        :returns: Name of promotion or None
+        '''
+        folder_url, short_name = self._get_job_folder(job_name)
+        try:
+            response = self.jenkins_open(Request(
+                self._build_url(PROMOTION_NAME, locals())))
+        except NotFoundException:
+            return None
+        else:
+            actual = json.loads(response)['name']
+            if actual != name:
+                raise JenkinsException(
+                    'Jenkins returned an unexpected promotion name %s '
+                    '(expected: %s)' % (actual, name))
+            return actual
+
+    def assert_promotion_exists(self, name, job_name,
+                                exception_message='promotion[%s] does not '
+                                'exist for job[%s]'):
+        '''Raise an exception if a job lacks a promotion
+
+        :param job_name: Job name, ``str``
+        :param name: Name of Jenkins promotion, ``str``
+        :param exception_message: Message to use for the exception. Formatted
+                                  with ``name`` and ``job_name``
+        :throws: :class:`JenkinsException` whenever the promotion
+            does not exist on a job
+        '''
+        if not self.promotion_exists(name, job_name):
+            raise JenkinsException(exception_message % (name, job_name))
+
+    def promotion_exists(self, name, job_name):
+        '''Check whether a job has a certain promotion
+
+        :param job_name: Job name, ``str``
+        :param name: Name of Jenkins promotion, ``str``
+        :returns: ``True`` if Jenkins promotion exists
+        '''
+        return self.get_promotion_name(name, job_name) == name
+
+    def get_promotions_info(self, job_name, depth=0):
+        '''Get promotion information dictionary of a job
+
+        :param name: job_name, ``str``
+        :param depth: JSON depth, ``int``
+        :returns: Dictionary of promotion info, ``dict``
+        '''
+        folder_url, short_name = self._get_job_folder(job_name)
+        try:
+            response = self.jenkins_open(Request(
+                self._build_url(PROMOTION_INFO, locals())))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('job[%s] does not exist' % job_name)
+        except HTTPError:
+            raise JenkinsException('job[%s] does not exist' % job_name)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for "
+                                   "promotions of job[%s]" % job_name)
+
+    def get_promotions(self, job_name):
+        """Get list of promotions running.
+
+        Each promotion is a dictionary with 'name' and 'url' keys.
+
+        :param job_name: Job name, ``str``
+        :returns: list of promotions, ``[ { str: str} ]``
+        """
+        return self.get_promotions_info(job_name)['processes']
+
+    def delete_promotion(self, name, job_name):
+        '''Delete Jenkins promotion permanently.
+
+        :param job_name: Job name, ``str``
+        :param name: Name of Jenkins promotion, ``str``
+        '''
+        folder_url, short_name = self._get_job_folder(job_name)
+        self.jenkins_open(Request(
+            self._build_url(DELETE_PROMOTION, locals()), b''
+        ))
+        if self.promotion_exists(name, job_name):
+            raise JenkinsException('delete[%s] from job[%s] failed' %
+                                   (name, job_name))
+
+    def create_promotion(self, name, job_name, config_xml):
+        '''Create a new Jenkins promotion
+
+        :param name: Name of Jenkins promotion, ``str``
+        :param job_name: Job name, ``str``
+        :param config_xml: config file text, ``str``
+        '''
+        if self.promotion_exists(name, job_name):
+            raise JenkinsException('promotion[%s] already exists at job[%s]'
+                                   % (name, job_name))
+
+        folder_url, short_name = self._get_job_folder(job_name)
+        self.jenkins_open(Request(
+            self._build_url(CREATE_PROMOTION, locals()),
+            config_xml.encode('utf-8'), DEFAULT_HEADERS))
+        self.assert_promotion_exists(name, job_name, 'create[%s] at '
+                                     'job[%s] failed')
+
+    def reconfig_promotion(self, name, job_name, config_xml):
+        '''Change configuration of existing Jenkins promotion.
+
+        To create a new promotion, see :meth:`Jenkins.create_promotion`.
+
+        :param name: Name of Jenkins promotion, ``str``
+        :param job_name: Job name, ``str``
+        :param config_xml: New XML configuration, ``str``
+        '''
+        folder_url, short_name = self._get_job_folder(job_name)
+        reconfig_url = self._build_url(CONFIG_PROMOTION, locals())
+        self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
+                                  DEFAULT_HEADERS))
+
+    def get_promotion_config(self, name, job_name):
+        '''Get configuration of existing Jenkins promotion.
+
+        :param name: Name of Jenkins promotion, ``str``
+        :param job_name: Job name, ``str``
+        :returns: promotion configuration (XML format)
+        '''
+        folder_url, short_name = self._get_job_folder(job_name)
+        request = Request(self._build_url(CONFIG_PROMOTION, locals()))
         return self.jenkins_open(request)
 
     def quiet_down(self):
