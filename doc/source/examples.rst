@@ -31,8 +31,36 @@ instead of a real password while creating a Jenkins instance.
 
 .. _Jenkins Authentication: https://wiki.jenkins-ci.org/display/JENKINS/Authenticating+scripted+clients
 
+Example 2: Logging into Jenkins using kerberos
+----------------------------------------------
 
-Example 2: Working with Jenkins Jobs
+Kerberos support is only enabled if you have "kerberos" python package installed.
+You can install the "kerberos" package from PyPI using the obvious pip command.
+
+.. code-block:: bash
+
+    pip install kerberos
+
+.. note:: This might require python header files as well 
+    as kerberos header files.
+
+If you have "kerberos" python package installed, python-jenkins tries to authenticate 
+using kerberos automatically when the Jenkins server replies "401 Unauthorized" 
+and indicates it supports kerberos.  That is, kerberos authentication should 
+work automagically. For a quick test, just try the following.
+
+::
+
+    import jenkins
+
+    server = jenkins.Jenkins('http://localhost:8080')
+    print server.jobs_count()
+
+.. note:: Jenkins as such does not support kerberos, it needs to be supported by
+    the Servlet container or a reverse proxy sitting in front of Jenkins.
+
+
+Example 3: Working with Jenkins Jobs
 ------------------------------------
 
 This is an example showing how to create, configure and delete Jenkins jobs.
@@ -59,7 +87,7 @@ This is an example showing how to create, configure and delete Jenkins jobs.
     print build_info
 
 
-Example 3: Working with Jenkins Views
+Example 4: Working with Jenkins Views
 -------------------------------------
 
 This is an example showing how to create, configure and delete Jenkins views.
@@ -73,7 +101,7 @@ This is an example showing how to create, configure and delete Jenkins views.
     print views
 
 
-Example 4: Working with Jenkins Plugins
+Example 5: Working with Jenkins Plugins
 ---------------------------------------
 
 This is an example showing how to retrieve Jenkins plugins information.
@@ -89,7 +117,7 @@ from the :func:`get_plugins_info` method is documented in the :doc:`api`
 doc.
 
 
-Example 5: Working with Jenkins Nodes
+Example 6: Working with Jenkins Nodes
 -------------------------------------
 
 This is an example showing how to add, configure, enable and delete Jenkins nodes.
@@ -120,7 +148,7 @@ This is an example showing how to add, configure, enable and delete Jenkins node
         launcher=jenkins.LAUNCHER_SSH,
         launcher_params=params)
 
-Example 6: Working with Jenkins Build Queue
+Example 7: Working with Jenkins Build Queue
 -------------------------------------------
 
 This is an example showing how to retrieve information on the Jenkins queue.
@@ -133,7 +161,7 @@ This is an example showing how to retrieve information on the Jenkins queue.
     server.cancel_queue(id)
 
 
-Example 7: Working with Jenkins Cloudbees Folders
+Example 8: Working with Jenkins Cloudbees Folders
 -------------------------------------------------
 
 Requires the `Cloudbees Folders Plugin
@@ -151,7 +179,7 @@ This is an example showing how to create, configure and delete Jenkins folders.
     server.delete_job('folder')
 
 
-Example 8: Updating Next Build Number
+Example 9: Updating Next Build Number
 -------------------------------------
 
 Requires the `Next Build Number Plugin
