@@ -86,6 +86,10 @@ This is an example showing how to create, configure and delete Jenkins jobs.
     build_info = server.get_job_info('api-test', last_build_number)
     print build_info
 
+    # get all jobs from the specific view
+    jobs = server.get_jobs(view_name='View Name')
+    print jobs
+
 
 Example 4: Working with Jenkins Views
 -------------------------------------

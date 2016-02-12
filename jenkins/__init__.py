@@ -116,6 +116,7 @@ NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
 VIEW_NAME = 'view/%(name)s/api/json?tree=name'
+VIEW_JOBS = 'view/%(name)s/api/json?tree=jobs[url,color,name]'
 CREATE_VIEW = 'createView?name=%(name)s'
 CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
@@ -657,18 +658,59 @@ class Jenkins(object):
 
         return plugins_data
 
-    def get_jobs(self, folder_depth=0):
-        """Get list of jobs.
+    def get_jobs(self, folder_depth=0, view_name=None):
+        '''Get list of jobs.
 
         Each job is a dictionary with 'name', 'url', 'color' and 'fullname'
         keys.
 
+        If the ``view_name`` param is present the list of jobs would be limited
+        to those configured on view specified.
+        Jobs dictionaries results in such case doesn't have the 'fullname' key.
+
         :param folder_depth: Number of levels to search, ``int``. By default
             0, which will limit search to toplevel. None disables the limit.
-        :returns: list of jobs, ``[ { str: str} ]``
-        """
+        :param view_name: Name of Jenkins view jobs belongs to, ``str``.
+            By default None, which won't limit jobs to specific view.
+        :returns: list of jobs, ``[{str: str, str: str, str: str, str: str}]``
 
-        return self.get_all_jobs(folder_depth=folder_depth)
+        Example::
+
+            >>> jobs = server.get_jobs()
+            >>> print(jobs)
+            [{
+                u'name': u'all_tests',
+                u'fullname': u'all_tests',
+                u'url': u'http://your_url.here/job/all_tests/',
+                u'color': u'blue'
+            }]
+
+            >>> jobs = server.get_jobs(view_name='stable')
+            >>> print(jobs)
+            [{
+                u'name': u'all_tests',
+                u'url': u'http://your_url.here/job/all_tests/',
+                u'color': u'blue'
+            }]
+
+        '''
+
+        if view_name:
+            try:
+                response = self.jenkins_open(Request(
+                    self._build_url(VIEW_JOBS, {u'name': view_name})
+                ))
+                if response:
+                    return json.loads(response)['jobs']
+                else:
+                    raise JenkinsException('view[%s] does not exist' % view_name)
+            except HTTPError:
+                raise JenkinsException('view[%s] does not exist' % view_name)
+            except ValueError:
+                raise JenkinsException(
+                    "Could not parse JSON info for view[%s]" % view_name)
+        else:
+            return self.get_all_jobs(folder_depth=folder_depth)
 
     def get_all_jobs(self, folder_depth=None):
         """Get list of all jobs recursively to the given folder depth.
