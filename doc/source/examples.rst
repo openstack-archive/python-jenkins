@@ -100,6 +100,10 @@ This is an example showing how to create, configure and delete Jenkins views.
     server.delete_view('EMPTY')
     print views
 
+    # get all jobs from the specific view
+    jobs = server.get_view_jobs('VIEW NAME')
+    print jobs
+
 
 Example 5: Working with Jenkins Plugins
 ---------------------------------------

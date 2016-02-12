@@ -116,6 +116,7 @@ NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
 VIEW_NAME = 'view/%(name)s/api/json?tree=name'
+VIEW_JOBS = 'view/%(name)s/api/json?tree=jobs[url,color,name]'
 CREATE_VIEW = 'createView?name=%(name)s'
 CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
@@ -1290,6 +1291,37 @@ class Jenkins(object):
                     'Jenkins returned an unexpected view name %s '
                     '(expected: %s)' % (actual, name))
             return actual
+
+    def get_view_jobs(self, name):
+        '''Get list of jobs configured on view.
+
+        Each job is a dictionary with 'name', 'url' and 'color' keys.
+
+        :param name: Name of Jenkins view, ``str``
+        :returns: List of jobs, ``[ { str: str, str: str, str: str } ]``
+
+        Example::
+            >>> jobs = server.get_view_jobs('stable')
+            >>> print(jobs)
+            [{
+                u'name': u'all_tests',
+                u'url': u'http://your_url.here/job/all_tests/',
+                u'color': u'blue'
+            }]
+        '''
+        try:
+            response = self.jenkins_open(Request(
+                self._build_url(VIEW_JOBS, locals())
+            ))
+            if response:
+                return json.loads(response)['jobs']
+            else:
+                raise JenkinsException('view[%s] does not exist' % name)
+        except HTTPError:
+            raise JenkinsException('view[%s] does not exist' % name)
+        except ValueError:
+            raise JenkinsException(
+                "Could not parse JSON info for view[%s]" % name)
 
     def assert_view_exists(self, name,
                            exception_message='view[%s] does not exist'):
