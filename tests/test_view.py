@@ -216,3 +216,32 @@ class JenkinsGetViewConfigTest(JenkinsViewsTestBase):
             jenkins_mock.call_args[0][0].get_full_url(),
             self.make_url('view/Test%20View/config.xml'))
         self._check_requests(jenkins_mock.call_args_list)
+
+
+class JenkinsGetViewJobsTest(JenkinsViewsTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_encodes_view_name(self, jenkins_mock):
+        view_jobs_to_return = {
+            u'jobs': [{
+                u'name': u'community.all',
+                u'url': u'http://your_url_here',
+                u'color': u'grey'
+            }, {
+                u'name': u'community.first',
+                u'url': u'http://your_url_here',
+                u'color': u'red'
+            }]
+        }
+        jenkins_mock.return_value = json.dumps(view_jobs_to_return)
+
+        view_jobs = self.j.get_view_jobs(u'Test View')
+
+        self.assertEqual(view_jobs[0][u'color'], u'grey')
+        self.assertEqual(view_jobs[1][u'name'], u'community.first')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url(
+                'view/Test%20View/api/json?tree=jobs[url,color,name]'
+            ))
+        self._check_requests(jenkins_mock.call_args_list)
