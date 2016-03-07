@@ -108,6 +108,7 @@ STOP_BUILD = '%(folder_url)sjob/%(short_name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = '%(folder_url)sjob/%(short_name)s/buildWithParameters'
 BUILD_INFO = '%(folder_url)sjob/%(short_name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = '%(folder_url)sjob/%(short_name)s/%(number)d/consoleText'
+DELETE_BUILD = '%(folder_url)sjob/%(short_name)s/%(number)s/doDelete'
 NODE_LIST = 'computer/api/json'
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
@@ -1039,6 +1040,16 @@ class Jenkins(object):
         folder_url, short_name = self._get_job_folder(name)
         self.jenkins_open(Request(
             self._build_url(STOP_BUILD, locals()), b''))
+
+    def delete_build(self, name, number):
+        """Delete a Jenkins build.
+
+        :param name: Name of Jenkins job, ``str``
+        :param number: Jenkins build number for the job, ``int``
+        """
+        folder_url, short_name = self._get_job_folder(name)
+        self.jenkins_open(Request(
+            self._build_url(DELETE_BUILD, locals()), b''))
 
     def get_running_builds(self):
         '''Return list of running builds.

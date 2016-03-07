@@ -23,6 +23,7 @@ the things you can use it for:
 * Create/delete/reconfig views
 * Put server in shutdown mode (quiet down)
 * List running builds
+* Delete builds
 * Create/delete/update folders [#f1]_
 * Set the next build number [#f2]_
 * Install plugins
