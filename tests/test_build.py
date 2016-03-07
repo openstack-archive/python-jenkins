@@ -203,6 +203,28 @@ class JenkinsStopBuildTest(JenkinsTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
 
+class JenkinsDeleteBuildTest(JenkinsTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_simple(self, jenkins_mock):
+        self.j.delete_build(u'Test Job', number=52)
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/Test%20Job/52/doDelete'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_in_folder(self, jenkins_mock):
+
+        self.j.delete_build(u'a Folder/Test Job', number=52)
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/a%20Folder/job/Test%20Job/52/doDelete'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+
 class JenkinsListRunningBuildsTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'get_node_info')
     @patch.object(jenkins.Jenkins, 'get_nodes')
