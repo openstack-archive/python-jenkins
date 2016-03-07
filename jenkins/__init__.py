@@ -109,6 +109,7 @@ BUILD_WITH_PARAMS_JOB = '%(folder_url)sjob/%(short_name)s/buildWithParameters'
 BUILD_INFO = '%(folder_url)sjob/%(short_name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = '%(folder_url)sjob/%(short_name)s/%(number)d/consoleText'
 DELETE_BUILD = '%(folder_url)sjob/%(short_name)s/%(number)s/doDelete'
+WIPEOUT_JOB_WORKSPACE = '%(folder_url)sjob/%(short_name)s/doWipeOutWorkspace'
 NODE_LIST = 'computer/api/json'
 CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
@@ -1041,7 +1042,6 @@ class Jenkins(object):
         self.jenkins_open(Request(
             self._build_url(STOP_BUILD, locals()), b''))
 
-
     def delete_build(self, name, number):
         """Delete a Jenkins build.
 
@@ -1052,6 +1052,14 @@ class Jenkins(object):
         self.jenkins_open(Request(
             self._build_url(DELETE_BUILD, locals()), b''))
 
+    def wipeout_job_workspace(self, name):
+        """Wipe out workspace for given Jenkins job.
+
+        :param name: Name of Jenkins job, ``str``
+        """
+        folder_url, short_name = self._get_job_folder(name)
+        self.jenkins_open(Request(
+            self._build_url(WIPEOUT_JOB_WORKSPACE, locals()), b''))
 
     def get_running_builds(self):
         '''Return list of running builds.
