@@ -18,10 +18,13 @@ retrieve the Jenkins server version.
     import jenkins
 
     server = jenkins.Jenkins('http://localhost:8080', username='myuser', password='mypassword')
+    user = server.get_whoami()
     version = server.get_version()
-    print version
+    print('Hello %s from Jenkins %s' % (user['fullName'], jenkins_version))
 
-The above code prints the version of the Jenkins master running on 'localhost:8080'
+The above code prints the the fullName attribute of the user and the version of
+the Jenkins master running on 'localhost:8080'. For example, it may print
+"Hello John from Jenkins 2.0".
 
 From Jenkins vesion 1.426 onward you can specify an API token instead of your
 real password while authenticating the user against the Jenkins instance.
