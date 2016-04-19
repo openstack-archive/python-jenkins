@@ -90,6 +90,7 @@ DEFAULT_HEADERS = {'Content-Type': 'text/xml; charset=utf-8'}
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
+WHOAMI_URL = 'me/api/json'
 JOBS_QUERY = '?tree=jobs[url,color,name,jobs]'
 JOB_INFO = '%(folder_url)sjob/%(short_name)s/api/json?depth=%(depth)s'
 JOB_NAME = '%(folder_url)sjob/%(short_name)s/api/json?tree=name'
@@ -512,6 +513,33 @@ class Jenkins(object):
                                    % self.server)
         except ValueError:
             raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
+
+    def get_whoami(self):
+        """Get information about the user account that authenticated to
+        Jenkins. This is a simple way to verify that your credentials are
+        correct.
+
+        :returns: Information about the current user ``dict``
+
+        Example::
+
+            >>> me = server.get_whoami()
+            >>> print me['fullName']
+            >>> 'John'
+
+        """
+        try:
+            response = self.jenkins_open(Request(self._build_url(WHOAMI_URL)))
+            if response is None:
+                raise EmptyResponseException(
+                    "Error communicating with server[%s]: "
+                    "empty response" % self.server)
+
+            return json.loads(response)
+
+        except (HTTPError, BadStatusLine):
+            raise BadHTTPException("Error communicating with server[%s]"
                                    % self.server)
 
     def get_version(self):
