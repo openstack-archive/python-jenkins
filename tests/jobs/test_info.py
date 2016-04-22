@@ -26,6 +26,37 @@ class JenkinsGetJobInfoTest(JenkinsJobsTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_all_builds(self, jenkins_mock):
+        job_info_to_return = {
+            u'building': False,
+            u'msg': u'test',
+            u'revision': 66,
+            u'user': u'unknown',
+            u'firstBuild': {u'number': 4},
+            u'builds': [{u'number': 5}],
+            u'name': u'Test Job'
+        }
+        all_builds_to_return = {u'allBuilds': [{u'number': 4},
+                                               {u'number': 5}]}
+        jenkins_mock.side_effect = [json.dumps(job_info_to_return),
+                                    json.dumps(all_builds_to_return)]
+
+        job_info = self.j.get_job_info(u'Test Job')
+
+        expected = dict(job_info_to_return)
+        expected["builds"] = [{u'number': 4}, {u'number': 5}]
+
+        self.assertEqual(job_info, expected)
+        self.assertEqual(
+            jenkins_mock.call_args_list[0][0][0].get_full_url(),
+            self.make_url('job/Test%20Job/api/json?depth=0'))
+        self.assertEqual(
+            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            self.make_url(
+                'job/Test%20Job/api/json?tree=allBuilds[number,url]'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_in_folder(self, jenkins_mock):
         job_info_to_return = {
             u'building': False,
