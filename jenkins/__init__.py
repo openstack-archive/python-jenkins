@@ -94,6 +94,7 @@ WHOAMI_URL = 'me/api/json'
 JOBS_QUERY = '?tree=jobs[url,color,name,jobs]'
 JOB_INFO = '%(folder_url)sjob/%(short_name)s/api/json?depth=%(depth)s'
 JOB_NAME = '%(folder_url)sjob/%(short_name)s/api/json?tree=name'
+ALL_BUILDS = '%(folder_url)sjob/%(short_name)s/api/json?tree=allBuilds[number,url]'
 Q_INFO = 'queue/api/json?depth=0'
 CANCEL_QUEUE = 'queue/cancelItem?id=%(id)s'
 CREATE_JOB = '%(folder_url)screateItem?name=%(short_name)s'  # also post config.xml
@@ -307,11 +308,49 @@ class Jenkins(object):
         if self.crumb:
             req.add_header(self.crumb['crumbRequestField'], self.crumb['crumb'])
 
-    def get_job_info(self, name, depth=0):
+    def _add_missing_builds(self, data):
+        """Query Jenkins to get all builds of a job.
+
+        The Jenkins API only fetches the first 100 builds, with no
+        indicator that there are more to be fetched. This fetches more
+        builds where necessary to get all builds of a given job.
+
+        Much of this code borrowed from
+        https://github.com/salimfadhley/jenkinsapi/blob/master/jenkinsapi/job.py,
+        which is MIT licensed.
+        """
+        if not data.get("builds"):
+            return data
+        oldest_loaded_build_number = data["builds"][-1]["number"]
+        if not data['firstBuild']:
+            first_build_number = oldest_loaded_build_number
+        else:
+            first_build_number = data["firstBuild"]["number"]
+        all_builds_loaded = (oldest_loaded_build_number == first_build_number)
+        if all_builds_loaded:
+            return data
+        folder_url, short_name = self._get_job_folder(data["name"])
+        response = self.jenkins_open(Request(self._build_url(ALL_BUILDS,
+                                                             locals())))
+        if response:
+            data["builds"] = json.loads(response)["allBuilds"]
+        else:
+            raise JenkinsException('Could not fetch all builds from job[%s]' %
+                                   data["name"])
+        return data
+
+    def get_job_info(self, name, depth=0, fetch_all_builds=False):
         '''Get job information dictionary.
 
         :param name: Job name, ``str``
         :param depth: JSON depth, ``int``
+        :param fetch_all_builds: If true, all builds will be retrieved
+                                 from Jenkins. Otherwise, Jenkins will
+                                 only return the most recent 100
+                                 builds. This comes at the expense of
+                                 an additional API call which may
+                                 return significant amounts of
+                                 data. ``bool``
         :returns: dictionary of job information
         '''
         folder_url, short_name = self._get_job_folder(name)
@@ -320,7 +359,10 @@ class Jenkins(object):
                 self._build_url(JOB_INFO, locals())
             ))
             if response:
-                return json.loads(response)
+                if fetch_all_builds:
+                    return self._add_missing_builds(json.loads(response))
+                else:
+                    return json.loads(response)
             else:
                 raise JenkinsException('job[%s] does not exist' % name)
         except HTTPError:
