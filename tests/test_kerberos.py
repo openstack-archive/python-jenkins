@@ -1,6 +1,7 @@
 import kerberos
 assert kerberos  # pyflakes
 from mock import patch, Mock
+from six.moves.urllib.request import Request
 import testtools
 
 from jenkins import urllib_kerb
@@ -23,7 +24,7 @@ class KerberosTests(testtools.TestCase):
         parent_return_mock.headers = {'www-authenticate': "Negotiate bar"}
         parent_mock.open.return_value = parent_return_mock
 
-        request_mock = Mock()
+        request_mock = Mock(spec=self._get_dummy_request())
         h = urllib_kerb.HTTPNegotiateHandler()
         h.add_parent(parent_mock)
         rv = h.http_error_401(request_mock, "", "", "", headers_from_server)
@@ -48,7 +49,8 @@ class KerberosTests(testtools.TestCase):
         init_mock.side_effect = kerberos.GSSError
 
         h = urllib_kerb.HTTPNegotiateHandler()
-        rv = h.http_error_401(Mock(), "", "", "", headers_from_server)
+        rv = h.http_error_401(Mock(spec=self._get_dummy_request()), "", "", "",
+                              headers_from_server)
         self.assertEqual(rv, None)
 
     @patch('kerberos.authGSSClientResponse')
@@ -59,7 +61,8 @@ class KerberosTests(testtools.TestCase):
         headers_from_server = {}
 
         h = urllib_kerb.HTTPNegotiateHandler()
-        rv = h.http_error_401(Mock(), "", "", "", headers_from_server)
+        rv = h.http_error_401(Mock(spec=self._get_dummy_request()), "", "", "",
+                              headers_from_server)
         self.assertEqual(rv, None)
 
     @patch('kerberos.authGSSClientResponse')
@@ -114,3 +117,8 @@ class KerberosTests(testtools.TestCase):
         h = urllib_kerb.HTTPNegotiateHandler()
         with testtools.ExpectedException(ValueError):
             h._extract_krb_value(headers_from_server)
+
+    def _get_dummy_request(self):
+        r = Request('http://example.com')
+        r.timeout = 10
+        return r
