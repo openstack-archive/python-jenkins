@@ -74,7 +74,6 @@ try:
 except ImportError:
     pass
 
-warnings.simplefilter("default", DeprecationWarning)
 
 if sys.version_info < (2, 7, 0):
     warnings.warn("Support for python 2.6 is deprecated and will be removed.")
