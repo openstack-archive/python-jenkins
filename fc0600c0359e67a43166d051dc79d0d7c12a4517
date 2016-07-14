@@ -1,0 +1,10 @@
+Code-Review+1: bhavik bhavsar <bbhavsar@redhat.com>
+Code-Review+1: Pratik Gadiya <pgadiya@redhat.com>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Workflow+1: Khai Do <zaro0508@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 14 Jul 2016 16:30:37 +0000
+Reviewed-on: https://review.openstack.org/337208
+Project: openstack/python-jenkins
+Branch: refs/heads/master
