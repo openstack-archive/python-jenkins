@@ -1149,7 +1149,7 @@ class Jenkins(object):
                     executor_number = executor['number']
                     build_number = executable['number']
                     url = executable['url']
-                    m = re.match(r'/job/([^/]+)/.*', urlparse(url).path)
+                    m = re.search(r'/job/([^/]+)/.*', urlparse(url).path)
                     job_name = m.group(1)
                     builds.append({'name': job_name,
                                    'number': build_number,

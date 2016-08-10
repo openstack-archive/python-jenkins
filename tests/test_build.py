@@ -259,7 +259,7 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
             "number": 1,
             "result": None,
             "timestamp": 1442262342729,
-            "url": "https://localhost/job/test/1/",
+            "url": self.make_url('job/test/1/'),
             "builtOn": "",
             "changeSet": {
                 "items": [],
@@ -293,7 +293,7 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
                            'number': 1,
                            'node': '(master)',
                            'executor': 1,
-                           'url': 'https://localhost/job/test/1/'}], builds)
+                           'url': self.make_url('job/test/1/')}], builds)
 
     @patch.object(jenkins.Jenkins, 'get_node_info')
     @patch.object(jenkins.Jenkins, 'get_nodes')
@@ -338,7 +338,7 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
             "number": 15,
             "result": None,
             "timestamp": 1442262342729,
-            "url": "https://localhost/job/test/15/",
+            "url": self.make_url("job/test/15/"),
             "builtOn": "",
             "changeSet": {
                 "items": [],
@@ -372,7 +372,7 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
                            'number': 15,
                            'node': 'foo-slave',
                            'executor': 0,
-                           'url': 'https://localhost/job/test/15/'}], builds)
+                           'url': self.make_url('job/test/15/')}], builds)
 
     @patch.object(jenkins.Jenkins, 'get_node_info')
     @patch.object(jenkins.Jenkins, 'get_nodes')
