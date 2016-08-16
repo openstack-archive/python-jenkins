@@ -1,0 +1,10 @@
+Code-Review+1: Rushi Agrawal <rushi.openstack@gmail.com>
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Code-Review+2: Kevin L. Mitchell <klmitch@mit.edu>
+Workflow+1: Kevin L. Mitchell <klmitch@mit.edu>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 16 Aug 2016 21:10:58 +0000
+Reviewed-on: https://review.openstack.org/345764
+Project: openstack/python-jenkins
+Branch: refs/heads/master
