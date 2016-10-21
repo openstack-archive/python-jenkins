@@ -22,7 +22,7 @@ retrieve the Jenkins server version.
     version = server.get_version()
     print('Hello %s from Jenkins %s' % (user['fullName'], version))
 
-The above code prints the the fullName attribute of the user and the version of
+The above code prints the fullName attribute of the user and the version of
 the Jenkins master running on 'localhost:8080'. For example, it may print
 "Hello John from Jenkins 2.0".
 
@@ -44,12 +44,12 @@ You can install the "kerberos" package from PyPI using the obvious pip command.
 
     pip install kerberos
 
-.. note:: This might require python header files as well 
+.. note:: This might require python header files as well
     as kerberos header files.
 
-If you have "kerberos" python package installed, python-jenkins tries to authenticate 
-using kerberos automatically when the Jenkins server replies "401 Unauthorized" 
-and indicates it supports kerberos.  That is, kerberos authentication should 
+If you have "kerberos" python package installed, python-jenkins tries to authenticate
+using kerberos automatically when the Jenkins server replies "401 Unauthorized"
+and indicates it supports kerberos.  That is, kerberos authentication should
 work automagically. For a quick test, just try the following.
 
 ::
