@@ -1,0 +1,9 @@
+Code-Review+1: Dong Ma <winterma.dong@gmail.com>
+Code-Review+2: Antoine Musso <hashar@free.fr>
+Workflow+1: Antoine Musso <hashar@free.fr>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Mon, 07 Nov 2016 21:23:42 +0000
+Reviewed-on: https://review.openstack.org/389568
+Project: openstack/python-jenkins
+Branch: refs/heads/master
