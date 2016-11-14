@@ -67,7 +67,7 @@ from jenkins import plugins
 try:
     import kerberos
     assert kerberos  # pyflakes
-    import urllib_kerb
+    from jenkins import urllib_kerb
     opener = build_opener()
     opener.add_handler(urllib_kerb.HTTPNegotiateHandler())
     install_opener(opener)
