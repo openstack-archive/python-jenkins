@@ -1,4 +1,5 @@
 from mock import patch
+from six.moves.urllib.parse import quote
 
 import jenkins
 from tests.base import JenkinsTestBase
@@ -13,6 +14,17 @@ class JenkinsScriptTest(JenkinsTestBase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
             self.make_url('scriptText'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_run_script_urlproof(self, jenkins_mock):
+        self.j.run_script(u'if (a == b && c ==d) { println(\"Yes\")}')
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('scriptText'))
+        self.assertTrue(quote('&&') in jenkins_mock.call_args[0][0].data.decode('utf8'),
+                        jenkins_mock.call_args[0][0].data)
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')

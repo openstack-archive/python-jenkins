@@ -1064,7 +1064,7 @@ class Jenkins(object):
             Plugin:maven-plugin, Plugin:pam-auth]'
         '''
         return self.jenkins_open(Request(self._build_url(SCRIPT_TEXT),
-                                         "script=".encode('utf-8') + script.encode('utf-8')))
+                                         "script=".encode('utf-8') + quote(script).encode('utf-8')))
 
     def install_plugin(self, name, include_dependencies=True):
         '''Install a plugin and its dependencies from the Jenkins public
