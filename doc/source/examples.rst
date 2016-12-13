@@ -86,7 +86,7 @@ This is an example showing how to create, configure and delete Jenkins jobs.
     # requires creating and configuring the api-test job to accept 'param1' & 'param2'
     server.build_job('api-test', {'param1': 'test value 1', 'param2': 'test value 2'})
     last_build_number = server.get_job_info('api-test')['lastCompletedBuild']['number']
-    build_info = server.get_job_info('api-test', last_build_number)
+    build_info = server.get_build_info('api-test', last_build_number)
     print build_info
 
     # get all jobs from the specific view
