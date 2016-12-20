@@ -13,3 +13,7 @@
 /.coverage
 /coverage*.xml
 /junit*.xml
+
+# Unit test / coverage reports
+cover/
+
