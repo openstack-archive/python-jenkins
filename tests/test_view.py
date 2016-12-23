@@ -95,7 +95,7 @@ class JenkinsGetViewsTest(JenkinsViewsTestBase):
         self.assertEqual(view_info, views)
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            self.make_url('api/json'))
+            self.make_url('api/json?tree=views[url,name,views]'))
         self._check_requests(jenkins_mock.call_args_list)
 
 
