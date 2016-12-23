@@ -107,6 +107,14 @@ This is an example showing how to create, configure and delete Jenkins views.
     server.delete_view('EMPTY')
     print views
 
+    # create view inside specific folder
+    server.create_job('folder', jenkins.EMPTY_FOLDER_XML)
+    server.create_view('folder/empty_view', jenkins.EMPTY_VIEW_CONFIG_XML)
+    server.delete_view('folder/empty_view')
+
+    # get all views including views in folders
+    views = server.get_all_views()
+    print views
 
 Example 5: Working with Jenkins Plugins
 ---------------------------------------

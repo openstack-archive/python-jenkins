@@ -91,6 +91,7 @@ PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
 WHOAMI_URL = 'me/api/json'
 JOBS_QUERY = '?tree=jobs[url,color,name,jobs]'
+VIEWS_QUERY = '?tree=views[url,name,views]'
 JOB_INFO = '%(folder_url)sjob/%(short_name)s/api/json?depth=%(depth)s'
 JOB_NAME = '%(folder_url)sjob/%(short_name)s/api/json?tree=name'
 ALL_BUILDS = '%(folder_url)sjob/%(short_name)s/api/json?tree=allBuilds[number,url]'
@@ -116,11 +117,11 @@ NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
-VIEW_NAME = 'view/%(name)s/api/json?tree=name'
-VIEW_JOBS = 'view/%(name)s/api/json?tree=jobs[url,color,name]'
-CREATE_VIEW = 'createView?name=%(name)s'
-CONFIG_VIEW = 'view/%(name)s/config.xml'
-DELETE_VIEW = 'view/%(name)s/doDelete'
+VIEW_NAME = '%(folder_url)sview/%(short_name)s/api/json?tree=name'
+VIEW_JOBS = '%(folder_url)sview/%(short_name)s/api/json?tree=jobs[url,color,name]'
+CREATE_VIEW = '%(folder_url)screateView?name=%(short_name)s'
+CONFIG_VIEW = '%(folder_url)sview/%(short_name)s/config.xml'
+DELETE_VIEW = '%(folder_url)sview/%(short_name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
 PROMOTION_NAME = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/api/json?tree=name'
 PROMOTION_INFO = '%(folder_url)sjob/%(short_name)s/promotion/api/json?depth=%(depth)s'
@@ -215,6 +216,24 @@ PROMO_RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
 </hudson.plugins.promoted__builds.PromotionProcess>
 '''
 
+# for testing only
+EMPTY_FOLDER_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<com.cloudbees.hudson.plugins.folder.Folder>
+  <properties/>
+  <views>
+    <hudson.model.AllView>
+      <owner class="com.cloudbees.hudson.plugins.folder.Folder" reference="../../.."/>
+      <name>All</name>
+      <filterExecutors>false</filterExecutors>
+      <filterQueue>false</filterQueue>
+      <properties/>
+    </hudson.model.AllView>
+  </views>
+  <viewsTabBar class="hudson.views.DefaultViewsTabBar"/>
+  <healthMetrics/>
+  <icon class="com.cloudbees.hudson.plugins.folder.icons.StockFolderIcon"/>
+</com.cloudbees.hudson.plugins.folder.Folder>
+'''
 
 class JenkinsException(Exception):
     '''General exception type for jenkins-API-related failures.'''
@@ -762,6 +781,37 @@ class Jenkins(object):
             return self._get_view_jobs(view_name=view_name)
         else:
             return self.get_all_jobs(folder_depth=folder_depth)
+
+    def get_all_views(self, folder_depth=None):
+        """Get list of all views recursively to the given folder depth.
+
+        Each view is a dictionary with 'name', 'url' keys.
+
+        :param folder_depth: Number of levels to search, ``int``. By default
+            None, which will search all levels. 0 limits to toplevel.
+        :returns: list of jobs, ``[ { str: str} ]``
+
+        """
+        views_list = []
+        for views in self.get_info(query=VIEWS_QUERY)['views']:
+            views_list.append(views)
+
+        jobs = [(0, "", self.get_info(query=JOBS_QUERY)['jobs'])]
+        for lvl, root, lvl_jobs in jobs:
+            if not isinstance(lvl_jobs, list):
+                lvl_jobs = [lvl_jobs]
+            for job in lvl_jobs:
+                if 'jobs' in job: # folder
+                    if folder_depth is None or lvl < folder_depth:
+                        path = '/job/'.join((root, job[u'name']))
+                        jobs.append(
+                            (lvl + 1, path,
+                             self.get_info(path,
+                                           query=JOBS_QUERY)['jobs']))
+                        for views in self.get_info(path, query=VIEWS_QUERY)['views']:
+                            views_list.append(views)
+
+        return views_list
 
     def get_all_jobs(self, folder_depth=None):
         """Get list of all jobs recursively to the given folder depth.
@@ -1376,9 +1426,10 @@ class Jenkins(object):
         :returns: list of jobs, ``[{str: str, str: str, str: str, str: str}]``
         '''
 
+        folder_url, short_name = self._get_job_folder(view_name)
         try:
             response = self.jenkins_open(Request(
-                self._build_url(VIEW_JOBS, {u'name': view_name})
+                self._build_url(VIEW_JOBS, locals())
             ))
             if response:
                 jobs = json.loads(response)['jobs']
@@ -1405,6 +1456,7 @@ class Jenkins(object):
         :param name: View name, ``str``
         :returns: Name of view or None
         '''
+        folder_url, short_name = self._get_job_folder(name)
         try:
             response = self.jenkins_open(Request(
                 self._build_url(VIEW_NAME, locals())))
@@ -1412,10 +1464,10 @@ class Jenkins(object):
             return None
         else:
             actual = json.loads(response)['name']
-            if actual != name:
+            if actual != short_name:
                 raise JenkinsException(
                     'Jenkins returned an unexpected view name %s '
-                    '(expected: %s)' % (actual, name))
+                    '(expected: %s)' % (actual, short_name))
             return actual
 
     def assert_view_exists(self, name,
@@ -1436,23 +1488,28 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :returns: ``True`` if Jenkins view exists
         '''
-        if self.get_view_name(name) == name:
+        folder_url, short_name = self._get_job_folder(name)
+        if self.get_view_name(name) == short_name:
             return True
 
-    def get_views(self):
+    def get_views(self, folder_depth=0):
         """Get list of views running.
+
+        :param folder_depth: Number of levels to search, ``int``. By default
+            0, which will limit search to toplevel. None disables the limit.
 
         Each view is a dictionary with 'name' and 'url' keys.
 
         :returns: list of views, ``[ { str: str} ]``
         """
-        return self.get_info()['views']
+        return self.get_all_views(folder_depth=folder_depth)
 
     def delete_view(self, name):
         '''Delete Jenkins view permanently.
 
         :param name: Name of Jenkins view, ``str``
         '''
+        folder_url, short_name = self._get_job_folder(name)
         self.jenkins_open(Request(
             self._build_url(DELETE_VIEW, locals()), b''
         ))
@@ -1468,6 +1525,7 @@ class Jenkins(object):
         if self.view_exists(name):
             raise JenkinsException('view[%s] already exists' % (name))
 
+        folder_url, short_name = self._get_job_folder(name)
         self.jenkins_open(Request(
             self._build_url(CREATE_VIEW, locals()),
             config_xml.encode('utf-8'), DEFAULT_HEADERS))
@@ -1481,6 +1539,7 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
+        folder_url, short_name = self._get_job_folder(name)
         reconfig_url = self._build_url(CONFIG_VIEW, locals())
         self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
                                   DEFAULT_HEADERS))
@@ -1491,6 +1550,7 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :returns: view configuration (XML format)
         '''
+        folder_url, short_name = self._get_job_folder(name)
         request = Request(self._build_url(CONFIG_VIEW, locals()))
         return self.jenkins_open(request)
 
