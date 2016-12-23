@@ -83,21 +83,68 @@ class JenkinsGetViewsTest(JenkinsViewsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_simple(self, jenkins_mock):
-        views = {
-            u'url': u'http://your_url_here/view/my_view/',
-            u'name': u'my_view',
+        info_to_return = {
+           u'jobs':[
+              {
+                 u'url': u'http://your_url_here/job/my_job/',
+                 u'color':u'blue',
+                 u'name':u'my_job'
+              }
+           ],
+           u'views':[
+              {
+                 u'url': u'http://your_url_here/',
+                 u'name':u'All'
+              },
+              {
+                 u'url': u'http://your_url_here/view/my_view/',
+                 u'name':u'my_view'
+              }
+           ]
         }
-        view_info_to_return = {u'views': views}
-        jenkins_mock.return_value = json.dumps(view_info_to_return)
-
+        jenkins_mock.return_value = json.dumps(info_to_return)
         view_info = self.j.get_views()
 
-        self.assertEqual(view_info, views)
+        self.assertEqual(view_info, info_to_return['views'])
         self.assertEqual(
             jenkins_mock.call_args[0][0].get_full_url(),
-            self.make_url('api/json'))
+            self.make_url('api/json?tree=jobs[url,color,name,jobs]'))
         self._check_requests(jenkins_mock.call_args_list)
 
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_multiple_level(self, jenkins_mock):
+        info_to_return = {
+           u'jobs':[
+              {
+                 u'url': u'http://your_url_here/job/my_job/',
+                 u'color':u'blue',
+                 u'name':u'my_job'
+              }
+           ],
+           u'views':[
+               {
+                   u'url': u'http://your_url_here/',
+                   u'name': u'All'
+               },
+               {
+                   u'url': u'http://your_url_here/job/my_folder/',
+                   u'name': u'All'
+               },
+               {
+                   u'url': u'http://your_url_here/job/my_folder/view/my_view/',
+                   u'name': u'my_view'
+               }
+           ]
+        }
+
+        jenkins_mock.return_value = json.dumps(info_to_return)
+        view_info = self.j.get_all_views()
+
+        self.assertEqual(view_info, info_to_return['views'])
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('api/json?tree=jobs[url,color,name,jobs]'))
+        self._check_requests(jenkins_mock.call_args_list)
 
 class JenkinsDeleteViewTest(JenkinsViewsTestBase):
 
