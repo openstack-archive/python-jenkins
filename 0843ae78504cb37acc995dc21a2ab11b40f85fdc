@@ -1,0 +1,8 @@
+Code-Review+2: Khai Do <zaro0508@gmail.com>
+Workflow+1: Khai Do <zaro0508@gmail.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 02 Feb 2017 01:07:20 +0000
+Reviewed-on: https://review.openstack.org/426530
+Project: openstack/python-jenkins
+Branch: refs/heads/master
