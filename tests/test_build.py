@@ -417,3 +417,40 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
         builds = self.j.get_running_builds()
         # Should treat the slave as not running any builds
         self.assertEqual([], builds)
+
+    @patch.object(jenkins.Jenkins, 'get_node_info')
+    @patch.object(jenkins.Jenkins, 'get_nodes')
+    def test_placeholder_task_in_queue(self, nodes_mock, node_info_mock):
+        nodes_to_return = [{
+            'name': "foo-slave", 'offline': False
+        }]
+        nodes_mock.return_value = nodes_to_return
+        node_info_to_return = {
+            "executors": [
+                {
+                    "currentExecutable": None,
+                    "currentWorkUnit": None,
+                    "idle": True,
+                    "likelyStuck": False,
+                    "number": 1,
+                    "progress": -1
+                },
+                {
+                    'currentExecutable': {
+                        '_class': (
+                            'org.jenkinsci.plugins.workflow.support.steps.'
+                            'ExecutorStepExecution$PlaceholderTask$'
+                            'PlaceholderExecutable'
+                        )
+                    },
+                    'currentWorkUnit': {},
+                    'idle': False,
+                    'likelyStuck': False,
+                    'number': 1,
+                    'progress': 0
+                }
+            ],
+        }
+        node_info_mock.return_value = node_info_to_return
+        builds = self.j.get_running_builds()
+        self.assertEqual([], builds)
