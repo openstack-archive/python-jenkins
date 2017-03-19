@@ -293,7 +293,10 @@ class Jenkins(object):
         else:
             url_path = format_spec
 
-        return urljoin(self.server, url_path)
+        url = urljoin(self.server, url_path)
+        if six.PY2:
+            url = url.encode('utf-8')
+        return url
 
     def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
