@@ -1258,7 +1258,7 @@ class Jenkins(object):
 
     def create_node(self, name, numExecutors=2, nodeDescription=None,
                     remoteFS='/var/lib/jenkins', labels=None, exclusive=False,
-                    launcher=LAUNCHER_COMMAND, launcher_params={}):
+                    launcher=LAUNCHER_COMMAND, launcher_params=None):
         '''Create a node
 
         :param name: name of node to create, ``str``
@@ -1277,6 +1277,9 @@ class Jenkins(object):
         if exclusive:
             mode = 'EXCLUSIVE'
 
+        if not launcher_params:
+            launcher_params = {}
+            
         launcher_params['stapler-class'] = launcher
 
         inner_params = {
