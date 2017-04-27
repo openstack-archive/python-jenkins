@@ -287,7 +287,7 @@ class Jenkins(object):
 
         if variables:
             if format_spec == CREATE_NODE:
-                url_path = format_spec % urlencode(self._get_encoded_params(variables))
+                url_path = format_spec % urlencode(variables)
             else:
                 url_path = format_spec % self._get_encoded_params(variables)
         else:
