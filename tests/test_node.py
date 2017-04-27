@@ -253,6 +253,14 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
             actual)
         self._check_requests(jenkins_mock.call_args_list)
 
+    def test_build_url(self):
+        j = jenkins.Jenkins('https://test.noexist/')
+        # Note the use of a URL-encodable character "+" here.
+        variables = {'name': '10.0.0.1+test-node'}
+        result = j._build_url(jenkins.CREATE_NODE, variables=variables)
+        expected = 'https://test.noexist/computer/doCreateItem?name=10.0.0.1%2Btest-node'
+        self.assertEqual(result, expected)
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_already_exists(self, jenkins_mock):
         jenkins_mock.side_effect = [
