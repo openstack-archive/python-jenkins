@@ -73,6 +73,8 @@ This is an example showing how to create, configure and delete Jenkins jobs.
     server.create_job('empty', jenkins.EMPTY_CONFIG_XML)
     jobs = server.get_jobs()
     print jobs
+    my_job = server.get_job_config('cool-job')
+    print(my_job) # prints XML configuration
     server.build_job('empty')
     server.disable_job('empty')
     server.copy_job('empty', 'empty_copy')
