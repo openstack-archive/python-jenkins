@@ -418,7 +418,7 @@ class Jenkins(object):
         for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
-    def jenkins_open(self, req, add_crumb=True):
+    def jenkins_open(self, req, add_crumb=True, raw_response=False):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
         This should only be used to extends the :class:`Jenkins` API.
@@ -428,12 +428,16 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
-            if response is None:
+            response = urlopen(req, timeout=self.timeout)
+            text_response = response.read()
+            if text_response is None:
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
-            return response.decode('utf-8')
+            if raw_response is True:
+                return response
+            else:
+                return text_response.decode('utf-8')
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
@@ -597,14 +601,8 @@ class Jenkins(object):
 
         """
         try:
-            request = Request(self._build_url(''))
-            request.add_header('X-Jenkins', '0.0')
-            response = urlopen(request, timeout=self.timeout)
-            if response is None:
-                raise EmptyResponseException(
-                    "Error communicating with server[%s]: "
-                    "empty response" % self.server)
-
+            response = self.jenkins_open(Request(self._build_url('')),
+                                         raw_response=True)
             if six.PY2:
                 return response.info().getheader('X-Jenkins')
 
