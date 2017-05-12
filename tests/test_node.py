@@ -79,6 +79,70 @@ class JenkinsGetNodesTest(JenkinsNodesTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
 
+class JenkinsGetAllNodeInfoTest(JenkinsNodesTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_simple(self, jenkins_mock):
+        computers = [{
+            "displayName": "master",
+            "offline": False
+        }, {
+            "displayName": "node1",
+            "offline": False
+        }]
+        jenkins_mock.return_value = json.dumps({
+            "computer": computers,
+            "busyExecutors": 2})
+        self.assertEqual(self.j.get_info_for_all_nodes(),
+                         computers)
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_return_invalid_json(self, jenkins_mock):
+        jenkins_mock.side_effect = [
+            'Invalid JSON',
+        ]
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_info_for_all_nodes()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('computer/api/json'))
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for server[{0}/]'.format(self.base_url))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch('jenkins.urlopen')
+    def test_raise_BadStatusLine(self, urlopen_mock):
+        urlopen_mock.side_effect = jenkins.BadStatusLine('not a valid status line')
+        with self.assertRaises(jenkins.BadHTTPException) as context_manager:
+            self.j.get_info_for_all_nodes()
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[{0}/]'.format(self.base_url))
+        self._check_requests(urlopen_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_raise_HTTPError(self, jenkins_mock):
+        jenkins_mock.side_effect = jenkins.HTTPError(
+            self.make_url('job/TestJob'),
+            code=401,
+            msg="basic auth failed",
+            hdrs=[],
+            fp=None)
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_info_for_all_nodes()
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('computer/api/json'))
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error communicating with server[{0}/]'.format(self.base_url))
+        self._check_requests(jenkins_mock.call_args_list)
+
+
 class JenkinsGetNodeInfoTest(JenkinsNodesTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')

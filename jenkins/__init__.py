@@ -1177,6 +1177,22 @@ class Jenkins(object):
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
 
+    def get_info_for_all_nodes(self):
+        '''Get a list of nodes connected to the Master, along with their
+           associated info.
+
+        :retruns: List of nodes info dictionaries, ``list``
+        '''
+        try:
+            nodes_data = json.loads(self.jenkins_open(Request(self._build_url(NODE_LIST))))
+            return nodes_data['computer']
+        except (HTTPError, BadStatusLine):
+            raise BadHTTPException("Error communicating with server[%s]"
+                                   % self.server)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for server[%s]"
+                                   % self.server)
+
     def get_node_info(self, name, depth=0):
         '''Get node information dictionary
 
