@@ -610,10 +610,15 @@ class Jenkins(object):
 
             if six.PY3:
                 return response.getheader('X-Jenkins')
+        except HTTPError as httpError:
+            if six.PY2:
+                return httpError.info().getheader('X-Jenkins')
+            if six.PY3:
+                return httpError.getheader('X-Jenkins')
+        except Exception as e:
+            raise BadHTTPException("Error communicating with server[%s]:\n"\
+                                   "      Reason: %s"% (self.server,e) )
 
-        except (HTTPError, BadStatusLine):
-            raise BadHTTPException("Error communicating with server[%s]"
-                                   % self.server)
 
     def get_plugins_info(self, depth=2):
         """Get all installed plugins information on this Master.
