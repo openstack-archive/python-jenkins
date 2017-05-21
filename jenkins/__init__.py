@@ -87,6 +87,7 @@ DEFAULT_HEADERS = {'Content-Type': 'text/xml; charset=utf-8'}
 
 # REST Endpoints
 INFO = 'api/json'
+Q_ITEM = 'queue/item'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
 WHOAMI_URL = 'me/api/json'
@@ -418,7 +419,7 @@ class Jenkins(object):
         for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
-    def jenkins_open(self, req, add_crumb=True):
+    def jenkins_open(self, req, add_crumb=True, headers=False):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
         This should only be used to extends the :class:`Jenkins` API.
@@ -428,11 +429,15 @@ class Jenkins(object):
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
+            res = urlopen(req, timeout=self.timeout)
+            response = res.read()
             if response is None:
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
+            if headers:
+                return response.decode('utf-8'), res.headers
+
             return response.decode('utf-8')
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
@@ -543,12 +548,16 @@ class Jenkins(object):
             u'name': u'my_job'}
 
         """
-        url = '/'.join((item, INFO)).lstrip('/')
+        if item:
+            url = '/'.join((Q_ITEM, item, INFO)).lstrip('/')
+        else:
+            url = INFO
+
         if query:
             url += query
         try:
             return json.loads(self.jenkins_open(
-                Request(self._build_url(url))
+                Request(self._build_url(url), u'')
             ))
         except (HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
@@ -1047,8 +1056,13 @@ class Jenkins(object):
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
         '''
-        return self.jenkins_open(Request(
-            self.build_job_url(name, parameters, token), b''))
+        res, headers = self.jenkins_open(Request(
+             self.build_job_url(name, parameters, token), b''), headers=True)
+
+        location = headers.getheader("Location")
+        item_id = location[::-1].split("/")[1][::-1]
+
+        return {"queue_item": item_id}
 
     def run_script(self, script):
         '''Execute a groovy script on the jenkins master.
