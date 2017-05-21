@@ -599,6 +599,8 @@ class Jenkins(object):
         try:
             request = Request(self._build_url(''))
             request.add_header('X-Jenkins', '0.0')
+            if self.auth:
+                request.add_header('Authorization', self.auth)
             response = urlopen(request, timeout=self.timeout)
             if response is None:
                 raise EmptyResponseException(
