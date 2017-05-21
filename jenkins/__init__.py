@@ -384,7 +384,7 @@ class Jenkins(object):
         jobs = self.get_all_jobs(folder_depth)
         for job in jobs:
             if re.search(pattern, job['name']):
-                result.append(self.get_job_info(job['name'], depth=depth))
+                result.append(self.get_job_info(job['fullname'], depth=depth))
 
         return result
 
