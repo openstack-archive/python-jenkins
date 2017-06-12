@@ -218,6 +218,7 @@ The job in this example is named *prom_job* and it needs to have this
 config xml snippet before creating the promotion:
 
 ::
+
     <properties>
        <hudson.plugins.promoted__builds.JobPropertyImpl>
        <activeProcessNames>
@@ -229,6 +230,7 @@ config xml snippet before creating the promotion:
 where *prom_name* is the name of the promotion that will get added to the job.
 
 ::
+
     server.create_promotion('prom_name', 'prom_job', jenkins.EMPTY_PROMO_CONFIG_XML)
     server.promotion_exists('prom_name', 'prom_job')
     print server.get_promotions('prom_job')
@@ -247,6 +249,7 @@ timeout. This can be used to aid launching of Jenkins and then waiting for the
 REST API to be responsive before continuing with subsequent configuration.
 
 ::
+
     # timeout here is the socket connection timeout, for each connection
     # attempt it will wait at most 5 seconds before assuming there is
     # nothing listening. Useful where firewalls may black hole connections.
