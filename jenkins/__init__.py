@@ -110,7 +110,7 @@ BUILD_WITH_PARAMS_JOB = '%(folder_url)sjob/%(short_name)s/buildWithParameters'
 BUILD_INFO = '%(folder_url)sjob/%(short_name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = '%(folder_url)sjob/%(short_name)s/%(number)d/consoleText'
 NODE_LIST = 'computer/api/json'
-CREATE_NODE = 'computer/doCreateItem?%s'
+CREATE_NODE = 'computer/doCreateItem'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
@@ -286,10 +286,7 @@ class Jenkins(object):
     def _build_url(self, format_spec, variables=None):
 
         if variables:
-            if format_spec == CREATE_NODE:
-                url_path = format_spec % urlencode(variables)
-            else:
-                url_path = format_spec % self._get_encoded_params(variables)
+            url_path = format_spec % self._get_encoded_params(variables)
         else:
             url_path = format_spec
 
@@ -1280,13 +1277,11 @@ class Jenkins(object):
         launcher_params['stapler-class'] = launcher
 
         inner_params = {
-            'name': name,
             'nodeDescription': nodeDescription,
             'numExecutors': numExecutors,
             'remoteFS': remoteFS,
             'labelString': labels,
             'mode': mode,
-            'type': NODE_TYPE,
             'retentionStrategy': {
                 'stapler-class':
                 'hudson.slaves.RetentionStrategy$Always'
@@ -1302,7 +1297,8 @@ class Jenkins(object):
         }
 
         self.jenkins_open(Request(
-            self._build_url(CREATE_NODE, params), b''))
+            self._build_url(CREATE_NODE, locals()),
+            urlencode(params).encode('utf-8')))
 
         self.assert_node_exists(name, 'create[%s] failed')
 
