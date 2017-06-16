@@ -223,7 +223,8 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
             'host': 'my.jenkins.slave1'
         }
         self.j.create_node(
-            'slave1',
+            # Note the use of a URL-encodable character "+" here.
+            '10.0.0.1+test-node',
             nodeDescription='my test slave',
             remoteFS='/home/juser',
             labels='precise',
@@ -231,11 +232,13 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
             launcher=jenkins.LAUNCHER_SSH,
             launcher_params=params)
 
-        actual = jenkins_mock.call_args_list[1][0][0].get_full_url()
+        actual = jenkins_mock.call_args_list[1][0][0].data
         # As python dicts do not guarantee order so the parameters get
         # re-ordered when it gets processed by _get_encoded_params(),
         # verify sections of the URL with self.assertIn() instead of
         # the entire URL
+        self.assertIn(u'name=10.0.0.1%2Btest-node', actual)
+        self.assertIn(u'type=hudson.slaves.DumbSlave%24DescriptorImpl', actual)
         self.assertIn(u'username%22%3A+%22juser', actual)
         self.assertIn(
             u'stapler-class%22%3A+%22hudson.plugins.sshslaves.SSHLauncher',
@@ -247,19 +250,7 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
         self.assertIn(u'port%22%3A+%2222', actual)
         self.assertIn(u'remoteFS%22%3A+%22%2Fhome%2Fjuser', actual)
         self.assertIn(u'labelString%22%3A+%22precise', actual)
-        self.assertIn(u'name%22%3A+%22slave1', actual)
-        self.assertIn(
-            u'type%22%3A+%22hudson.slaves.DumbSlave%24DescriptorImpl',
-            actual)
         self._check_requests(jenkins_mock.call_args_list)
-
-    def test_build_url(self):
-        j = jenkins.Jenkins('https://test.noexist/')
-        # Note the use of a URL-encodable character "+" here.
-        variables = {'name': '10.0.0.1+test-node'}
-        result = j._build_url(jenkins.CREATE_NODE, variables=variables)
-        expected = 'https://test.noexist/computer/doCreateItem?name=10.0.0.1%2Btest-node'
-        self.assertEqual(result, expected)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_already_exists(self, jenkins_mock):
