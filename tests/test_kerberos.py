@@ -24,7 +24,7 @@ class KerberosTests(testtools.TestCase):
         parent_return_mock.headers = {'www-authenticate': "Negotiate bar"}
         parent_mock.open.return_value = parent_return_mock
 
-        request_mock = Mock(spec=self._get_dummy_request())
+        request_mock = Mock(spec=self._get_dummy_request(), host='example.com')
         h = urllib_kerb.HTTPNegotiateHandler()
         h.add_parent(parent_mock)
         rv = h.http_error_401(request_mock, "", "", "", headers_from_server)
@@ -49,8 +49,9 @@ class KerberosTests(testtools.TestCase):
         init_mock.side_effect = kerberos.GSSError
 
         h = urllib_kerb.HTTPNegotiateHandler()
-        rv = h.http_error_401(Mock(spec=self._get_dummy_request()), "", "", "",
-                              headers_from_server)
+        rv = h.http_error_401(
+            Mock(spec=self._get_dummy_request(), host='example.com'), "", "",
+            "", headers_from_server)
         self.assertEqual(rv, None)
 
     @patch('kerberos.authGSSClientResponse')
