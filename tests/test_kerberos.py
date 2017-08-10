@@ -24,7 +24,7 @@ class KerberosTests(testtools.TestCase):
         parent_return_mock.headers = {'www-authenticate': "Negotiate bar"}
         parent_mock.open.return_value = parent_return_mock
 
-        request_mock = Mock(spec=self._get_dummy_request())
+        request_mock = Mock(spec=self._get_dummy_request(), host='example.com')
         h = urllib_kerb.HTTPNegotiateHandler()
         h.add_parent(parent_mock)
         rv = h.http_error_401(request_mock, "", "", "", headers_from_server)
@@ -38,6 +38,31 @@ class KerberosTests(testtools.TestCase):
             'Authorization', 'Negotiate %s' % "foo")
         self.assertEqual(rv, parent_return_mock)
         clean_mock.assert_called_with("context")
+        self.assertEqual(init_mock.call_args[0][0], 'HTTP@example.com')
+
+    @patch('kerberos.authGSSClientResponse')
+    @patch('kerberos.authGSSClientStep')
+    @patch('kerberos.authGSSClientInit')
+    @patch('kerberos.authGSSClientClean')
+    def test_gssapi_nonstandard_port(
+        self, clean_mock, init_mock, step_mock, response_mock):
+        headers_from_server = {'www-authenticate': 'Negotiate xxx'}
+
+        init_mock.side_effect = lambda x: (x, "context")
+        response_mock.return_value = "foo"
+
+        parent_mock = Mock()
+        parent_return_mock = Mock()
+        parent_return_mock.headers = {'www-authenticate': "Negotiate bar"}
+        parent_mock.open.return_value = parent_return_mock
+
+        request_mock = Mock(spec=self._get_dummy_request(
+            'https://localhost:8080'), host='localhost:8080')
+        h = urllib_kerb.HTTPNegotiateHandler()
+        h.add_parent(parent_mock)
+        h.http_error_401(request_mock, "", "", "", headers_from_server)
+
+        self.assertEqual(init_mock.call_args[0][0], 'HTTP@localhost')
 
     @patch('kerberos.authGSSClientResponse')
     @patch('kerberos.authGSSClientStep')
@@ -49,8 +74,9 @@ class KerberosTests(testtools.TestCase):
         init_mock.side_effect = kerberos.GSSError
 
         h = urllib_kerb.HTTPNegotiateHandler()
-        rv = h.http_error_401(Mock(spec=self._get_dummy_request()), "", "", "",
-                              headers_from_server)
+        rv = h.http_error_401(
+            Mock(spec=self._get_dummy_request(), host='example.com'), "", "",
+            "", headers_from_server)
         self.assertEqual(rv, None)
 
     @patch('kerberos.authGSSClientResponse')
@@ -118,7 +144,7 @@ class KerberosTests(testtools.TestCase):
         with testtools.ExpectedException(ValueError):
             h._extract_krb_value(headers_from_server)
 
-    def _get_dummy_request(self):
-        r = Request('http://example.com')
+    def _get_dummy_request(self, url='http://example.com'):
+        r = Request(url)
         r.timeout = 10
         return r
