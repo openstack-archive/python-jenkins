@@ -52,7 +52,7 @@ class HTTPNegotiateHandler(request.BaseHandler):
 
             self.tries += 1
             try:
-                krb_resp = self._krb_response(req.host, krb_req)
+                krb_resp = self._krb_response(req.host.split(':')[0], krb_req)
 
                 req.add_unredirected_header('Authorization',
                                             "Negotiate %s" % krb_resp)
