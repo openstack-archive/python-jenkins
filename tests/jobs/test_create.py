@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 from mock import patch
 
@@ -111,4 +113,25 @@ class JenkinsCreateJobTest(JenkinsJobsTestBase):
         self.assertEqual(
             str(context_manager.exception),
             'create[a Folder/TestJob] failed')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_unicode_job(self, jenkins_mock):
+        unicode_config_xml = """
+            <matrix-project>
+                <actions/>
+                <description>unicode char: č</description>
+            </matrix-project>"""
+        # unicode_config_xml = unicode_config_xml.decode('utf-8')
+        jenkins_mock.side_effect = [
+            jenkins.NotFoundException(),
+            None,
+            json.dumps({'name': 'Test Job'}),
+        ]
+
+        self.j.create_job(u'Test Job', unicode_config_xml.decode('utf-8'))
+
+        self.assertEqual(
+            jenkins_mock.call_args_list[1][0][0].get_full_url(),
+            self.make_url('createItem?name=Test%20Job'))
         self._check_requests(jenkins_mock.call_args_list)
