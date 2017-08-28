@@ -331,7 +331,7 @@ class Jenkins(object):
         for k, v in params.items():
             if k in ["name", "msg", "short_name", "from_short_name",
                      "to_short_name", "folder_url", "from_folder_url", "to_folder_url"]:
-                params[k] = quote(v)
+                params[k] = quote(v.encode('utf8'))
         return params
 
     def _build_url(self, format_spec, variables=None):
@@ -341,7 +341,7 @@ class Jenkins(object):
         else:
             url_path = format_spec
 
-        return urljoin(self.server, url_path)
+        return str(urljoin(self.server, url_path))
 
     def maybe_add_crumb(self, req):
         # We don't know yet whether we need a crumb
@@ -562,11 +562,12 @@ class Jenkins(object):
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
             if e.response.status_code in [401, 403, 500]:
-                raise JenkinsException(
-                    'Error in request. ' +
-                    'Possibly authentication failed [%s]: %s' % (
-                        e.response.status_code, e.response.reason)
-                )
+                msg = 'Error in request. ' + \
+                      'Possibly authentication failed [%s]: %s' % (
+                      e.response.status_code, e.response.reason)
+                if e.response.text:
+                    msg += '\n' + e.response.text
+                raise JenkinsException(msg)
             elif e.response.status_code == 404:
                 raise NotFoundException('Requested item could not be found')
             else:
