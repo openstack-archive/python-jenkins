@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 from mock import patch
 
+from six.moves.urllib.parse import quote
 from tests.helper import build_response_mock
 from tests.jobs.base import JenkinsJobsTestBase
 
@@ -11,10 +13,10 @@ class JenkinsBuildJobTest(JenkinsJobsTestBase):
         session_send_mock.return_value = build_response_mock(
             302, {}, headers={'Location': self.make_url('/queue/item/25/')})
 
-        queue_id = self.j.build_job(u'Test Job')
+        queue_id = self.j.build_job(u'Test Jøb')
 
         self.assertEqual(session_send_mock.call_args[0][1].url,
-                         self.make_url('job/Test%20Job/build'))
+                         self.make_url(quote(u'job/Test Jøb/build'.encode('utf8'))))
         self.assertEqual(queue_id, 25)
 
     @patch('jenkins.requests.Session.send', autospec=True)
