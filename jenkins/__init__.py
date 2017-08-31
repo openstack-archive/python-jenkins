@@ -421,7 +421,7 @@ class Jenkins(object):
     def jenkins_open(self, req, add_crumb=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
-        This should only be used to extends the :class:`Jenkins` API.
+        This should only be used to extend the :class:`Jenkins` API.
         '''
         try:
             if self.auth:
