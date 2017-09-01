@@ -418,22 +418,27 @@ class Jenkins(object):
         for k, v in self.get_job_info(job_name).items():
             print(k, v)
 
-    def jenkins_open(self, req, add_crumb=True):
+    def jenkins_urlopen(self, req, add_crumb=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
         This should only be used to extends the :class:`Jenkins` API.
+
+        :param req: A ``six.moves.urllib.request.Request`` to submit.
+        :param add_crumb: If True, try to add a crumb header to this ``req``
+                          before submitting. Defaults to ``True``.
+        :returns: A file-like object from urlopen()
         '''
         try:
             if self.auth:
                 req.add_header('Authorization', self.auth)
             if add_crumb:
                 self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
+            response = urlopen(req, timeout=self.timeout)
             if response is None:
                 raise EmptyResponseException(
                     "Error communicating with server[%s]: "
                     "empty response" % self.server)
-            return response.decode('utf-8')
+            return response
         except HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
             # distinguish errors.
@@ -459,6 +464,19 @@ class Jenkins(object):
             if str(e.reason) == "timed out":
                 raise TimeoutException('Error in request: %s' % (e.reason))
             raise JenkinsException('Error in request: %s' % (e.reason))
+
+    def jenkins_open(self, req, add_crumb=True):
+        '''Return the HTTP response body from an HTTP ``Request``.
+
+        This should only be used to extends the :class:`Jenkins` API.
+        '''
+        response = self.jenkins_urlopen(req, add_crumb)
+        content = response.read()
+        if content is None:
+            raise EmptyResponseException(
+                "Error communicating with server[%s]: "
+                "empty response" % self.server)
+        return content.decode('utf-8')
 
     def get_build_info(self, name, number, depth=0):
         '''Get build information dictionary.
