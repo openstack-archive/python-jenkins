@@ -115,6 +115,7 @@ CREATE_VIEW = 'createView?name=%(name)s'
 CONFIG_VIEW = 'view/%(name)s/config.xml'
 DELETE_VIEW = 'view/%(name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
+NODE_SCRIPT_TEXT = 'computer/%(name)s/scriptText'
 PROMOTION_NAME = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/api/json?tree=name'
 PROMOTION_INFO = '%(folder_url)sjob/%(short_name)s/promotion/api/json?depth=%(depth)s'
 DELETE_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/doDelete'
@@ -1127,6 +1128,21 @@ class Jenkins(object):
             requests.Request(
                 'POST', self._build_url(SCRIPT_TEXT),
                 data="script=".encode('utf-8') + quote(script).encode('utf-8')))
+
+    def run_node_script(self, name, script):
+        '''Execute a groovy script on the specified jenkins node.
+
+        :param name: Node name, ``str``
+        :param script: The groovy script, ``string``
+        :returns: The result of the script run.
+
+        Example::
+            >>> info = server.run_node_script('test node', 'println System.getenv("PATH")')
+            >>> print(info)
+            u'/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        '''
+        return self.jenkins_open(Request(self._build_url(NODE_SCRIPT_TEXT, locals()),
+                                         "script=".encode('utf-8') + quote(script).encode('utf-8')))
 
     def install_plugin(self, name, include_dependencies=True):
         '''Install a plugin and its dependencies from the Jenkins public
