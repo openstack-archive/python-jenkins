@@ -135,6 +135,7 @@ CREATE_VIEW = '%(folder_url)screateView?name=%(short_name)s'
 CONFIG_VIEW = '%(folder_url)sview/%(short_name)s/config.xml'
 DELETE_VIEW = '%(folder_url)sview/%(short_name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
+NODE_SCRIPT_TEXT = 'computer/%(node)s/scriptText'
 PROMOTION_NAME = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/api/json?tree=name'
 PROMOTION_INFO = '%(folder_url)sjob/%(short_name)s/promotion/api/json?depth=%(depth)s'
 DELETE_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/doDelete'
@@ -1281,10 +1282,12 @@ class Jenkins(object):
         number = int(parts[-1])
         return number
 
-    def run_script(self, script):
-        '''Execute a groovy script on the jenkins master.
+    def run_script(self, script, node=None):
+        '''Execute a groovy script on the jenkins master or on a node if
+        specified..
 
         :param script: The groovy script, ``string``
+        :param node: Node to run the script on, defaults to None (master).
         :returns: The result of the script run.
 
         Example::
@@ -1297,9 +1300,14 @@ class Jenkins(object):
         '''
         magic_str = ')]}.'
         print_magic_str = 'println()\nprint("{}")'.format(magic_str)
-        groovy = {'script': script.encode('utf-8') + print_magic_str.encode('utf-8')}
+        data = {'script': script.encode('utf-8') + print_magic_str.encode('utf-8')}
+        if node:
+            url = self._build_url(NODE_SCRIPT_TEXT, locals())
+        else:
+            url = self._build_url(SCRIPT_TEXT, locals())
+
         result = self.jenkins_open(requests.Request(
-            'POST', self._build_url(SCRIPT_TEXT), data=groovy))
+            'POST', url, data=data))
 
         if not result.endswith(magic_str):
             raise JenkinsException(result)

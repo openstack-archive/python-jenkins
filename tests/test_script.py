@@ -16,6 +16,15 @@ class JenkinsScriptTest(JenkinsTestBase):
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_run_script_node(self, jenkins_mock):
+        self.j.run_script(u'println(\"Hello World!\")', node='(master)')
+
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('computer/(master)/scriptText'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_run_script_urlproof(self, jenkins_mock):
         self.j.run_script(u'if (a == b && c ==d) { println(\"Yes\")}')
 
