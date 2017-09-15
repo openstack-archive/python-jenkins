@@ -39,6 +39,16 @@ class JenkinsGetJobsTestBase(JenkinsJobsTestBase):
         ]
     )
 
+    jobs_in_unsafe_name_folders = copy.deepcopy(jobs_in_folder)
+    jobs_in_unsafe_name_folders[1].insert(
+        0, {'name': 'my spaced folder', 'jobs': None})
+    jobs_in_unsafe_name_folders.append(
+        # my_folder1/my\ spaced\ folder jobs
+        [
+            {'name': 'my job 5'}
+        ]
+    )
+
 
 def build_jobs_list_responses(jobs_list, server_url):
     responses = []

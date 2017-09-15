@@ -544,6 +544,7 @@ class Jenkins(object):
 
         """
         url = '/'.join((item, INFO)).lstrip('/')
+        url = quote(url)
         if query:
             url += query
         try:

@@ -59,3 +59,20 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         self.assertEqual(len(expected_fullnames), len(jobs_info))
         got_fullnames = [job[u"fullname"] for job in jobs_info]
         self.assertEqual(expected_fullnames, got_fullnames)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_unsafe_chars(self, jenkins_mock):
+        response = build_jobs_list_responses(
+            self.jobs_in_unsafe_name_folders, 'http://example.com/')
+        jenkins_mock.side_effect = iter(response)
+
+        jobs_info = self.j.get_all_jobs()
+
+        expected_fullnames = [
+            u"my_job1", u"my_job2",
+            u"my_folder1/my_job3", u"my_folder1/my_job4",
+            u"my_folder1/my spaced folder/my job 5"
+        ]
+        self.assertEqual(len(expected_fullnames), len(jobs_info))
+        got_fullnames = [job[u"fullname"] for job in jobs_info]
+        self.assertEqual(expected_fullnames, got_fullnames)
