@@ -146,6 +146,16 @@ EMPTY_CONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
 </project>'''
 
 # for testing only
+EMPTY_FOLDER_XML = '''<?xml version='1.0' encoding='UTF-8'?>
+<com.cloudbees.hudson.plugins.folder.Folder plugin="cloudbees-folder@6.1.2">
+  <actions/>
+  <description></description>
+  <properties/>
+  <folderViews/>
+  <healthMetrics/>
+</com.cloudbees.hudson.plugins.folder.Folder>'''
+
+# for testing only
 RECONFIG_XML = '''<?xml version='1.0' encoding='UTF-8'?>
 <project>
   <keepDependencies>false</keepDependencies>
