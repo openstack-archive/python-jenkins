@@ -764,7 +764,29 @@ class Jenkins(object):
         else:
             return self.get_all_jobs(folder_depth=folder_depth)
 
-    def get_all_jobs(self, folder_depth=None):
+    def build_tree_parameter(self, tree):
+        return '?tree=' + self.build_tree_parameter_value(tree)
+
+    def build_tree_parameter_value(self, obj):
+        temp_params = []
+
+        if isinstance(obj, list):
+            for i in obj:
+                if isinstance(i, (str, unicode)):
+                    temp_params.append(i)
+                else:
+                    temp_params.append(self.build_tree_parameter_value(i))
+
+            return ",".join(temp_params)
+        else:  # dict
+            for key, value in obj.iteritems():
+                temp_params.append(
+                    key + "[" + self.build_tree_parameter_value(value) +
+                    "]")
+
+            return ",".join(temp_params)
+
+    def get_all_jobs(self, folder_depth=None, tree=None):
         """Get list of all jobs recursively to the given folder depth.
 
         Each job is a dictionary with 'name', 'url', 'color' and 'fullname'
@@ -772,6 +794,10 @@ class Jenkins(object):
 
         :param folder_depth: Number of levels to search, ``int``. By default
             None, which will search all levels. 0 limits to toplevel.
+        :param tree: A tree of properties to return, leave None to use the
+            default tree. An examaple tree value is
+            {"builds": ["duration", "building", "result"]}, which will result
+            in "?tree=builds[duration,builing,result". Dicts can be nested
         :returns: list of jobs, ``[ { str: str} ]``
 
         .. note::
@@ -810,8 +836,9 @@ class Jenkins(object):
 
         """
         jobs_list = []
+        query = JOBS_QUERY if tree is None else self.build_tree_parameter(tree)
 
-        jobs = [(0, "", self.get_info(query=JOBS_QUERY)['jobs'])]
+        jobs = [(0, "", self.get_info(query=query)['jobs'])]
         for lvl, root, lvl_jobs in jobs:
             if not isinstance(lvl_jobs, list):
                 lvl_jobs = [lvl_jobs]
@@ -822,7 +849,7 @@ class Jenkins(object):
                         jobs.append(
                             (lvl + 1, path,
                              self.get_info(path,
-                                           query=JOBS_QUERY)['jobs']))
+                                           query=query)['jobs']))
                 else:
                     # insert fullname info if it doesn't exist to
                     # allow callers to easily reference unambiguously
