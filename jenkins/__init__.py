@@ -1638,7 +1638,7 @@ class Jenkins(object):
         No new builds will be started allowing running builds to complete
         prior to shutdown of the server.
         '''
-        request = Request(self._build_url(QUIET_DOWN))
+        request = Request(self._build_url(QUIET_DOWN), b'')
         self.jenkins_open(request)
         info = self.get_info()
         if not info['quietingDown']:
