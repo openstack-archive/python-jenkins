@@ -517,10 +517,15 @@ class Jenkins(object):
 
         Example::
 
-            >>> next_build_number = server.get_job_info('build_name')['nextBuildNumber']
-            >>> output = server.build_job('build_name')
-            >>> from time import sleep; sleep(10)
-            >>> build_info = server.get_build_info('build_name', next_build_number)
+            >>> from time import sleep
+            >>> queue_number = server.build_job('build_name')
+            >>> queue_item = server.get_queue_item(queue_number)
+            >>> while 'executable' not in queue_item:
+            >>>     print(queue_item['why'])
+            >>>     sleep(2)
+            >>>     queue_item = server.get_queue_item(queue_number)
+            >>> build_number = queue_item['executable']['number']
+            >>> build_info = server.get_build_info('build_name', build_number)
             >>> print(build_info)
             {u'building': False, u'changeSet': {u'items': [{u'date': u'2011-12-19T18:01:52.540557Z', u'msg': u'test', u'revision': 66, u'user': u'unknown', u'paths': [{u'editType': u'edit', u'file': u'/branches/demo/index.html'}]}], u'kind': u'svn', u'revisions': [{u'module': u'http://eaas-svn01.i3.level3.com/eaas', u'revision': 66}]}, u'builtOn': u'', u'description': None, u'artifacts': [{u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war', u'fileName': u'eaas-87-2011-12-19_18-01-57.war'}, {u'relativePath': u'dist/eaas-87-2011-12-19_18-01-57.war.zip', u'displayPath': u'eaas-87-2011-12-19_18-01-57.war.zip', u'fileName': u'eaas-87-2011-12-19_18-01-57.war.zip'}], u'timestamp': 1324317717000, u'number': 87, u'actions': [{u'parameters': [{u'name': u'SERVICE_NAME', u'value': u'eaas'}, {u'name': u'PROJECT_NAME', u'value': u'demo'}]}, {u'causes': [{u'userName': u'anonymous', u'shortDescription': u'Started by user anonymous'}]}, {}, {}, {}], u'id': u'2011-12-19_18-01-57', u'keepLog': False, u'url': u'http://eaas-jenkins01.i3.level3.com:9080/job/build_war/87/', u'culprits': [{u'absoluteUrl': u'http://eaas-jenkins01.i3.level3.com:9080/user/unknown', u'fullName': u'unknown'}], u'result': u'SUCCESS', u'duration': 8826, u'fullDisplayName': u'build_war #87'}
         '''
