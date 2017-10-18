@@ -114,6 +114,7 @@ CREATE_NODE = 'computer/doCreateItem?%s'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
+LABEL_INFO = 'label/%(name)s/api/json'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
 VIEW_NAME = 'view/%(name)s/api/json?tree=name'
@@ -1322,6 +1323,25 @@ class Jenkins(object):
         '''
         reconfig_url = self._build_url(CONFIG_NODE, locals())
         self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'), DEFAULT_HEADERS))
+
+    def get_label_info(self, name):
+        '''Get information about a label.
+
+        :param name: Label name, ``str``
+        :returns: Jenkins label name, ``str``
+        '''
+        try:
+            response = self.jenkins_open(Request(
+                self._build_url(LABEL_INFO, locals())))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('label[%s] does not exist' % name)
+        except HTTPError:
+            raise JenkinsException('label[%s] does not exist' % name)
+        except ValueError:
+            raise JenkinsException("Could not parse JSON info for label[%s]"
+                                   % name)
 
     def get_build_console_output(self, name, number):
         '''Get build console text.
