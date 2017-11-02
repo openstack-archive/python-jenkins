@@ -255,7 +255,8 @@ class Jenkins(object):
     _timeout_warning_issued = False
 
     def __init__(self, url, username=None, password=None,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
+                 retries=0, retry_wait=5):
         '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
@@ -263,6 +264,8 @@ class Jenkins(object):
         :param username: Server username, ``str``
         :param password: Server password, ``str``
         :param url: URL of Jenkins server, ``str``
+        :param retries: Number of retries on failed requests, ``int``
+        :param retry_wait: Delay between retries, ``float``
         :param timeout: Server connection timeout in secs (default: not set), ``int``
         '''
         if url[-1] == '/':
@@ -275,6 +278,8 @@ class Jenkins(object):
             self.auth = None
         self.crumb = None
         self.timeout = timeout
+        self.retries = retries
+        self.retry_wait = retry_wait
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -423,42 +428,49 @@ class Jenkins(object):
 
         This should only be used to extends the :class:`Jenkins` API.
         '''
-        try:
-            if self.auth:
-                req.add_header('Authorization', self.auth)
-            if add_crumb:
-                self.maybe_add_crumb(req)
-            response = urlopen(req, timeout=self.timeout).read()
-            if response is None:
-                raise EmptyResponseException(
-                    "Error communicating with server[%s]: "
-                    "empty response" % self.server)
-            return response.decode('utf-8')
-        except HTTPError as e:
-            # Jenkins's funky authentication means its nigh impossible to
-            # distinguish errors.
-            if e.code in [401, 403, 500]:
-                # six.moves.urllib.error.HTTPError provides a 'reason'
-                # attribute for all python version except for ver 2.6
-                # Falling back to HTTPError.msg since it contains the
-                # same info as reason
-                raise JenkinsException(
-                    'Error in request. ' +
-                    'Possibly authentication failed [%s]: %s' % (
-                        e.code, e.msg)
-                )
-            elif e.code == 404:
-                raise NotFoundException('Requested item could not be found')
-            else:
-                raise
-        except socket.timeout as e:
-            raise TimeoutException('Error in request: %s' % (e))
-        except URLError as e:
-            # python 2.6 compatibility to ensure same exception raised
-            # since URLError wraps a socket timeout on python 2.6.
-            if str(e.reason) == "timed out":
-                raise TimeoutException('Error in request: %s' % (e.reason))
-            raise JenkinsException('Error in request: %s' % (e.reason))
+        attempts = self.retries + 1
+        while attempts > 0:
+            attempts -= 1
+            try:
+                if self.auth:
+                    req.add_header('Authorization', self.auth)
+                if add_crumb:
+                    self.maybe_add_crumb(req)
+                response = urlopen(req, timeout=self.timeout).read()
+                if response is None:
+                    raise EmptyResponseException(
+                        "Error communicating with server[%s]: "
+                        "empty response" % self.server)
+                return response.decode('utf-8')
+            except HTTPError as e:
+                # Jenkins's funky authentication means its nigh impossible to
+                # distinguish errors.
+                if e.code in [401, 403, 500]:
+                    # six.moves.urllib.error.HTTPError provides a 'reason'
+                    # attribute for all python version except for ver 2.6
+                    # Falling back to HTTPError.msg since it contains the
+                    # same info as reason
+                    raise JenkinsException(
+                        'Error in request. ' +
+                        'Possibly authentication failed [%s]: %s' % (
+                            e.code, e.msg)
+                    )
+                elif e.code == 404:
+                    raise NotFoundException('Requested item could not be found')
+                elif e.code >= 500:
+                    if attempts == 0:
+                        raise
+                else:
+                    raise
+            except socket.timeout as e:
+                raise TimeoutException('Error in request: %s' % (e))
+            except URLError as e:
+                # python 2.6 compatibility to ensure same exception raised
+                # since URLError wraps a socket timeout on python 2.6.
+                if str(e.reason) == "timed out":
+                    raise TimeoutException('Error in request: %s' % (e.reason))
+                raise JenkinsException('Error in request: %s' % (e.reason))
+            time.sleep(self.retry_wait)
 
     def get_build_info(self, name, number, depth=0):
         '''Get build information dictionary.

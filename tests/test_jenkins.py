@@ -60,6 +60,16 @@ class JenkinsConstructorTest(JenkinsTestBase):
         j = jenkins.Jenkins('{0}'.format(self.base_url), timeout=300)
         self.assertEqual(j.timeout, 300)
 
+    def test_custom_retries(self):
+        j = jenkins.Jenkins('{0}'.format(self.base_url), retries=5)
+        self.assertEqual(j.retries, 5)
+
+    def test_custom_retry_wait(self):
+        j1 = jenkins.Jenkins('{0}'.format(self.base_url), retry_wait=10)
+        j2 = jenkins.Jenkins('{0}'.format(self.base_url), retry_wait=0.2)
+        self.assertEqual(j1.retry_wait, 10)
+        self.assertEqual(j2.retry_wait, 0.2)
+
 
 class JenkinsMaybeAddCrumbTest(JenkinsTestBase):
 
@@ -169,6 +179,34 @@ class JenkinsOpenTest(JenkinsTestBase):
             self.make_url('job/TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
 
+    @patch('time.sleep')
+    @patch('jenkins.urlopen')
+    def test_response_400_no_retry_attempt(self, jenkins_mock, sleep_mock):
+        data = {'name': 'Test Job'}
+        jenkins_mock.side_effect = [
+            jenkins.HTTPError(
+                self.make_url('job/TestJob'),
+                code=400,
+                msg="Bad Request",
+                hdrs=[],
+                fp=None),
+            get_mock_urlopen_return_value(data),
+        ]
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test',
+                            retries=1, retry_wait=42)
+        request = jenkins.Request(self.make_url('job/TestJob'))
+
+        with self.assertRaises(jenkins.HTTPError) as context_manager:
+            j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'HTTP Error 400: Bad Request')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('job/TestJob'))
+        self._check_requests(jenkins_mock.call_args_list)
+        self.assertFalse(sleep_mock.called)
+
     @patch('jenkins.urlopen')
     def test_empty_response(self, jenkins_mock):
         jenkins_mock.return_value = Mock(**{'read.return_value': None})
@@ -205,6 +243,64 @@ class JenkinsOpenTest(JenkinsTestBase):
             jenkins_mock.call_args[0][0].get_full_url(),
             self.make_url('job/TestJob'))
         self._check_requests(jenkins_mock.call_args_list)
+
+    @patch('time.sleep')
+    @patch('jenkins.urlopen')
+    def test_response_502(self, jenkins_mock, sleep_mock):
+        data = {'name': 'Test Job'}
+        jenkins_mock.side_effect = [
+            jenkins.HTTPError(
+                self.make_url('job/TestJob'),
+                code=502,
+                msg="Proxy Error",
+                hdrs=[],
+                fp=None),
+            get_mock_urlopen_return_value(data),
+        ]
+
+        retry_wait = 42
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test',
+                            retries=1, retry_wait=retry_wait)
+        request = jenkins.Request(self.make_url('job/TestJob'))
+        response = j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('job/TestJob'))
+        self._check_requests(jenkins_mock.call_args_list)
+        self.assertEqual(response, json.dumps(data))
+        self.assertEqual(
+            sleep_mock.call_args[0][0],
+            retry_wait)
+
+    @patch('time.sleep')
+    @patch('jenkins.urlopen')
+    def test_response_502_fail(self, jenkins_mock, sleep_mock):
+        exception = jenkins.HTTPError(
+            self.make_url('job/TestJob'),
+            code=502,
+            msg="Proxy Error",
+            hdrs=[],
+            fp=None)
+        jenkins_mock.side_effect = [
+            exception, exception
+        ]
+
+        retry_wait = 42
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test',
+                            retries=1, retry_wait=retry_wait)
+        request = jenkins.Request(self.make_url('job/TestJob'))
+        with self.assertRaises(HTTPError) as context_manager:
+            j.jenkins_open(request, add_crumb=False)
+        self.assertEqual(
+            str(context_manager.exception),
+            'HTTP Error 502: Proxy Error')
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].get_full_url(),
+            self.make_url('job/TestJob'))
+        self._check_requests(jenkins_mock.call_args_list)
+        self.assertEqual(
+            sleep_mock.call_args[0][0],
+            retry_wait)
 
     @patch('jenkins.urlopen')
     def test_timeout(self, jenkins_mock):
