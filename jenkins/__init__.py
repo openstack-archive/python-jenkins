@@ -1025,14 +1025,22 @@ class Jenkins(object):
         Authenticated setups may require configuring a token on the server
         side.
 
-        :param parameters: parameters for job, or None., ``dict``
+        :param parameters: parameters for job, or None., ``dict`` or ``list of two membered tuples``
         :param token: (optional) token for building job, ``str``
         :returns: URL for building job
         '''
         folder_url, short_name = self._get_job_folder(name)
         if parameters:
             if token:
-                parameters['token'] = token
+                if isinstance(parameters, list):
+                    parameters.append(("token", token, ))
+                elif isinstance(parameters, dict):
+                    parameters['token'] = token
+                else:
+                    raise JenkinsException('build parameters can be a dictionary '
+                                           'like {"param_key": "param_value", ...} '
+                                           'or a list of two membered tuples '
+                                           'like [("param_key", "param_value",), ...]')
             return (self._build_url(BUILD_WITH_PARAMS_JOB, locals()) +
                     '?' + urlencode(parameters))
         elif token:
@@ -1045,7 +1053,7 @@ class Jenkins(object):
         '''Trigger build job.
 
         :param name: name of job
-        :param parameters: parameters for job, or ``None``, ``dict``
+        :param parameters: parameters for job, or ``None``, ``dict`` or ``list``
         :param token: Jenkins API token
         '''
         return self.jenkins_open(Request(
