@@ -16,7 +16,7 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         jobs_info = self.j.get_all_jobs()
 
         expected_fullnames = [
-            u"my_job1", u"my_job2",
+            u"my_job1", u"my_folder1", u"my_job2",
             u"my_folder1/my_job3", u"my_folder1/my_job4"
         ]
         self.assertEqual(len(expected_fullnames), len(jobs_info))
@@ -32,7 +32,7 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         jobs_info = self.j.get_all_jobs()
 
         expected_fullnames = [
-            u"my_job1", u"my_job2",
+            u"my_job1", u"my_folder1", u"my_job2", u"my_folder1/my_folder2",
             u"my_folder1/my_job3", u"my_folder1/my_job4",
             u"my_folder1/my_folder2/my_job1", u"my_folder1/my_folder2/my_job2"
         ]
@@ -53,7 +53,7 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         jobs_info = self.j.get_all_jobs(folder_depth=1)
 
         expected_fullnames = [
-            u"my_job1", u"my_job2",
+            u"my_job1", u"my_folder1", u"my_job2", u"my_folder1/my_folder2",
             u"my_folder1/my_job3", u"my_folder1/my_job4"
         ]
         self.assertEqual(len(expected_fullnames), len(jobs_info))
@@ -69,7 +69,7 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         jobs_info = self.j.get_all_jobs()
 
         expected_fullnames = [
-            u"my_job1", u"my_job2",
+            u"my_job1", u"my_folder1", u"my_job2", u"my_folder1/my spaced folder",
             u"my_folder1/my_job3", u"my_folder1/my_job4",
             u"my_folder1/my spaced folder/my job 5"
         ]
