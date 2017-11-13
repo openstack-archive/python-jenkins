@@ -17,3 +17,5 @@
 # Unit test / coverage reports
 cover/
 
+/ChangeLog
+/AUTHORS

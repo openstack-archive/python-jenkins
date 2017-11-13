@@ -765,14 +765,21 @@ class Jenkins(object):
         else:
             return self.get_all_jobs(folder_depth=folder_depth)
 
-    def get_all_jobs(self, folder_depth=None):
+    def get_all_jobs(self, folder_depth=None, multibranch=False, folders=True):
         """Get list of all jobs recursively to the given folder depth.
 
         Each job is a dictionary with 'name', 'url', 'color' and 'fullname'
         keys.
 
         :param folder_depth: Number of levels to search, ``int``. By default
-            None, which will search all levels. 0 limits to toplevel.
+            ``None``, which will search all levels. 0 limits to toplevel.
+        :param multibranch: Return all branches of multibranch
+            jobs, which are not really configurable individually. By default
+            ``False``.
+        :param folders: Return folders, by default ``True``. If ``False`` it
+            will skip returning Folders but it will look inside them and return
+            jobs from there.
+            ``False``.
         :returns: list of jobs, ``[ { str: str} ]``
 
         .. note::
@@ -817,6 +824,20 @@ class Jenkins(object):
             if not isinstance(lvl_jobs, list):
                 lvl_jobs = [lvl_jobs]
             for job in lvl_jobs:
+                # insert fullname info if it doesn't exist to
+                # allow callers to easily reference unambiguously
+                if u'fullname' not in job:
+                    job[u'fullname'] = '/'.join(
+                        [p for p in root.split('/')
+                         if p and p != 'job'] +
+                        [job[u'name']])
+
+                if not (not folders and job.get('_class') ==
+                        'com.cloudbees.hudson.plugins.folder.Folder'):
+                    jobs_list.append(job)
+                if not multibranch and job.get('_class') == \
+                        'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject':  # noqa
+                    continue
                 if 'jobs' in job:  # folder
                     if folder_depth is None or lvl < folder_depth:
                         path = '/job/'.join((root, job[u'name']))
@@ -824,15 +845,6 @@ class Jenkins(object):
                             (lvl + 1, path,
                              self.get_info(path,
                                            query=JOBS_QUERY)['jobs']))
-                else:
-                    # insert fullname info if it doesn't exist to
-                    # allow callers to easily reference unambiguously
-                    if u'fullname' not in job:
-                        job[u'fullname'] = '/'.join(
-                            [p for p in root.split('/')
-                             if p and p != 'job'] +
-                            [job[u'name']])
-                    jobs_list.append(job)
         return jobs_list
 
     def copy_job(self, from_name, to_name):
