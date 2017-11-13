@@ -817,6 +817,14 @@ class Jenkins(object):
             if not isinstance(lvl_jobs, list):
                 lvl_jobs = [lvl_jobs]
             for job in lvl_jobs:
+                # insert fullname info if it doesn't exist to
+                # allow callers to easily reference unambiguously
+                if u'fullname' not in job:
+                    job[u'fullname'] = '/'.join(
+                        [p for p in root.split('/')
+                         if p and p != 'job'] +
+                        [job[u'name']])
+                jobs_list.append(job)
                 if 'jobs' in job:  # folder
                     if folder_depth is None or lvl < folder_depth:
                         path = '/job/'.join((root, job[u'name']))
@@ -824,15 +832,6 @@ class Jenkins(object):
                             (lvl + 1, path,
                              self.get_info(path,
                                            query=JOBS_QUERY)['jobs']))
-                else:
-                    # insert fullname info if it doesn't exist to
-                    # allow callers to easily reference unambiguously
-                    if u'fullname' not in job:
-                        job[u'fullname'] = '/'.join(
-                            [p for p in root.split('/')
-                             if p and p != 'job'] +
-                            [job[u'name']])
-                    jobs_list.append(job)
         return jobs_list
 
     def copy_job(self, from_name, to_name):
