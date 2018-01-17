@@ -26,7 +26,7 @@ The above code prints the fullName attribute of the user and the version of
 the Jenkins master running on 'localhost:8080'. For example, it may print
 "Hello John from Jenkins 2.0".
 
-From Jenkins vesion 1.426 onward you can specify an API token instead of your
+From Jenkins version 1.426 onward you can specify an API token instead of your
 real password while authenticating the user against the Jenkins instance.
 Refer to the `Jenkins Authentication`_ wiki for details about how you
 can generate an API token. Once you have an API token you can pass the API token
