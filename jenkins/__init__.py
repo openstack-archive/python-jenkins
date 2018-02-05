@@ -293,6 +293,8 @@ class Jenkins(object):
         else:
             url_path = format_spec
 
+        url_path = url_path.replace(' ', '%20')
+        
         return urljoin(self.server, url_path)
 
     def maybe_add_crumb(self, req):
