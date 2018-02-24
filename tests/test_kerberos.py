@@ -1,10 +1,16 @@
-import kerberos
-assert kerberos  # pyflakes
 from mock import patch, Mock
 from six.moves.urllib.request import Request
+import sys
 import testtools
+import unittest
+from unittest.case import SkipTest
 
-from jenkins import urllib_kerb
+try:
+    import kerberos
+    assert kerberos  # pyflakes
+    from jenkins import urllib_kerb
+except ImportError:
+    pass
 
 
 class KerberosTests(testtools.TestCase):
@@ -13,6 +19,8 @@ class KerberosTests(testtools.TestCase):
     @patch('kerberos.authGSSClientStep')
     @patch('kerberos.authGSSClientInit')
     @patch('kerberos.authGSSClientClean')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_http_error_401_simple(self, clean_mock, init_mock, step_mock, response_mock):
         headers_from_server = {'www-authenticate': 'Negotiate xxx'}
 
@@ -43,6 +51,8 @@ class KerberosTests(testtools.TestCase):
     @patch('kerberos.authGSSClientStep')
     @patch('kerberos.authGSSClientInit')
     @patch('kerberos.authGSSClientClean')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_http_error_401_gsserror(self, clean_mock, init_mock, step_mock, response_mock):
         headers_from_server = {'www-authenticate': 'Negotiate xxx'}
 
@@ -57,6 +67,8 @@ class KerberosTests(testtools.TestCase):
     @patch('kerberos.authGSSClientStep')
     @patch('kerberos.authGSSClientInit')
     @patch('kerberos.authGSSClientClean')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_http_error_401_empty(self, clean_mock, init_mock, step_mock, response_mock):
         headers_from_server = {}
 
@@ -68,6 +80,8 @@ class KerberosTests(testtools.TestCase):
     @patch('kerberos.authGSSClientResponse')
     @patch('kerberos.authGSSClientStep')
     @patch('kerberos.authGSSClientInit')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_krb_response_simple(self, init_mock, step_mock, response_mock):
         response_mock.return_value = "foo"
         init_mock.return_value = ("bar", "context")
@@ -78,6 +92,8 @@ class KerberosTests(testtools.TestCase):
     @patch('kerberos.authGSSClientResponse')
     @patch('kerberos.authGSSClientStep')
     @patch('kerberos.authGSSClientInit')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_krb_response_gsserror(self, init_mock, step_mock, response_mock):
         response_mock.side_effect = kerberos.GSSError
         init_mock.return_value = ("bar", "context")
@@ -86,6 +102,8 @@ class KerberosTests(testtools.TestCase):
             h._krb_response("host", "xxx")
 
     @patch('kerberos.authGSSClientStep')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_authenticate_server_simple(self, step_mock):
         headers_from_server = {'www-authenticate': 'Negotiate xxx'}
         h = urllib_kerb.HTTPNegotiateHandler()
@@ -94,30 +112,40 @@ class KerberosTests(testtools.TestCase):
         step_mock.assert_called_with("foo", "xxx")
 
     @patch('kerberos.authGSSClientStep')
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_authenticate_server_empty(self, step_mock):
         headers_from_server = {'www-authenticate': 'Negotiate'}
         h = urllib_kerb.HTTPNegotiateHandler()
         rv = h._authenticate_server(headers_from_server)
         self.assertEqual(rv, None)
 
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_extract_krb_value_simple(self):
         headers_from_server = {'www-authenticate': 'Negotiate xxx'}
         h = urllib_kerb.HTTPNegotiateHandler()
         rv = h._extract_krb_value(headers_from_server)
         self.assertEqual(rv, "xxx")
 
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_extract_krb_value_empty(self):
         headers_from_server = {}
         h = urllib_kerb.HTTPNegotiateHandler()
         with testtools.ExpectedException(ValueError):
             h._extract_krb_value(headers_from_server)
 
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def test_extract_krb_value_invalid(self):
         headers_from_server = {'www-authenticate': 'Foo-&#@^%:; bar'}
         h = urllib_kerb.HTTPNegotiateHandler()
         with testtools.ExpectedException(ValueError):
             h._extract_krb_value(headers_from_server)
 
+    @unittest.skipIf(sys.platform == "darwin" and sys.version_info[0] > 2,
+                     "osx py3 incompatibility https://github.com/apple/ccs-pykerberos/issues/63")  # noqa
     def _get_dummy_request(self):
         r = Request('http://example.com')
         r.timeout = 10
