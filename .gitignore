@@ -1,19 +1,19 @@
+.*.swp
 *.egg
 *.egg-info
 *.pyc
-/.tox
-.*.swp
-/build/*
-/MANIFEST
-/dist/*
-/doc/build/*
+/.coverage
 /.test
 /.testrepository
-/MANIFEST
-/.coverage
+/.tox
+/AUTHORS
+/build/*
+/ChangeLog
 /coverage*.xml
+/dist/*
+/doc/build/*
 /junit*.xml
+/MANIFEST
 
 # Unit test / coverage reports
 cover/
-
