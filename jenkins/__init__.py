@@ -116,11 +116,11 @@ NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
 NODE_TYPE = 'hudson.slaves.DumbSlave$DescriptorImpl'
 TOGGLE_OFFLINE = 'computer/%(name)s/toggleOffline?offlineMessage=%(msg)s'
 CONFIG_NODE = 'computer/%(name)s/config.xml'
-VIEW_NAME = 'view/%(name)s/api/json?tree=name'
+VIEW_NAME = '%(folder_url)sview/%(short_name)s/api/json?tree=name'
 VIEW_JOBS = 'view/%(name)s/api/json?tree=jobs[url,color,name]'
-CREATE_VIEW = 'createView?name=%(name)s'
-CONFIG_VIEW = 'view/%(name)s/config.xml'
-DELETE_VIEW = 'view/%(name)s/doDelete'
+CREATE_VIEW = '%(folder_url)screateView?name=%(short_name)s'
+CONFIG_VIEW = '%(folder_url)sview/%(short_name)s/config.xml'
+DELETE_VIEW = '%(folder_url)sview/%(short_name)s/doDelete'
 SCRIPT_TEXT = 'scriptText'
 PROMOTION_NAME = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/api/json?tree=name'
 PROMOTION_INFO = '%(folder_url)sjob/%(short_name)s/promotion/api/json?depth=%(depth)s'
@@ -1377,6 +1377,7 @@ class Jenkins(object):
         :returns: list of jobs, ``[{str: str, str: str, str: str, str: str}]``
         '''
 
+        folder_url, short_name = self._get_job_folder(view_name)
         try:
             response = self.jenkins_open(Request(
                 self._build_url(VIEW_JOBS, {u'name': view_name})
@@ -1406,6 +1407,7 @@ class Jenkins(object):
         :param name: View name, ``str``
         :returns: Name of view or None
         '''
+        folder_url, short_name = self._get_job_folder(name)
         try:
             response = self.jenkins_open(Request(
                 self._build_url(VIEW_NAME, locals())))
@@ -1413,11 +1415,11 @@ class Jenkins(object):
             return None
         else:
             actual = json.loads(response)['name']
-            if actual != name:
+            if actual != short_name:
                 raise JenkinsException(
                     'Jenkins returned an unexpected view name %s '
-                    '(expected: %s)' % (actual, name))
-            return actual
+                    '(expected: %s)' % (actual, short_name))
+            return name
 
     def assert_view_exists(self, name,
                            exception_message='view[%s] does not exist'):
@@ -1454,6 +1456,7 @@ class Jenkins(object):
 
         :param name: Name of Jenkins view, ``str``
         '''
+        folder_url, short_name = self._get_job_folder(name)
         self.jenkins_open(Request(
             self._build_url(DELETE_VIEW, locals()), b''
         ))
@@ -1466,6 +1469,7 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :param config_xml: config file text, ``str``
         '''
+        folder_url, short_name = self._get_job_folder(name)
         if self.view_exists(name):
             raise JenkinsException('view[%s] already exists' % (name))
 
@@ -1482,6 +1486,7 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :param config_xml: New XML configuration, ``str``
         '''
+        folder_url, short_name = self._get_job_folder(name)
         reconfig_url = self._build_url(CONFIG_VIEW, locals())
         self.jenkins_open(Request(reconfig_url, config_xml.encode('utf-8'),
                                   DEFAULT_HEADERS))
@@ -1492,6 +1497,7 @@ class Jenkins(object):
         :param name: Name of Jenkins view, ``str``
         :returns: view configuration (XML format)
         '''
+        folder_url, short_name = self._get_job_folder(name)
         request = Request(self._build_url(CONFIG_VIEW, locals()))
         return self.jenkins_open(request)
 
