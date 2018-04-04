@@ -2,6 +2,7 @@ import json
 from mock import patch
 
 import jenkins
+from tests.helper import build_response_mock
 from tests.jobs.base import build_jobs_list_responses
 from tests.jobs.base import JenkinsGetJobsTestBase
 
@@ -23,8 +24,8 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         jobs[u'fullname'] = jobs[u'name']
         self.assertEqual(job_info, [jobs])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
-            self.make_url('api/json?tree=jobs[url,color,name,jobs]'))
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('api/json'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -79,7 +80,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         self.assertEqual(view_jobs[1][u'name'], u'community.first')
         self.assertEqual(view_jobs[1][u'name'], view_jobs[1][u'fullname'])
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url(
                 'view/Test%20View/api/json?tree=jobs[url,color,name]'
             ))
@@ -93,7 +94,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
             self.j.get_jobs(view_name=u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url(
                 'view/Test%20View/api/json?tree=jobs[url,color,name]'
             ))
@@ -110,7 +111,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
             self.j.get_jobs(view_name=u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            jenkins_mock.call_args[0][0].url,
             self.make_url(
                 'view/Test%20View/api/json?tree=jobs[url,color,name]'
             ))
@@ -119,25 +120,21 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
             'Could not parse JSON info for view[Test View]')
         self._check_requests(jenkins_mock.call_args_list)
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open')
-    def test_get_view_jobs_raise_HTTPError(self, jenkins_mock):
-        jenkins_mock.side_effect = jenkins.HTTPError(
-            self.make_url(
-                'view/Test%20View/api/json?tree=jobs[url,color,name]'),
-            code=401,
-            msg="basic auth failed",
-            hdrs=[],
-            fp=None)
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_get_view_jobs_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
             self.j.get_jobs(view_name=u'Test View')
 
         self.assertEqual(
-            jenkins_mock.call_args[0][0].get_full_url(),
+            session_send_mock.call_args_list[1][0][1].url,
             self.make_url(
                 'view/Test%20View/api/json?tree=jobs[url,color,name]'
             ))
         self.assertEqual(
             str(context_manager.exception),
             'view[Test View] does not exist')
-        self._check_requests(jenkins_mock.call_args_list)
