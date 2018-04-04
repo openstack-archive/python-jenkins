@@ -17,3 +17,4 @@
 # Unit test / coverage reports
 cover/
 
+/.stestr
