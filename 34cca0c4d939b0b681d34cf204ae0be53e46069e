@@ -1,0 +1,12 @@
+Code-Review+2: Kevin L. Mitchell <klmitch@mit.edu>
+Code-Review+1: Ken Dreyer (Red Hat) <kdreyer@redhat.com>
+Code-Review+2: Sorin Sbarnea <ssbarnea@redhat.com>
+Workflow+1: Sorin Sbarnea <ssbarnea@redhat.com>
+Code-Review+2: Thanh Ha <zxiiro@gmail.com>
+Workflow+1: Thanh Ha <zxiiro@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 04 Apr 2018 20:40:17 +0000
+Reviewed-on: https://review.openstack.org/205637
+Project: openstack/python-jenkins
+Branch: refs/heads/master
