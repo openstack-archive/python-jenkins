@@ -47,6 +47,7 @@ See examples at :doc:`examples`
 '''
 
 import json
+import os
 import re
 import socket
 import sys
@@ -280,6 +281,14 @@ class Jenkins(object):
         self.crumb = None
         self.timeout = timeout
         self._session = requests.Session()
+        # emulates python SSL verification with requests library
+        # which does not respect python SSL override.
+        self.verify = self._session.verify
+        if os.getenv('PYTHONHTTPSVERIFY', '1') == '0':
+            warnings.warn('PYTHONHTTPSVERIFY=0 detected so we will '
+                          'disable requests library SSL verification to keep '
+                          'compatibility with older versions.')
+            self.verify = False
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -476,7 +485,7 @@ class Jenkins(object):
     def _request(self, req):
 
         r = self._session.prepare_request(req)
-        return self._session.send(r, timeout=self.timeout)
+        return self._session.send(r, timeout=self.timeout, verify=self.verify)
 
     def jenkins_open(self, req, add_crumb=True, resolve_auth=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
