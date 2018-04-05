@@ -419,7 +419,7 @@ class Jenkins(object):
         '''Return the name of a job using the API.
 
         That is roughly an identity method which can be used to quickly verify
-        a job exist or is accessible without causing too much stress on the
+        a job exists or is accessible without causing too much stress on the
         server side.
 
         :param name: Job name, ``str``
