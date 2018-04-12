@@ -57,6 +57,7 @@ import warnings
 import multi_key_dict
 import requests
 import requests.exceptions as req_exc
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
@@ -288,6 +289,7 @@ class Jenkins(object):
             warnings.warn('PYTHONHTTPSVERIFY=0 detected so we will '
                           'disable requests library SSL verification to keep '
                           'compatibility with older versions.')
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
             self.verify = False
 
     def _get_encoded_params(self, params):
