@@ -52,6 +52,7 @@ import re
 import socket
 import sys
 import time
+import urllib3
 import warnings
 
 import multi_key_dict
@@ -288,6 +289,7 @@ class Jenkins(object):
             warnings.warn('PYTHONHTTPSVERIFY=0 detected so we will '
                           'disable requests library SSL verification to keep '
                           'compatibility with older versions.')
+            urllib3.disable_warnings()
             self.verify = False
 
     def _get_encoded_params(self, params):
