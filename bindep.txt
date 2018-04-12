@@ -2,6 +2,7 @@
 # see http://docs.openstack.org/infra/bindep/ for additional information.
 build-essential [platform:dpkg]
 gcc [platform:rpm]
+pypy [test]
 python-dev [platform:dpkg]
 python-devel [platform:rpm]
 python3-dev [platform:dpkg]
