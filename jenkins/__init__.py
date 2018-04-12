@@ -47,6 +47,7 @@ See examples at :doc:`examples`
 '''
 
 import json
+import logging
 import os
 import re
 import socket
@@ -57,6 +58,7 @@ import warnings
 import multi_key_dict
 import requests
 import requests.exceptions as req_exc
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
@@ -68,6 +70,16 @@ try:
 except ImportError:
     requests_kerberos = None
 
+# Set default logging handler to avoid "No handler found" warnings.
+try:  # Python 2.7+
+    from logging import NullHandler
+except ImportError:
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
+
+logging.getLogger(__name__).addHandler(NullHandler())
 
 if sys.version_info < (2, 7, 0):
     warnings.warn("Support for python 2.6 is deprecated and will be removed.")
@@ -244,6 +256,25 @@ class TimeoutException(JenkinsException):
     '''A special exception to call out in the case of a socket timeout.'''
 
 
+class WrappedSession(requests.Session):
+    """A wrapper for requests.Session to override 'verify' property, ignoring REQUESTS_CA_BUNDLE environment variable.
+
+    This is a workaround for https://github.com/kennethreitz/requests/issues/3829 (will be fixed in requests 3.0.0)
+    """
+
+    def merge_environment_settings(self, url, proxies, stream, verify, *args,
+                                   **kwargs):
+        if self.verify is False:
+            verify = False
+
+        return super(WrappedSession, self).merge_environment_settings(url,
+                                                                      proxies,
+                                                                      stream,
+                                                                      verify,
+                                                                      *args,
+                                                                      **kwargs)
+
+
 class Jenkins(object):
     _timeout_warning_issued = False
 
@@ -280,15 +311,14 @@ class Jenkins(object):
         self.auth = None
         self.crumb = None
         self.timeout = timeout
-        self._session = requests.Session()
-        # emulates python SSL verification with requests library
-        # which does not respect python SSL override.
-        self.verify = self._session.verify
+        self._session = WrappedSession()
+
         if os.getenv('PYTHONHTTPSVERIFY', '1') == '0':
-            warnings.warn('PYTHONHTTPSVERIFY=0 detected so we will '
+            logging.debug('PYTHONHTTPSVERIFY=0 detected so we will '
                           'disable requests library SSL verification to keep '
                           'compatibility with older versions.')
-            self.verify = False
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+            self._session.verify = False
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -485,7 +515,12 @@ class Jenkins(object):
     def _request(self, req):
 
         r = self._session.prepare_request(req)
-        return self._session.send(r, timeout=self.timeout, verify=self.verify)
+        # requests.Session.send() does not honor env settings by design
+        # see https://github.com/requests/requests/issues/2807
+        _settings = self._session.merge_environment_settings(
+            r.url, None, None, self._session.verify, None)
+        _settings['timeout'] = self.timeout
+        return self._session.send(r, **_settings)
 
     def jenkins_open(self, req, add_crumb=True, resolve_auth=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
