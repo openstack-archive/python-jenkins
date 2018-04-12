@@ -57,6 +57,7 @@ import warnings
 import multi_key_dict
 import requests
 import requests.exceptions as req_exc
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
@@ -281,13 +282,18 @@ class Jenkins(object):
         self.crumb = None
         self.timeout = timeout
         self._session = requests.Session()
+        # Uses the same logic as requests lib for default verify value
+        self.verify = self._session.verify
+        if self.verify is True or self.verify is None:
+                self.verify = (os.environ.get('REQUESTS_CA_BUNDLE') or
+                               os.environ.get('CURL_CA_BUNDLE'))
         # emulates python SSL verification with requests library
         # which does not respect python SSL override.
-        self.verify = self._session.verify
         if os.getenv('PYTHONHTTPSVERIFY', '1') == '0':
             warnings.warn('PYTHONHTTPSVERIFY=0 detected so we will '
                           'disable requests library SSL verification to keep '
                           'compatibility with older versions.')
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
             self.verify = False
 
     def _get_encoded_params(self, params):
