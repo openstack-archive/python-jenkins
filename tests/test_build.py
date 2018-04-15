@@ -1,4 +1,6 @@
 import json
+
+import collections
 from mock import patch
 
 import jenkins
@@ -464,3 +466,32 @@ class JenkinsListRunningBuildsTest(JenkinsTestBase):
         node_info_mock.return_value = node_info_to_return
         builds = self.j.get_running_builds()
         self.assertEqual([], builds)
+
+
+class JenkinsBuildJobUrlTest(JenkinsTestBase):
+
+    def test_params_as_dict(self):
+        token = 'token123'
+        params = [
+            ('m_select', 'value1'),
+            ('s_select', 's_select2')
+        ]
+        parameters = collections.OrderedDict(params)
+        self.assertEqual(
+            self.j.build_job_url('Test Job', parameters=parameters, token=token),
+            self.make_url(
+                'job/Test%20Job/buildWithParameters?m_select=value1'
+                '&s_select=s_select2&token=token123'))
+
+    def test_params_as_list(self):
+        token = 'token123'
+        params = [
+            ('m_select', 'value1',),
+            ('m_select', 'value3'),
+            ('s_select', 's_select2')
+        ]
+        self.assertEqual(
+            self.j.build_job_url('Test Job', parameters=params, token=token),
+            self.make_url(
+                'job/Test%20Job/buildWithParameters?m_select=value1'
+                '&m_select=value3&s_select=s_select2&token=token123'))
