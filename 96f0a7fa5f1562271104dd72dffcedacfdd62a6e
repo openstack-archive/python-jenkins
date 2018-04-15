@@ -1,0 +1,9 @@
+Code-Review+1: Akshat Tandon <tandonakshat7@gmail.com>
+Code-Review+2: Sorin Sbarnea <ssbarnea@redhat.com>
+Workflow+1: Sorin Sbarnea <ssbarnea@redhat.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Sun, 15 Apr 2018 09:44:55 +0000
+Reviewed-on: https://review.openstack.org/517361
+Project: openstack/python-jenkins
+Branch: refs/heads/master
