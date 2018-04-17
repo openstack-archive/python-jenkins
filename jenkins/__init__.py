@@ -101,6 +101,7 @@ JOB_INFO = '%(folder_url)sjob/%(short_name)s/api/json?depth=%(depth)s'
 JOB_NAME = '%(folder_url)sjob/%(short_name)s/api/json?tree=name'
 ALL_BUILDS = '%(folder_url)sjob/%(short_name)s/api/json?tree=allBuilds[number,url]'
 Q_INFO = 'queue/api/json?depth=0'
+Q_ITEM = 'queue/item/%(number)d/api/json'
 CANCEL_QUEUE = 'queue/cancelItem?id=%(id)s'
 CREATE_JOB = '%(folder_url)screateItem?name=%(short_name)s'  # also post config.xml
 CONFIG_JOB = '%(folder_url)sjob/%(short_name)s/config.xml'
@@ -571,6 +572,34 @@ class Jenkins(object):
             if str(e.reason) == "timed out":
                 raise TimeoutException('Error in request: %s' % (e.reason))
             raise JenkinsException('Error in request: %s' % (e.reason))
+
+    def get_queue_item(self, number):
+        '''Get information about a queued item (to-be-created job).
+
+        The returned dict will have a "why" key if the queued item is still
+        waiting for an executor.
+
+        The returned dict will have an "executable" key if the queued item is
+        running on an executor, or has completed running. Use this to
+        determine the job number / URL.
+
+        :param name: queue number, ``int``
+        :returns: dictionary of queued information, ``dict``
+        '''
+        url = self._build_url(Q_ITEM, locals())
+        try:
+            response = self.jenkins_open(requests.Request('GET', url))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('queue number[%d] does not exist'
+                                       % number)
+        except (req_exc.HTTPError, NotFoundException):
+            raise JenkinsException('queue number[%d] does not exist' % number)
+        except ValueError:
+            raise JenkinsException(
+                'Could not parse JSON info for queue number[%d]' % number
+            )
 
     def get_build_info(self, name, number, depth=0):
         '''Get build information dictionary.
@@ -1171,6 +1200,12 @@ class Jenkins(object):
 
     def build_job(self, name, parameters=None, token=None):
         '''Trigger build job.
+
+        This method returns a queue item number that you can pass to
+        :meth:`Jenkins.get_queue_item`. Note that this queue number is only
+        valid for about five minutes after the job completes, so you should
+        get/poll the queue information as soon as possible to determine the
+        job's URL.
 
         :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
