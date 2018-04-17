@@ -525,9 +525,21 @@ class Jenkins(object):
         return self._session.send(r, **_settings)
 
     def jenkins_open(self, req, add_crumb=True, resolve_auth=True):
+        '''Return the HTTP response body from a ``requests.Request``.
+
+        :returns: ``str``
+        '''
+        return self.jenkins_request(req, add_crumb, resolve_auth).text
+
+    def jenkins_request(self, req, add_crumb=True, resolve_auth=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
-        This should only be used to extend the :class:`Jenkins` API.
+        :param req: A ``requests.Request`` to submit.
+        :param add_crumb: If True, try to add a crumb header to this ``req``
+                          before submitting. Defaults to ``True``.
+        :param resolve_auth: If True, maybe add authentication. Defaults to
+                             ``True``.
+        :returns: A ``requests.Response`` object.
         '''
         try:
             if resolve_auth:
@@ -536,7 +548,7 @@ class Jenkins(object):
                 self.maybe_add_crumb(req)
 
             return self._response_handler(
-                self._request(req)).text
+                self._request(req))
 
         except req_exc.HTTPError as e:
             # Jenkins's funky authentication means its nigh impossible to
