@@ -1133,7 +1133,7 @@ class Jenkins(object):
         select options.
 
         :param parameters: parameters for job, or None., ``dict`` or
-        ``list of two membered tuples``
+            ``list of two membered tuples``
         :param token: (optional) token for building job, ``str``
         :returns: URL for building job
         '''

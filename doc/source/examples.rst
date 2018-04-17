@@ -13,7 +13,7 @@ Example 1: Get version of Jenkins
 This is an example showing how to connect to a Jenkins instance and
 retrieve the Jenkins server version.
 
-::
+.. code-block:: python
 
     import jenkins
 
@@ -52,7 +52,7 @@ using kerberos automatically when the Jenkins server replies "401 Unauthorized"
 and indicates it supports kerberos.  That is, kerberos authentication should
 work automagically. For a quick test, just try the following.
 
-::
+.. code-block:: python
 
     import jenkins
 
@@ -68,7 +68,7 @@ Example 3: Working with Jenkins Jobs
 
 This is an example showing how to create, configure and delete Jenkins jobs.
 
-::
+.. code-block:: python
 
     server.create_job('empty', jenkins.EMPTY_CONFIG_XML)
     jobs = server.get_jobs()
@@ -101,7 +101,7 @@ Example 4: Working with Jenkins Views
 
 This is an example showing how to create, configure and delete Jenkins views.
 
-::
+.. code-block:: python
 
     server.create_view('EMPTY', jenkins.EMPTY_VIEW_CONFIG_XML)
     view_config = server.get_view_config('EMPTY')
@@ -115,7 +115,7 @@ Example 5: Working with Jenkins Plugins
 
 This is an example showing how to retrieve Jenkins plugins information.
 
-::
+.. code-block:: python
 
     plugins = server.get_plugins_info()
     print plugins
@@ -131,7 +131,7 @@ Example 6: Working with Jenkins Nodes
 
 This is an example showing how to add, configure, enable and delete Jenkins nodes.
 
-::
+.. code-block:: python
 
     server.create_node('slave1')
     nodes = get_nodes()
@@ -162,7 +162,7 @@ Example 7: Working with Jenkins Build Queue
 
 This is an example showing how to retrieve information on the Jenkins queue.
 
-::
+.. code-block:: python
 
     server.build_job('foo')
     queue_info = server.get_queue_info()
@@ -179,7 +179,7 @@ Jenkins.
 
 This is an example showing how to create, configure and delete Jenkins folders.
 
-::
+.. code-block:: python
 
     server.create_job('folder', jenkins.EMPTY_FOLDER_XML)
     server.create_job('folder/empty', jenkins.EMPTY_FOLDER_XML)
@@ -198,7 +198,7 @@ for Jenkins.
 This is an example showing how to update the next build number for a
 Jenkins job.
 
-::
+.. code-block:: python
 
     next_bn = server.get_job_info('job_name')['nextBuildNumber']
     server.set_next_build_number('job_name', next_bn + 50)
@@ -217,7 +217,8 @@ promotion process for an existing job.
 The job in this example is named *prom_job* and it needs to have this
 config xml snippet before creating the promotion:
 
-::
+.. code-block:: xml
+
     <properties>
        <hudson.plugins.promoted__builds.JobPropertyImpl>
        <activeProcessNames>
@@ -228,7 +229,8 @@ config xml snippet before creating the promotion:
 
 where *prom_name* is the name of the promotion that will get added to the job.
 
-::
+.. code-block:: python
+
     server.create_promotion('prom_name', 'prom_job', jenkins.EMPTY_PROMO_CONFIG_XML)
     server.promotion_exists('prom_name', 'prom_job')
     print server.get_promotions('prom_job')
@@ -246,7 +248,8 @@ It is possible to ask the API to wait for Jenkins to be ready with a given
 timeout. This can be used to aid launching of Jenkins and then waiting for the
 REST API to be responsive before continuing with subsequent configuration.
 
-::
+.. code-block:: python
+
     # timeout here is the socket connection timeout, for each connection
     # attempt it will wait at most 5 seconds before assuming there is
     # nothing listening. Useful where firewalls may black hole connections.
