@@ -286,9 +286,9 @@ class Jenkins(object):
 
         All methods will raise :class:`JenkinsException` on failure.
 
+        :param url: URL of Jenkins server, ``str``
         :param username: Server username, ``str``
         :param password: Server password, ``str``
-        :param url: URL of Jenkins server, ``str``
         :param timeout: Server connection timeout in secs (default: not set), ``int``
         '''
         if url[-1] == '/':
@@ -564,7 +564,7 @@ class Jenkins(object):
         '''Get build information dictionary.
 
         :param name: Job name, ``str``
-        :param name: Build number, ``int``
+        :param number: Build number, ``int``
         :param depth: JSON depth, ``int``
         :returns: dictionary of build information, ``dict``
 
@@ -1132,6 +1132,7 @@ class Jenkins(object):
         Use ``list of two membered tuples`` to supply parameters with multi
         select options.
 
+        :param name: Name of Jenkins job, ``str``
         :param parameters: parameters for job, or None., ``dict`` or
         ``list of two membered tuples``
         :param token: (optional) token for building job, ``str``
@@ -1661,8 +1662,8 @@ class Jenkins(object):
         quickly verify a promotion exists for a job or is accessible
         without causing too much stress on the server side.
 
-        :param job_name: Job name, ``str``
         :param name: Promotion name, ``str``
+        :param job_name: Job name, ``str``
         :returns: Name of promotion or None
         '''
         folder_url, short_name = self._get_job_folder(job_name)
@@ -1684,8 +1685,8 @@ class Jenkins(object):
                                 'exist for job[%s]'):
         '''Raise an exception if a job lacks a promotion
 
-        :param job_name: Job name, ``str``
         :param name: Name of Jenkins promotion, ``str``
+        :param job_name: Job name, ``str``
         :param exception_message: Message to use for the exception. Formatted
                                   with ``name`` and ``job_name``
         :throws: :class:`JenkinsException` whenever the promotion
@@ -1697,8 +1698,8 @@ class Jenkins(object):
     def promotion_exists(self, name, job_name):
         '''Check whether a job has a certain promotion
 
-        :param job_name: Job name, ``str``
         :param name: Name of Jenkins promotion, ``str``
+        :param job_name: Job name, ``str``
         :returns: ``True`` if Jenkins promotion exists
         '''
         return self.get_promotion_name(name, job_name) == name
@@ -1706,7 +1707,7 @@ class Jenkins(object):
     def get_promotions_info(self, job_name, depth=0):
         '''Get promotion information dictionary of a job
 
-        :param name: job_name, ``str``
+        :param job_name: job_name, ``str``
         :param depth: JSON depth, ``int``
         :returns: Dictionary of promotion info, ``dict``
         '''
@@ -1737,8 +1738,8 @@ class Jenkins(object):
     def delete_promotion(self, name, job_name):
         '''Delete Jenkins promotion permanently.
 
-        :param job_name: Job name, ``str``
         :param name: Name of Jenkins promotion, ``str``
+        :param job_name: Job name, ``str``
         '''
         folder_url, short_name = self._get_job_folder(job_name)
         self.jenkins_open(requests.Request(
