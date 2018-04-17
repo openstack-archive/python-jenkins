@@ -529,9 +529,9 @@ class Jenkins(object):
 
         :returns: ``str``
         '''
-        return self.jenkins_urlopen(req, add_crumb, resolve_auth).text
+        return self.jenkins_request(req, add_crumb, resolve_auth).text
 
-    def jenkins_urlopen(self, req, add_crumb=True, resolve_auth=True):
+    def jenkins_request(self, req, add_crumb=True, resolve_auth=True):
         '''Utility routine for opening an HTTP request to a Jenkins server.
 
         :param req: A ``requests.Request`` to submit.
@@ -1175,9 +1175,17 @@ class Jenkins(object):
         :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
+        :returns: ``int`` queue item
         '''
-        return self.jenkins_open(requests.Request(
+        response = self.jenkins_request(requests.Request(
             'POST', self.build_job_url(name, parameters, token)))
+        location = response.headers['Location']
+        # location is a queue item, eg. "http://jenkins/queue/item/25/"
+        if location.endswith('/'):
+            location = location[:-1]
+        parts = location.split('/')
+        number = int(parts[-1])
+        return number
 
     def run_script(self, script):
         '''Execute a groovy script on the jenkins master.
