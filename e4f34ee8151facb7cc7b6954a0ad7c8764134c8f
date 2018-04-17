@@ -1,0 +1,8 @@
+Code-Review+2: Sorin Sbarnea <ssbarnea@redhat.com>
+Workflow+1: Sorin Sbarnea <ssbarnea@redhat.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 17 Apr 2018 09:35:22 +0000
+Reviewed-on: https://review.openstack.org/561818
+Project: openstack/python-jenkins
+Branch: refs/heads/master
