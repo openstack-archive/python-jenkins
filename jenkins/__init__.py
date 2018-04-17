@@ -1175,9 +1175,17 @@ class Jenkins(object):
         :param name: name of job
         :param parameters: parameters for job, or ``None``, ``dict``
         :param token: Jenkins API token
+        :returns: ``int`` queue item
         '''
-        return self.jenkins_open(requests.Request(
+        response = self.jenkins_request(requests.Request(
             'POST', self.build_job_url(name, parameters, token)))
+        location = response.headers['Location']
+        # location is a queue item, eg. "http://jenkins/queue/item/25/"
+        if location.endswith('/'):
+            location = location[:-1]
+        parts = location.split('/')
+        number = int(parts[-1])
+        return number
 
     def run_script(self, script):
         '''Execute a groovy script on the jenkins master.
