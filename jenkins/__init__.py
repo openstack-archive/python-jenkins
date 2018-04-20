@@ -116,6 +116,10 @@ STOP_BUILD = '%(folder_url)sjob/%(short_name)s/%(number)s/stop'
 BUILD_WITH_PARAMS_JOB = '%(folder_url)sjob/%(short_name)s/buildWithParameters'
 BUILD_INFO = '%(folder_url)sjob/%(short_name)s/%(number)d/api/json?depth=%(depth)s'
 BUILD_CONSOLE_OUTPUT = '%(folder_url)sjob/%(short_name)s/%(number)d/consoleText'
+BUILD_ENV_VARS = '%(folder_url)sjob/%(short_name)s/%(number)d/injectedEnvVars/api/json' + \
+    '?depth=%(depth)s'
+BUILD_TEST_REPORT = '%(folder_url)sjob/%(short_name)s/%(number)d/testReport/api/json' + \
+    '?depth=%(depth)s'
 DELETE_BUILD = '%(folder_url)sjob/%(short_name)s/%(number)s/doDelete'
 WIPEOUT_JOB_WORKSPACE = '%(folder_url)sjob/%(short_name)s/doWipeOutWorkspace'
 NODE_LIST = 'computer/api/json'
@@ -636,6 +640,56 @@ class Jenkins(object):
                 'Could not parse JSON info for job[%s] number[%d]'
                 % (name, number)
             )
+
+    def get_build_env_vars(self, name, number, depth=0):
+        '''Get build environment variables.
+
+        :param name: Job name, ``str``
+        :param number: Build number, ``int``
+        :param depth: JSON depth, ``int``
+        :returns: dictionary of build env vars, ``dict`` or None for workflow jobs,
+            or if InjectEnvVars plugin not installed
+        '''
+        folder_url, short_name = self._get_job_folder(name)
+        try:
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(BUILD_ENV_VARS, locals())))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('job[%s] number[%d] does not exist' % (name, number))
+        except req_exc.HTTPError:
+            raise JenkinsException('job[%s] number[%d] does not exist' % (name, number))
+        except ValueError:
+            raise JenkinsException(
+                'Could not parse JSON info for job[%s] number[%d]' % (name, number))
+        except NotFoundException:
+            # This can happen on workflow jobs, or if InjectEnvVars plugin not installed
+            return None
+
+    def get_build_test_report(self, name, number, depth=0):
+        '''Get test results report.
+
+        :param name: Job name, ``str``
+        :param number: Build number, ``int``
+        :returns: dictionary of test report results, ``dict`` or None if there is no Test Report
+        '''
+        folder_url, short_name = self._get_job_folder(name)
+        try:
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(BUILD_TEST_REPORT, locals())))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('job[%s] number[%d] does not exist' % (name, number))
+        except req_exc.HTTPError:
+            raise JenkinsException('job[%s] number[%d] does not exist' % (name, number))
+        except ValueError:
+            raise JenkinsException(
+                'Could not parse JSON info for job[%s] number[%d]' % (name, number))
+        except NotFoundException:
+            # This can happen if the test report wasn't generated for any reason
+            return None
 
     def get_queue_info(self):
         ''':returns: list of job dictionaries, ``[dict]``

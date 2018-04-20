@@ -495,3 +495,163 @@ class JenkinsBuildJobUrlTest(JenkinsTestBase):
             self.make_url(
                 'job/Test%20Job/buildWithParameters?m_select=value1'
                 '&m_select=value3&s_select=s_select2&token=token123'))
+
+
+class JenkinsBuildEnvVarUrlTest(JenkinsTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_simple(self, jenkins_mock):
+        jenkins_mock.return_value = '{}'
+        ret = self.j.get_build_env_vars(u'Test Job', number=52, depth=1)
+        self.assertEqual(ret, json.loads(jenkins_mock.return_value))
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/Test%20Job/52/injectedEnvVars/api/json?depth=1'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_in_folder(self, jenkins_mock):
+        jenkins_mock.return_value = '{}'
+        ret = self.j.get_build_env_vars(u'a Folder/Test Job', number=52, depth=1)
+        self.assertEqual(ret, json.loads(jenkins_mock.return_value))
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/a%20Folder/job/Test%20Job/52/injectedEnvVars/api/json?depth=1'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_return_none(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
+        ret = self.j.get_build_env_vars(u'TestJob', number=52)
+        self.assertIsNone(ret)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_open_return_none(self, jenkins_mock):
+        jenkins_mock.return_value = None
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_env_vars(u'TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[TestJob] number[52] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_return_invalid_json(self, jenkins_mock):
+        jenkins_mock.return_value = 'Invalid JSON'
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_env_vars(u'TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for job[TestJob] number[52]')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(401, reason="Not Authorised"),  # crumb
+            build_response_mock(401, reason="Not Authorised"),  # request
+        ])
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_env_vars(u'TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error in request. Possibly authentication failed [401]: Not Authorised')
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_in_folder_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(401, reason="Not Authorised"),  # crumb
+            build_response_mock(401, reason="Not Authorised"),  # request
+        ])
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_env_vars(u'a Folder/TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error in request. Possibly authentication failed [401]: Not Authorised')
+
+
+class JenkinsBuildTestReportUrlTest(JenkinsTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_simple(self, jenkins_mock):
+        jenkins_mock.return_value = '{}'
+        ret = self.j.get_build_test_report(u'Test Job', number=52, depth=1)
+        self.assertEqual(ret, json.loads(jenkins_mock.return_value))
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/Test%20Job/52/testReport/api/json?depth=1'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_in_folder(self, jenkins_mock):
+        jenkins_mock.return_value = '{}'
+        ret = self.j.get_build_test_report(u'a Folder/Test Job', number=52, depth=1)
+        self.assertEqual(ret, json.loads(jenkins_mock.return_value))
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/a%20Folder/job/Test%20Job/52/testReport/api/json?depth=1'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_return_none(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(404, reason="Not Found"),  # crumb
+            build_response_mock(404, reason="Not Found"),  # request
+        ])
+        ret = self.j.get_build_test_report(u'TestJob', number=52)
+        self.assertIsNone(ret)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_open_return_none(self, jenkins_mock):
+        jenkins_mock.return_value = None
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_test_report(u'TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'job[TestJob] number[52] does not exist')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_return_invalid_json(self, jenkins_mock):
+        jenkins_mock.return_value = 'Invalid JSON'
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_test_report(u'TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Could not parse JSON info for job[TestJob] number[52]')
+        self._check_requests(jenkins_mock.call_args_list)
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(401, reason="Not Authorised"),  # crumb
+            build_response_mock(401, reason="Not Authorised"),  # request
+        ])
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_test_report(u'TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error in request. Possibly authentication failed [401]: Not Authorised')
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_in_folder_raise_HTTPError(self, session_send_mock):
+        session_send_mock.side_effect = iter([
+            build_response_mock(401, reason="Not Authorised"),  # crumb
+            build_response_mock(401, reason="Not Authorised"),  # request
+        ])
+
+        with self.assertRaises(jenkins.JenkinsException) as context_manager:
+            self.j.get_build_test_report(u'a Folder/TestJob', number=52)
+        self.assertEqual(
+            str(context_manager.exception),
+            'Error in request. Possibly authentication failed [401]: Not Authorised')
