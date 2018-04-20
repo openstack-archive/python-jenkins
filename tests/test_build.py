@@ -1,9 +1,11 @@
 import json
 
 import collections
-from mock import patch
+from mock import patch, MagicMock
 
 import jenkins
+from parameterized import parameterized
+import requests
 from tests.base import JenkinsTestBase
 from tests.helper import build_response_mock
 
@@ -495,3 +497,63 @@ class JenkinsBuildJobUrlTest(JenkinsTestBase):
             self.make_url(
                 'job/Test%20Job/buildWithParameters?m_select=value1'
                 '&m_select=value3&s_select=s_select2&token=token123'))
+
+
+class JenkinsBuildEnvVarUrlTest(JenkinsTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_simple(self, jenkins_mock):
+        jenkins_mock.return_value = '{}'
+        ret = self.j.get_build_env_vars(u'Test Job', number=52, depth=1)
+        self.assertEqual(ret, json.loads(jenkins_mock.return_value))
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/Test%20Job/52/injectedEnvVars/api/json?depth=1'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+
+class JenkinsBuildTestReportUrlTest(JenkinsTestBase):
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_simple(self, jenkins_mock):
+        jenkins_mock.return_value = '{}'
+        ret = self.j.get_build_test_report(u'Test Job', number=52, depth=1)
+        self.assertEqual(ret, json.loads(jenkins_mock.return_value))
+        self.assertEqual(
+            jenkins_mock.call_args[0][0].url,
+            self.make_url('job/Test%20Job/52/testReport/api/json?depth=1'))
+        self._check_requests(jenkins_mock.call_args_list)
+
+
+class JenkinsBuildMiscUrlTest(JenkinsTestBase):
+
+    @parameterized.expand(['get_build_env_vars', 'get_build_test_report'])
+    def test_url_missing(self, param):
+        with patch('jenkins.Jenkins.jenkins_open') as mock_open:
+            mock_open.return_value = None
+            func = getattr(self.j, param)
+            self.assertRaises(jenkins.JenkinsException, func, 'job_name', 1)
+
+    @parameterized.expand(['get_build_env_vars', 'get_build_test_report'])
+    def test_url_http(self, param):
+        with patch('jenkins.Jenkins.jenkins_open') as mock_open:
+            mock_open.side_effect = requests.exceptions.HTTPError('url', 'code', 'msg', 'hdrs',
+                                                                  MagicMock())
+            func = getattr(self.j, param)
+            self.assertRaises(jenkins.JenkinsException, func, 'job_name', 1)
+
+    @parameterized.expand(['get_build_env_vars', 'get_build_test_report'])
+    def test_url_value(self, param):
+        with patch('jenkins.Jenkins.jenkins_open') as mock_open:
+            mock_open.side_effect = ValueError()
+            func = getattr(self.j, param)
+            self.assertRaises(jenkins.JenkinsException, func, 'job_name', 1)
+
+    @parameterized.expand(['get_build_env_vars', 'get_build_test_report'])
+    def test_url_not_found(self, param):
+        with patch('jenkins.Jenkins.jenkins_open') as mock_open:
+            mock_open.side_effect = jenkins.NotFoundException()
+            func = getattr(self.j, param)
+            ret = 'Return not set'
+            ret = func('job_name', 1)
+            self.assertIsNone(ret, "Return not None: {}".format(ret))
