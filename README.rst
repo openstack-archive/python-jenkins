@@ -78,9 +78,9 @@ Then install the required python packages using pip_::
 
     $ sudo pip install python-jenkins
 
-.. _flake8: https://pypi.python.org/pypi/flake8
+.. _flake8: https://pypi.org/project/flake8
 .. _tox: https://testrun.org/tox
-.. _pip: https://pypi.python.org/pypi/pip
+.. _pip: https://pypi.org/project/pip
 
 
 .. rubric:: Footnotes
