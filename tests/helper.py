@@ -102,5 +102,6 @@ def build_response_mock(status_code, json_body=None, headers=None, **kwargs):
     # for some reason, wraps cannot handle attributes which are dicts
     # and accessed by key
     response.headers = real_response.headers
+    response.content = text
 
     return response
