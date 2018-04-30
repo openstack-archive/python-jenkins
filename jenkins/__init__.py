@@ -521,7 +521,7 @@ class Jenkins(object):
         # requests.Session.send() does not honor env settings by design
         # see https://github.com/requests/requests/issues/2807
         _settings = self._session.merge_environment_settings(
-            r.url, None, None, self._session.verify, None)
+            r.url, {}, None, self._session.verify, None)
         _settings['timeout'] = self.timeout
         return self._session.send(r, **_settings)
 
