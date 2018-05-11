@@ -24,8 +24,6 @@ class JenkinsTestBase(TestWithScenarios, unittest.TestCase):
 
     def setUp(self):
         super(JenkinsTestBase, self).setUp()
-        # TODO(darragh) would be useful if this could be mocked
-        jenkins.requests_kerberos = None
 
         self.j = jenkins.Jenkins(self.base_url, 'test', 'test')
 
