@@ -1,0 +1,10 @@
+Code-Review+2: Darragh Bailey <daragh.bailey@gmail.com>
+Code-Review+1: Jon-Paul Sullivan (j3p0uk) <j3p0uk@hotmail.com>
+Code-Review+2: Thanh Ha <zxiiro@gmail.com>
+Workflow+1: Thanh Ha <zxiiro@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Sat, 19 May 2018 02:26:01 +0000
+Reviewed-on: https://review.openstack.org/563221
+Project: openstack/python-jenkins
+Branch: refs/heads/master
