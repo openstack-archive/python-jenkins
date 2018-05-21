@@ -58,6 +58,9 @@ Patches are submitted via Gerrit at:
 
 Please do not submit GitHub pull requests, they will be automatically closed.
 
+The python-jenkins developers communicate in the ``#openstack-jjb`` channel
+on Freenode's IRC network.
+
 More details on how you can contribute is available on our wiki at:
 
 * http://docs.openstack.org/infra/manual/developers.html
