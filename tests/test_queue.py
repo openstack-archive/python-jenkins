@@ -107,5 +107,5 @@ class JenkinsQueueItemTest(JenkinsTestBase):
         self.assertEqual(queue_item, queue_item_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].url,
-            self.make_url('queue/item/25/api/json'))
+            self.make_url('queue/item/25/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
