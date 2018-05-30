@@ -1,3 +1,5 @@
+cmd2!=0.8.3,<0.9.0;python_version<'3.0'  # MIT
+cmd2!=0.8.3;python_version>='3.0'  # MIT
 coverage>=3.6
 hacking>=0.5.6,<0.11
 mock<1.1
