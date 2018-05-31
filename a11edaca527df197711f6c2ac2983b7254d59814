@@ -1,0 +1,9 @@
+Code-Review+1: Darragh Bailey <daragh.bailey@gmail.com>
+Code-Review+2: Sorin Sbarnea <ssbarnea@redhat.com>
+Workflow+1: Sorin Sbarnea <ssbarnea@redhat.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Thu, 31 May 2018 18:50:49 +0000
+Reviewed-on: https://review.openstack.org/565486
+Project: openstack/python-jenkins
+Branch: refs/heads/master
