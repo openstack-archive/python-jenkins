@@ -1,5 +1,6 @@
 import sys
 
+import mock
 from testscenarios import TestWithScenarios
 
 import jenkins
@@ -24,10 +25,16 @@ class JenkinsTestBase(TestWithScenarios, unittest.TestCase):
 
     def setUp(self):
         super(JenkinsTestBase, self).setUp()
-        # TODO(darragh) would be useful if this could be mocked
-        jenkins.requests_kerberos = None
+
+        self.request_kerberos_module_patcher = mock.patch(
+            'jenkins.requests_kerberos', None)
+        self.request_kerberos_module_patcher.start()
 
         self.j = jenkins.Jenkins(self.base_url, 'test', 'test')
+
+    def tearDown(self):
+
+        self.request_kerberos_module_patcher.stop()
 
     def make_url(self, path):
         return u'{0}/{1}'.format(self.base_url, path)
