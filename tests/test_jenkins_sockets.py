@@ -15,6 +15,7 @@ class JenkinsRequestTimeoutTests(testtools.TestCase):
         self.server = NullServer(("127.0.0.1", 0))
         self.messages = StringIO()
         self.addOnException(self._get_messages)
+        jenkins.requests_kerberos = None
 
     def _get_messages(self, exc_info):
         self.addDetail('timeout-tests-messages',
