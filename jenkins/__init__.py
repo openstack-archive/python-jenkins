@@ -378,6 +378,8 @@ class Jenkins(object):
                         add_crumb=False, resolve_auth=False)
                     self._session.auth = auth
                     break
+                except TimeoutException:
+                    raise
                 except Exception as exc:
                     # assume authentication failure
                     failures.append("auth(%s) %s" % (name, exc))
