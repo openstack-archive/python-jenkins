@@ -510,6 +510,7 @@ class Jenkins(object):
         headers = response.headers
         if (headers.get('content-length') is None and
                 headers.get('transfer-encoding') is None and
+                headers.get('location') is None and
                 (response.content is None or len(response.content) <= 0)):
             # response body should only exist if one of these is provided
             raise EmptyResponseException(
