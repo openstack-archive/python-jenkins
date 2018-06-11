@@ -1292,10 +1292,10 @@ class Jenkins(object):
             Plugin:mailer, Plugin:jquery, Plugin:antisamy-markup-formatter,
             Plugin:maven-plugin, Plugin:pam-auth]'
         '''
-        return self.jenkins_open(
-            requests.Request(
-                'POST', self._build_url(SCRIPT_TEXT),
-                data="script=".encode('utf-8') + quote(script).encode('utf-8')))
+        groovy = {'script': script.encode('utf-8')}
+        return self.jenkins_open(requests.Request(
+            'POST', self._build_url(SCRIPT_TEXT),
+            data=groovy))
 
     def install_plugin(self, name, include_dependencies=True):
         '''Install a plugin and its dependencies from the Jenkins public
