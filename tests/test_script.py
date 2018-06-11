@@ -23,7 +23,6 @@ class JenkinsScriptTest(JenkinsTestBase):
         self.assertEqual(
             jenkins_mock.call_args[0][0].url,
             self.make_url('scriptText'))
-        self.assertIn(quote('&&'), jenkins_mock.call_args[0][0].data.decode('utf8'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
