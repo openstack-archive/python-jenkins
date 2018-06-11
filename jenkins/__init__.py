@@ -1294,10 +1294,16 @@ class Jenkins(object):
             Plugin:mailer, Plugin:jquery, Plugin:antisamy-markup-formatter,
             Plugin:maven-plugin, Plugin:pam-auth]'
         '''
-        return self.jenkins_open(
-            requests.Request(
-                'POST', self._build_url(SCRIPT_TEXT),
-                data="script=".encode('utf-8') + quote(script).encode('utf-8')))
+        magic_str = ')]}.'
+        print_magic_str = 'println()\nprint("{}")'.format(magic_str)
+        groovy = {'script': script.encode('utf-8') + print_magic_str.encode('utf-8')}
+        result = self.jenkins_open(requests.Request(
+            'POST', self._build_url(SCRIPT_TEXT), data=groovy))
+
+        if not result.endswith(magic_str):
+            raise JenkinsException(result)
+
+        return result.replace(magic_str, '')
 
     def install_plugin(self, name, include_dependencies=True):
         '''Install a plugin and its dependencies from the Jenkins public
