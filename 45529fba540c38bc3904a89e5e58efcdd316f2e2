@@ -1,0 +1,10 @@
+Code-Review+1: Jan Hruban <jan.hruban@gooddata.com>
+Code-Review+2: Thanh Ha <zxiiro@gmail.com>
+Code-Review+2: Sorin Sbarnea <ssbarnea@redhat.com>
+Workflow+1: Sorin Sbarnea <ssbarnea@redhat.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 12 Jun 2018 18:06:01 +0000
+Reviewed-on: https://review.openstack.org/571678
+Project: openstack/python-jenkins
+Branch: refs/heads/master
