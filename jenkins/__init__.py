@@ -327,6 +327,29 @@ class Jenkins(object):
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
             self._session.verify = False
 
+        # detect real jenkins frontend
+        # Avoid redirection issues (performance or silent failed POSTs)
+        try:
+            # r = requests.head(url, allow_redirects=False)
+            r = self.jenkins_request(requests.Request(
+                'HEAD', url))
+            if r.status_code in [300, 301, 302, 303]:
+                new_url = r.headers['Location']
+                warnings.warn(
+                    "Redirection from %s to %s detected, you may want to update your frontend url." % (
+                        url, new_url))
+                self.server = new_url
+        except Exception as e:
+            # backwards for compatibility
+            # - test suite
+            # - clients that may not expect a HTTP exception to occur so soon
+            pass
+        finally:
+            # tests expect crumb ping-pong to happen on first api call.
+            self.crumb = None
+
+
+
     def _get_encoded_params(self, params):
         for k, v in params.items():
             if k in ["name", "msg", "short_name", "from_short_name",
