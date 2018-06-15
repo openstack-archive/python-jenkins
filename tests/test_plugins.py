@@ -175,7 +175,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             json.dumps(self.plugin_info_json),
             json.dumps(self.updated_plugin_info_json)
         ]
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
 
         plugins_info = j.get_plugins()
         self.assertEqual(plugins_info["mailer"]["version"],
@@ -289,7 +289,7 @@ class PluginsTestScenarios(JenkinsPluginsBase):
         equality operator defined for the scenario.
         """
         plugin_name = "Jenkins Mailer Plugin"
-        j = jenkins.Jenkins(self.base_url, 'test', 'test')
+        j = jenkins.Jenkins(self.base_url, 'test', 'test', resolve=False)
         plugin_info = j.get_plugins()[plugin_name]
         v1 = plugin_info.get("version")
 
@@ -307,7 +307,7 @@ class PluginsTestScenarios(JenkinsPluginsBase):
         type of PluginVersion before comparing provides the same result.
         """
         plugin_name = "Jenkins Mailer Plugin"
-        j = jenkins.Jenkins(self.base_url, 'test', 'test')
+        j = jenkins.Jenkins(self.base_url, 'test', 'test', resolve=False)
         plugin_info = j.get_plugins()[plugin_name]
         v1 = plugin_info.get("version")
 

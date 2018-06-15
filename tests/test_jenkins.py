@@ -30,7 +30,7 @@ class JenkinsConstructorTest(JenkinsTestBase):
         self.assertEqual(self.j.crumb, None)
 
     def test_url_without_trailing_slash(self):
-        j = jenkins.Jenkins(self.base_url, 'test', 'test')
+        j = jenkins.Jenkins(self.base_url, 'test', 'test', resolve=False)
         j._maybe_add_auth()
         self.assertEqual(j.server, self.make_url(''))
         self.assertEqual(j.auth(self.req).headers['Authorization'],
@@ -38,7 +38,7 @@ class JenkinsConstructorTest(JenkinsTestBase):
         self.assertEqual(j.crumb, None)
 
     def test_without_user_or_password(self):
-        j = jenkins.Jenkins('{0}'.format(self.base_url))
+        j = jenkins.Jenkins('{0}'.format(self.base_url), resolve=False)
         j._maybe_add_auth()
         self.assertEqual(j.server, self.make_url(''))
         self.assertEqual(j.auth, None)
@@ -47,7 +47,8 @@ class JenkinsConstructorTest(JenkinsTestBase):
     def test_unicode_password(self):
         j = jenkins.Jenkins('{0}'.format(self.base_url),
                             six.u('nonascii'),
-                            six.u('\xe9\u20ac'))
+                            six.u('\xe9\u20ac'),
+                            resolve=False)
         j._maybe_add_auth()
         self.assertEqual(j.server, self.make_url(''))
         self.assertEqual(j.auth(self.req).headers['Authorization'],
@@ -58,7 +59,7 @@ class JenkinsConstructorTest(JenkinsTestBase):
         long_str = 'a' * 60
         long_str_b64 = 'YWFh' * 20
 
-        j = jenkins.Jenkins('{0}'.format(self.base_url), long_str, long_str)
+        j = jenkins.Jenkins('{0}'.format(self.base_url), long_str, long_str, resolve=False)
         j._maybe_add_auth()
 
         auth_header = j.auth(self.req).headers['Authorization']
@@ -67,11 +68,11 @@ class JenkinsConstructorTest(JenkinsTestBase):
             long_str_b64 + 'Om' + long_str_b64[2:] + 'YQ=='))
 
     def test_default_timeout(self):
-        j = jenkins.Jenkins('{0}'.format(self.base_url))
+        j = jenkins.Jenkins('{0}'.format(self.base_url), resolve=False)
         self.assertEqual(j.timeout, socket._GLOBAL_DEFAULT_TIMEOUT)
 
     def test_custom_timeout(self):
-        j = jenkins.Jenkins('{0}'.format(self.base_url), timeout=300)
+        j = jenkins.Jenkins('{0}'.format(self.base_url), timeout=300, resolve=False)
         self.assertEqual(j.timeout, 300)
 
 
@@ -206,7 +207,9 @@ class JenkinsOpenTest(JenkinsTestBase):
     def test_timeout(self, session_send_mock):
         session_send_mock.side_effect = jenkins.URLError(
             reason="timed out")
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', timeout=1)
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test',
+                            timeout=1,
+                            resolve=False)
         request = jenkins.requests.Request('GET', self.make_url('job/TestJob'))
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
@@ -223,7 +226,7 @@ class JenkinsOpenTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'get_version',
                   return_value="Version42")
     def test_wait_for_normal_op(self, version_mock, jenkins_mock):
-        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        j = jenkins.Jenkins('http://example.com', 'test', 'test', resolve=False)
         self.assertTrue(j.wait_for_normal_op(0))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open',
@@ -231,11 +234,11 @@ class JenkinsOpenTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'get_version',
                   side_effect=jenkins.EmptyResponseException())
     def test_wait_for_normal_op__empty_response(self, version_mock, jenkins_mock):
-        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        j = jenkins.Jenkins('http://example.com', 'test', 'test', resolve=False)
         self.assertFalse(j.wait_for_normal_op(0))
 
     def test_wait_for_normal_op__negative_timeout(self):
-        j = jenkins.Jenkins('http://example.com', 'test', 'test')
+        j = jenkins.Jenkins('http://example.com', 'test', 'test', resolve=False)
         with self.assertRaises(ValueError) as context_manager:
             j.wait_for_normal_op(-1)
         self.assertEqual(
