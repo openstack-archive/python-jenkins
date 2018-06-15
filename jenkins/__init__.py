@@ -287,7 +287,7 @@ class Jenkins(object):
     _timeout_warning_issued = False
 
     def __init__(self, url, username=None, password=None,
-                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
+                 timeout=socket._GLOBAL_DEFAULT_TIMEOUT, resolve=True):
         '''Create handle to Jenkins instance.
 
         All methods will raise :class:`JenkinsException` on failure.
@@ -296,6 +296,7 @@ class Jenkins(object):
         :param username: Server username, ``str``
         :param password: Server password, ``str``
         :param timeout: Server connection timeout in secs (default: not set), ``int``
+        :param resolve: Attempts to resolve and auto-correct API redirection. default: True ``bool``
         '''
         if url[-1] == '/':
             self.server = url
@@ -327,6 +328,25 @@ class Jenkins(object):
                           'compatibility with older versions.')
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
             self._session.verify = False
+
+        # if resolve:
+        #     self._resolve_api()
+
+    def _resolve_api(self):
+        '''Detects if Jenkins api frontend is redirect and corrects it if so
+        in order to avoid future redirects of each request or failures caused
+        by the fact that a redirected POST is transformed into a GET.
+        '''
+        r = self.jenkins_request(requests.Request('HEAD', self.server), add_crumb=False)
+        if r.url != self.server or r.status_code in [300, 301, 302, 303]:
+            if 'Location' in r.headers:
+                new_url = r.headers['Location']
+            else:
+                new_url = r.url
+            warnings.warn(
+                "Redirection from %s to %s detected, you may want to update your frontend url." % (
+                    self.server, new_url))
+            self.server = new_url
 
     def _get_encoded_params(self, params):
         for k, v in params.items():
@@ -1310,6 +1330,7 @@ class Jenkins(object):
             'POST', url, data=data))
 
         if not result.endswith(magic_str):
+            logging.error(result)
             raise JenkinsException(result)
 
         return result[:result.rfind('\n')]
