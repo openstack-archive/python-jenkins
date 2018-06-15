@@ -37,7 +37,7 @@ class JenkinsScriptTest(JenkinsTestBase):
     def test_install_plugin(self, jenkins_mock):
         '''Installation of plugins is done with the run_script method
         '''
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
         j.install_plugin("jabber")
         self.assertEqual(
             jenkins_mock.call_args[0][0].url,
@@ -49,7 +49,7 @@ class JenkinsScriptTest(JenkinsTestBase):
     def test_install_plugin_with_dependencies(self, run_script_mock, jenkins_mock):
         '''Verify install plugins with dependencies
         '''
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
         j.install_plugin("jabber")
         self.assertEqual(len(run_script_mock.call_args_list), 2)
         self.assertEqual(run_script_mock.call_args_list[0][0][0],
@@ -65,7 +65,7 @@ class JenkinsScriptTest(JenkinsTestBase):
     def test_install_plugin_without_dependencies(self, run_script_mock, jenkins_mock):
         '''Verify install plugins without dependencies
         '''
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
         j.install_plugin("jabber", include_dependencies=False)
         self.assertEqual(len(run_script_mock.call_args_list), 2)
         self.assertEqual(run_script_mock.call_args_list[0][0][0],
@@ -81,7 +81,7 @@ class JenkinsScriptTest(JenkinsTestBase):
         '''Verify install plugin does not need a restart
         '''
         run_script_mock.return_value = u'Result: false\n'
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
         self.assertFalse(j.install_plugin("jabber"))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
@@ -90,5 +90,5 @@ class JenkinsScriptTest(JenkinsTestBase):
         '''Verify install plugin needs a restart
         '''
         run_script_mock.return_value = u'Result: true\n'
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
         self.assertTrue(j.install_plugin("jabber"))

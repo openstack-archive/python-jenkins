@@ -30,7 +30,7 @@ class JenkinsTestBase(TestWithScenarios, unittest.TestCase):
             'jenkins.requests_kerberos', None)
         self.request_kerberos_module_patcher.start()
 
-        self.j = jenkins.Jenkins(self.base_url, 'test', 'test')
+        self.j = jenkins.Jenkins(self.base_url, 'test', 'test', resolve=False)
 
     def tearDown(self):
 
