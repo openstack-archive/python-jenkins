@@ -296,6 +296,17 @@ class Jenkins(object):
         :param password: Server password, ``str``
         :param timeout: Server connection timeout in secs (default: not set), ``int``
         '''
+
+        # detect real jenkins frontend
+        # Avoid redirection issues (performance or silent failed POSTs)
+        r = requests.head(url, allow_redirects=False)
+        if r.status_code in [300, 301, 302, 303]:
+            new_url = r.headers['Location']
+            warnings.warn(
+                "Redirection from %s to %s detected, you may want to update your frontend url." % (
+                url, new_url))
+            url = new_url
+
         if url[-1] == '/':
             self.server = url
         else:
