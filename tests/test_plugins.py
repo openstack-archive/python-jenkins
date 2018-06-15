@@ -175,7 +175,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
             json.dumps(self.plugin_info_json),
             json.dumps(self.updated_plugin_info_json)
         ]
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test')
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', resolve=False)
 
         plugins_info = j.get_plugins()
         self.assertEqual(plugins_info["mailer"]["version"],

@@ -206,7 +206,9 @@ class JenkinsOpenTest(JenkinsTestBase):
     def test_timeout(self, session_send_mock):
         session_send_mock.side_effect = jenkins.URLError(
             reason="timed out")
-        j = jenkins.Jenkins(self.make_url(''), 'test', 'test', timeout=1)
+        j = jenkins.Jenkins(self.make_url(''), 'test', 'test',
+                            timeout=1,
+                            resolve=False)
         request = jenkins.requests.Request('GET', self.make_url('job/TestJob'))
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
