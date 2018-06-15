@@ -44,5 +44,5 @@ class JenkinsWhoamiTest(JenkinsTestBase):
         with self.assertRaises(jenkins.JenkinsException):
             self.j.get_whoami()
         self.assertEqual(
-            session_send_mock.call_args_list[1][0][1].url,
+            session_send_mock.call_args_list[0][0][1].url,
             self.make_url('me/api/json?depth=0'))
