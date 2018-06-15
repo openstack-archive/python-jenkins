@@ -172,6 +172,7 @@ class JenkinsPluginInfoTest(JenkinsPluginsBase):
     def test_get_plugin_info_updated(self, jenkins_mock):
 
         jenkins_mock.side_effect = [
+            '',  # HEAD call from Jenkins.__init__
             json.dumps(self.plugin_info_json),
             json.dumps(self.updated_plugin_info_json)
         ]
