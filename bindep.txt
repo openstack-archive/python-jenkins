@@ -3,6 +3,7 @@
 build-essential [platform:dpkg]
 gcc [platform:rpm]
 pypy [test]
+pypy-dev [test]
 python-dev [platform:dpkg]
 python-devel [platform:rpm]
 python3-dev [platform:dpkg]
