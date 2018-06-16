@@ -31,7 +31,7 @@ class JenkinsWhoamiTest(JenkinsTestBase):
         self.assertEqual(user, user_to_return)
         self.assertEqual(
             jenkins_mock.call_args[0][0].url,
-            self.make_url('me/api/json'))
+            self.make_url('me/api/json?depth=0'))
         self._check_requests(jenkins_mock.call_args_list)
 
     @patch('jenkins.requests.Session.send', autospec=True)
@@ -45,4 +45,4 @@ class JenkinsWhoamiTest(JenkinsTestBase):
             self.j.get_whoami()
         self.assertEqual(
             session_send_mock.call_args_list[1][0][1].url,
-            self.make_url('me/api/json'))
+            self.make_url('me/api/json?depth=0'))

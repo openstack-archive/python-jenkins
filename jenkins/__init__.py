@@ -95,13 +95,13 @@ DEFAULT_HEADERS = {'Content-Type': 'text/xml; charset=utf-8'}
 INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
-WHOAMI_URL = 'me/api/json'
+WHOAMI_URL = 'me/api/json?depth=%(depth)s'
 JOBS_QUERY = '?tree=jobs[url,color,name,jobs]'
 JOB_INFO = '%(folder_url)sjob/%(short_name)s/api/json?depth=%(depth)s'
 JOB_NAME = '%(folder_url)sjob/%(short_name)s/api/json?tree=name'
 ALL_BUILDS = '%(folder_url)sjob/%(short_name)s/api/json?tree=allBuilds[number,url]'
 Q_INFO = 'queue/api/json?depth=0'
-Q_ITEM = 'queue/item/%(number)d/api/json'
+Q_ITEM = 'queue/item/%(number)d/api/json?depth=%(depth)s'
 CANCEL_QUEUE = 'queue/cancelItem?id=%(id)s'
 CREATE_JOB = '%(folder_url)screateItem?name=%(short_name)s'  # also post config.xml
 CONFIG_JOB = '%(folder_url)sjob/%(short_name)s/config.xml'
@@ -122,7 +122,7 @@ BUILD_TEST_REPORT = '%(folder_url)sjob/%(short_name)s/%(number)d/testReport/api/
     '?depth=%(depth)s'
 DELETE_BUILD = '%(folder_url)sjob/%(short_name)s/%(number)s/doDelete'
 WIPEOUT_JOB_WORKSPACE = '%(folder_url)sjob/%(short_name)s/doWipeOutWorkspace'
-NODE_LIST = 'computer/api/json'
+NODE_LIST = 'computer/api/json?depth=%(depth)s'
 CREATE_NODE = 'computer/doCreateItem'
 DELETE_NODE = 'computer/%(name)s/doDelete'
 NODE_INFO = 'computer/%(name)s/api/json?depth=%(depth)s'
@@ -580,7 +580,7 @@ class Jenkins(object):
                 raise TimeoutException('Error in request: %s' % (e.reason))
             raise JenkinsException('Error in request: %s' % (e.reason))
 
-    def get_queue_item(self, number):
+    def get_queue_item(self, number, depth=0):
         '''Get information about a queued item (to-be-created job).
 
         The returned dict will have a "why" key if the queued item is still
@@ -757,7 +757,7 @@ class Jenkins(object):
             raise JenkinsException("Could not parse JSON info for server[%s]"
                                    % self.server)
 
-    def get_whoami(self):
+    def get_whoami(self, depth=0):
         """Get information about the user account that authenticated to
         Jenkins. This is a simple way to verify that your credentials are
         correct.
@@ -773,7 +773,7 @@ class Jenkins(object):
         """
         try:
             response = self.jenkins_open(requests.Request(
-                'GET', self._build_url(WHOAMI_URL)
+                'GET', self._build_url(WHOAMI_URL, locals())
             ))
             if response is None:
                 raise EmptyResponseException(
@@ -1418,7 +1418,7 @@ class Jenkins(object):
                                    'executor': executor_number})
         return builds
 
-    def get_nodes(self):
+    def get_nodes(self, depth=0):
         '''Get a list of nodes connected to the Master
 
         Each node is a dict with keys 'name' and 'offline'
@@ -1427,7 +1427,7 @@ class Jenkins(object):
         '''
         try:
             nodes_data = json.loads(self.jenkins_open(
-                requests.Request('GET', self._build_url(NODE_LIST))))
+                requests.Request('GET', self._build_url(NODE_LIST, locals()))))
             return [{'name': c["displayName"], 'offline': c["offline"]}
                     for c in nodes_data["computer"]]
         except (req_exc.HTTPError, BadStatusLine):

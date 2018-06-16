@@ -45,7 +45,7 @@ class JenkinsGetNodesTest(JenkinsNodesTestBase):
             self.j.get_nodes()
         self.assertEqual(
             jenkins_mock.call_args[0][0].url,
-            self.make_url('computer/api/json'))
+            self.make_url('computer/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'Could not parse JSON info for server[{0}]'.format(
@@ -74,7 +74,7 @@ class JenkinsGetNodesTest(JenkinsNodesTestBase):
             self.j.get_nodes()
         self.assertEqual(
             session_send_mock.call_args_list[1][0][1].url,
-            self.make_url('computer/api/json'))
+            self.make_url('computer/api/json?depth=0'))
         self.assertEqual(
             str(context_manager.exception),
             'Error communicating with server[{0}]'.format(
