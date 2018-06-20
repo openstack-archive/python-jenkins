@@ -68,11 +68,8 @@ More details on how you can contribute is available on our wiki at:
 Writing a patch
 ---------------
 
-We ask that all code submissions be flake8_ clean.  The
-easiest way to do that is to run tox_ before submitting code for
-review in Gerrit.  It will run ``flake8`` in the same
-manner as the automated test suite that will run on proposed
-patchsets.
+Be sure that you lint code before created an code review.
+The easiest way to do this is to install git pre-commit_ hooks.
 
 Installing without setup.py
 ---------------------------
@@ -81,9 +78,9 @@ Then install the required python packages using pip_::
 
     $ sudo pip install python-jenkins
 
-.. _flake8: https://pypi.org/project/flake8
 .. _tox: https://testrun.org/tox
 .. _pip: https://pypi.org/project/pip
+.. _pre-commit: https://pre-commit.com/#install
 
 
 .. rubric:: Footnotes

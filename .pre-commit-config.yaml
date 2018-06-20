@@ -1,0 +1,14 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v1.3.0
+    hooks:
+      - id: flake8
+      - id: check-yaml
+        files: .*\.(yaml|yml)$
+        # args: [--unsafe]
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.11.1
+    hooks:
+      - id: yamllint
+        files: \.(yaml|yml)$
