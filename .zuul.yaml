@@ -1,3 +1,4 @@
+---
 - job:
     name: jjb-tox-cross-jenkins-job-builder
     description: Tests compatibility with master branch of jenkins-job-builder
@@ -9,6 +10,24 @@
     failure-message: WARNING
 
 - project:
+    templates:
+      - system-required
+      - docs-on-readthedocs
+      - publish-to-pypi
     check:
       jobs:
+        - build-openstack-sphinx-docs
+        - openstack-tox-linters
+        - openstack-tox-py27
+        - openstack-tox-py35
+        - openstack-tox-py36
+        - openstack-tox-pypy:
+            nodeset: ubuntu-bionic
         - jjb-tox-cross-jenkins-job-builder
+    gate:
+      jobs:
+        - build-openstack-sphinx-docs
+        - openstack-tox-linters
+        - openstack-tox-py27
+        - openstack-tox-py35
+        - openstack-tox-py36
