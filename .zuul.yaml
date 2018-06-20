@@ -1,3 +1,4 @@
+---
 - job:
     name: jjb-tox-cross-jenkins-job-builder
     description: Tests compatibility with master branch of jenkins-job-builder
