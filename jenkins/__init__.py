@@ -802,6 +802,8 @@ class Jenkins(object):
         """
         try:
             request = requests.Request('GET', self._build_url(''))
+            if self.auth:
+                request.add_header('Authorization', self.auth)
             request.headers['X-Jenkins'] = '0.0'
             response = self._response_handler(self._request(request))
 
