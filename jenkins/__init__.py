@@ -1299,8 +1299,8 @@ class Jenkins(object):
             Plugin:maven-plugin, Plugin:pam-auth]'
         '''
         magic_str = ')]}.'
-        print_magic_str = 'println()\nprint("{}")'.format(magic_str)
-        data = {'script': script.encode('utf-8') + print_magic_str.encode('utf-8')}
+        print_magic_str = 'print("{}")'.format(magic_str)
+        data = {'script': "{0}\n{1}".format(script, print_magic_str).encode('utf-8')}
         if node:
             url = self._build_url(NODE_SCRIPT_TEXT, locals())
         else:
