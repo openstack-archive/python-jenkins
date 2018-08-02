@@ -62,6 +62,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from six.moves.http_client import BadStatusLine
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import quote, urlencode, urljoin, urlparse
+import xml.etree.ElementTree as ET
 
 from jenkins import plugins
 
@@ -141,6 +142,10 @@ PROMOTION_INFO = '%(folder_url)sjob/%(short_name)s/promotion/api/json?depth=%(de
 DELETE_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/doDelete'
 CREATE_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/createProcess?name=%(name)s'
 CONFIG_PROMOTION = '%(folder_url)sjob/%(short_name)s/promotion/process/%(name)s/config.xml'
+LIST_CREDENTIALS = '%(folder_url)sjob/%(short_name)s/credentials/store/folder/domain/%(domain_name)s/api/json?tree=credentials[id]'
+CREATE_CREDENTIAL = '%(folder_url)sjob/%(short_name)s/credentials/store/folder/domain/%(domain_name)s/createCredentials'
+CONFIG_CREDENTIAL = '%(folder_url)sjob/%(short_name)s/credentials/store/folder/domain/%(domain_name)s/credential/%(name)s/config.xml'
+CREDENTIAL_INFO = '%(folder_url)sjob/%(short_name)s/credentials/store/folder/domain/%(domain_name)s/credential/%(name)s/api/json?depth=0'
 QUIET_DOWN = 'quietDown'
 
 # for testing only
@@ -1943,6 +1948,190 @@ class Jenkins(object):
         request = requests.Request(
             'GET', self._build_url(CONFIG_PROMOTION, locals()))
         return self.jenkins_open(request)
+
+    def _get_tag_text(self, name, xml):
+        '''Get text of tag from xml
+
+        :param name: XML tag name, ``str``
+        :param xml: XML configuration, ``str``
+        :returns: Text of tag, ``str``
+        :throws: :class:`JenkinsException` whenever tag does not exist
+            or has invalidated text
+        '''
+        tag = ET.fromstring(xml).find(name)
+        try:
+            text = tag.text.strip()
+            if text:
+                return text
+            raise JenkinsException("tag[%s] is invalidated" % name)
+        except AttributeError:
+            raise JenkinsException("tag[%s] is invalidated" % name)
+
+    def assert_folder(self, name, exception_message='job[%s] is not a folder'):
+        '''Raise an exception if job is not Cloudbees Folder
+
+        :param name: Name of job, ``str``
+        :param exception_message: Message to use for the exception.
+        :throws: :class:`JenkinsException` whenever the job is
+            not Cloudbees Folder
+        '''
+        if not self.is_folder(name):
+            raise JenkinsException(exception_message % name)
+
+    def is_folder(self, name):
+        '''Check whether a job is Cloudbees Folder
+
+        :param name: Job name, ``str``
+        :returns: ``True`` if job is folder, ``False`` otherwise
+        '''
+        return 'com.cloudbees.hudson.plugins.folder.Folder' \
+            == self.get_job_info(name)['_class']
+
+    def assert_credential_exists(self, name, folder_name, domain_name='_',
+                                 exception_message='credential[%s] does not'
+                                 ' exist in the domain[%s] of [%s]'):
+        '''Raise an exception if credential does not exist in domain of folder
+
+        :param name: Name of credential, ``str``
+        :param folder_name: Folder name, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        :param exception_message: Message to use for the exception.
+                                  Formatted with ``name``, ``domain_name``,
+                                  and ``folder_name``
+        :throws: :class:`JenkinsException` whenever the credentail
+            does not exist in domain of folder
+        '''
+        if not self.credential_exists(name, folder_name, domain_name):
+            raise JenkinsException(exception_message %
+                                    (name, domain_name, folder_name))
+
+    def credential_exists(self, name, folder_name, domain_name='_'):
+        '''Check whether a credentail exists in domain of folder
+
+        :param name: Name of credentail, ``str``
+        :param folder_name: Folder name, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        :returns: ``True`` if credentail exists, ``False`` otherwise
+        '''
+        try:
+            return self.get_credential_info(name, folder_name,
+                                            domain_name)['id'] == name
+        except JenkinsException:
+            return False
+
+    def get_credential_info(self, name, folder_name, domain_name='_'):
+        '''Get credential information dictionary in domain of folder
+
+        :param name: Name of credentail, ``str``
+        :param folder_name: folder_name, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        :returns: Dictionary of credential info, ``dict``
+        '''
+        self.assert_folder(folder_name)
+        folder_url, short_name = self._get_job_folder(folder_name)
+        try:
+            response = self.jenkins_open(requests.Request(
+                'GET', self._build_url(CREDENTIAL_INFO, locals())
+            ))
+            if response:
+                return json.loads(response)
+            else:
+                raise JenkinsException('credential[%s] does not exist'
+                                       ' in the domain[%s] of [%s]'
+                                       % (name, domain_name, folder_name))
+        except (req_exc.HTTPError, NotFoundException):
+            raise JenkinsException('credential[%s] does not exist'
+                                    ' in the domain[%s] of [%s]'
+                                       % (name, domain_name, folder_name))
+        except ValueError:
+            raise JenkinsException(
+                'Could not parse JSON info for credential[%s]'
+                ' in the domain[%s] of [%s]'
+                % (name, domain_name, folder_name)
+            )
+
+    def get_credential_config(self, name, folder_name, domain_name='_'):
+        '''Get configuration of credential in domain of folder.
+
+        :param name: Name of credentail, ``str``
+        :param folder_name: Folder name, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        :returns: Credential configuration (XML format)
+        '''
+        self.assert_folder(folder_name)
+        folder_url, short_name = self._get_job_folder(folder_name)
+        return self.jenkins_open(requests.Request(
+            'GET', self._build_url(CONFIG_CREDENTIAL, locals())
+            ))
+
+    def create_credential(self, folder_name, config_xml,
+                          domain_name='_'):
+        '''Create credentail in domain of folder
+
+        :param name: Name of credentail, ``str``
+        :param folder_name: Folder name, ``str``
+        :param config_xml: New XML configuration, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        '''
+        folder_url, short_name = self._get_job_folder(folder_name)
+        name = self._get_tag_text('id', config_xml)
+        if self.credential_exists(name, folder_name, domain_name):
+            raise JenkinsException('credential[%s] already exists'
+                                    ' in the domain[%s] of [%s]'
+                                    % (name, domain_name, folder_name))
+
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(CREATE_CREDENTIAL, locals()),
+            data=config_xml.encode('utf-8'),
+            headers=DEFAULT_HEADERS
+        ))
+        self.assert_credential_exists(name, folder_name, domain_name,
+                                      'create[%s] failed in the'
+                                       ' domain[%s] of [%s]')
+
+    def delete_credential(self, name, folder_name, domain_name='_'):
+        '''Delete credential from domain of folder
+
+        :param name: Name of credentail, ``str``
+        :param folder_name: Folder name, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        '''
+        folder_url, short_name = self._get_job_folder(folder_name)
+        self.jenkins_open(requests.Request(
+            'DELETE', self._build_url(CONFIG_CREDENTIAL, locals())
+            ))
+        if self.credential_exists(name, folder_name, domain_name):
+            raise JenkinsException('delete credential[%s] from'
+                                    'domain[%s] of [%s] failed' %
+                                 (name, domain_name, folder_name))
+
+    def reconfig_credential(self, folder_name, config_xml, domain_name='_'):
+        '''Reconfig credential with new config in domain of folder
+
+        :param folder_name: Folder name, ``str``
+        :param config_xml: New XML configuration, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        '''
+        folder_url, short_name = self._get_job_folder(folder_name)
+        name = self._get_tag_text('id', config_xml)
+        self.assert_credential_exists(name, folder_name, domain_name)
+        self.jenkins_open(requests.Request(
+            'POST', self._build_url(CONFIG_CREDENTIAL, locals())
+            ))
+
+    def list_credentials(self, folder_name, domain_name='_'):
+        '''List credentials in domain of folder
+
+        :param folder_name: Folder name, ``str``
+        :param domain_name: Domain name, default is '_', ``str``
+        :returns: Credentials list, ``list``
+        '''
+        self.assert_folder(folder_name)
+        folder_url, short_name = self._get_job_folder(folder_name)
+        response = self.jenkins_open(requests.Request(
+            'GET', self._build_url(LIST_CREDENTIALS, locals())
+        ))
+        return json.loads(response)['credentials']
 
     def quiet_down(self):
         '''Prepare Jenkins for shutdown.
