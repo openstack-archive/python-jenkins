@@ -101,3 +101,28 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         ]
         self.assertEqual(expected_request_urls,
                          self.got_request_urls(jenkins_mock))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_deep_query(self, jenkins_mock):
+        jenkins_mock.side_effect = map(
+            json.dumps, self.jobs_in_folder_deep_query)
+
+        jobs_info = self.j.get_all_jobs()
+
+        expected_fullnames = [
+            u"top_folder",
+            u"top_folder/middle_folder",
+            u"top_folder/middle_folder/bottom_folder",
+            u"top_folder/middle_folder/bottom_folder/my_job1",
+            u"top_folder/middle_folder/bottom_folder/my_job2"
+        ]
+        self.assertEqual(len(expected_fullnames), len(jobs_info))
+        got_fullnames = [job[u"fullname"] for job in jobs_info]
+        self.assertEqual(expected_fullnames, got_fullnames)
+
+        expected_request_urls = [
+            self.make_url('api/json'),
+            self.make_url('job/top_folder/job/middle_folder/job/bottom_folder/api/json')
+        ]
+        self.assertEqual(expected_request_urls,
+                         self.got_request_urls(jenkins_mock))
