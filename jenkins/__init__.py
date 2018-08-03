@@ -770,7 +770,7 @@ class Jenkins(object):
             url += query
         try:
             return json.loads(self.jenkins_open(
-                requests.Request('GET', self._build_url(INFO))
+                requests.Request('GET', self._build_url(url))
             ))
         except (req_exc.HTTPError, BadStatusLine):
             raise BadHTTPException("Error communicating with server[%s]"
