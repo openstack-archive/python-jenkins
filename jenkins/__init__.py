@@ -96,7 +96,6 @@ INFO = 'api/json'
 PLUGIN_INFO = 'pluginManager/api/json?depth=%(depth)s'
 CRUMB_URL = 'crumbIssuer/api/json'
 WHOAMI_URL = 'me/api/json?depth=%(depth)s'
-JOBS_QUERY = '?tree=jobs[url,color,name,jobs]'
 JOB_INFO = '%(folder_url)sjob/%(short_name)s/api/json?depth=%(depth)s'
 JOB_NAME = '%(folder_url)sjob/%(short_name)s/api/json?tree=name'
 ALL_BUILDS = '%(folder_url)sjob/%(short_name)s/api/json?tree=allBuilds[number,url]'
@@ -477,17 +476,21 @@ class Jenkins(object):
             raise JenkinsException(
                 "Could not parse JSON info for job[%s]" % name)
 
-    def get_job_info_regex(self, pattern, depth=0, folder_depth=0):
+    def get_job_info_regex(self, pattern, depth=0, folder_depth=0,
+                           folder_depth_inc=10):
         '''Get a list of jobs information that contain names which match the
            regex pattern.
 
         :param pattern: regex pattern, ``str``
         :param depth: JSON depth, ``int``
         :param folder_depth: folder level depth to search ``int``
+        :param folder_depth_inc: Number of levels to fetch at once, ``int``.
+            See :func:`get_all_jobs`.
         :returns: List of jobs info, ``list``
         '''
         result = []
-        jobs = self.get_all_jobs(folder_depth)
+        jobs = self.get_all_jobs(folder_depth=folder_depth,
+                                 folder_depth_inc=folder_depth_inc)
         for job in jobs:
             if re.search(pattern, job['name']):
                 result.append(self.get_job_info(job['name'], depth=depth))
@@ -944,7 +947,7 @@ class Jenkins(object):
 
         return plugins_data
 
-    def get_jobs(self, folder_depth=0, view_name=None):
+    def get_jobs(self, folder_depth=0, folder_depth_inc=10, view_name=None):
         """Get list of jobs.
 
         Each job is a dictionary with 'name', 'url', 'color' and 'fullname'
@@ -957,6 +960,8 @@ class Jenkins(object):
 
         :param folder_depth: Number of levels to search, ``int``. By default
             0, which will limit search to toplevel. None disables the limit.
+        :param folder_depth_inc: Number of levels to fetch at once, ``int``.
+            See :func:`get_all_jobs`.
         :param view_name: Name of a Jenkins view for which to
             retrieve jobs, ``str``. By default, the job list is
             not limited to a specific view.
@@ -978,9 +983,10 @@ class Jenkins(object):
         if view_name:
             return self._get_view_jobs(name=view_name)
         else:
-            return self.get_all_jobs(folder_depth=folder_depth)
+            return self.get_all_jobs(folder_depth=folder_depth,
+                                     folder_depth_inc=folder_depth_inc)
 
-    def get_all_jobs(self, folder_depth=None):
+    def get_all_jobs(self, folder_depth=None, folder_depth_inc=10):
         """Get list of all jobs recursively to the given folder depth.
 
         Each job is a dictionary with 'name', 'url', 'color' and 'fullname'
@@ -988,46 +994,18 @@ class Jenkins(object):
 
         :param folder_depth: Number of levels to search, ``int``. By default
             None, which will search all levels. 0 limits to toplevel.
+        :param folder_depth_inc: Number of levels to fetch at once, ``int``.
+            By default 10, which is usually enough to fetch all jobs using
+            a single request and still easily fits into an HTTP request.
         :returns: list of jobs, ``[ { str: str} ]``
-
-        .. note::
-
-            On instances with many folders it may be more efficient to use the
-            run_script method to retrieve all jobs instead.
-
-            Example::
-
-                server.run_script(\"\"\"
-                    import groovy.json.JsonBuilder;
-
-                    // get all projects excluding matrix configuration
-                    // as they are simply part of a matrix project.
-                    // there may be better ways to get just jobs
-                    items = Jenkins.instance.getAllItems(AbstractProject);
-                    items.removeAll {
-                      it instanceof hudson.matrix.MatrixConfiguration
-                    };
-
-                    def json = new JsonBuilder()
-                    def root = json {
-                      jobs items.collect {
-                        [
-                          name: it.name,
-                          url: Jenkins.instance.getRootUrl() + it.getUrl(),
-                          color: it.getIconColor().toString(),
-                          fullname: it.getFullName()
-                        ]
-                      }
-                    }
-
-                    // use json.toPrettyString() if viewing
-                    println json.toString()
-                    \"\"\")
-
         """
-        jobs_list = []
+        jobs_query = 'jobs'
+        for _ in range(folder_depth_inc):
+            jobs_query = 'jobs[url,color,name,' + jobs_query + ']'
+        jobs_query = '?tree=' + jobs_query
 
-        jobs = [(0, [], self.get_info(query=JOBS_QUERY)['jobs'])]
+        jobs_list = []
+        jobs = [(0, [], self.get_info(query=jobs_query)['jobs'])]
         for lvl, root, lvl_jobs in jobs:
             if not isinstance(lvl_jobs, list):
                 lvl_jobs = [lvl_jobs]
@@ -1038,13 +1016,16 @@ class Jenkins(object):
                 if u'fullname' not in job:
                     job[u'fullname'] = '/'.join(path)
                 jobs_list.append(job)
-                if 'jobs' in job:  # folder
+                if 'jobs' in job and isinstance(job['jobs'], list):  # folder
                     if folder_depth is None or lvl < folder_depth:
-                        url_path = ''.join(['/job/' + p for p in path])
-                        jobs.append(
-                            (lvl + 1, path,
-                             self.get_info(url_path,
-                                           query=JOBS_QUERY)['jobs']))
+                        children = job['jobs']
+                        # once folder_depth_inc is reached, Jenkins returns
+                        # empty objects
+                        if any('url' not in child for child in job['jobs']):
+                            url_path = ''.join(['/job/' + p for p in path])
+                            children = self.get_info(url_path,
+                                                     query=jobs_query)['jobs']
+                        jobs.append((lvl + 1, path, children))
         return jobs_list
 
     def copy_job(self, from_name, to_name):
@@ -1163,22 +1144,6 @@ class Jenkins(object):
         '''Get the number of jobs on the Jenkins server
 
         :returns: Total number of jobs, ``int``
-
-        .. note::
-
-            On instances with many folders it may be more efficient to use the
-            run_script method to retrieve the total number of jobs instead.
-
-            Example::
-
-                # get all projects excluding matrix configuration
-                # as they are simply part of a matrix project.
-                server.run_script(
-                    "print(Hudson.instance.getAllItems("
-                    "    hudson.model.AbstractProject).count{"
-                    "        !(it instanceof hudson.matrix.MatrixConfiguration)"
-                    "    })")
-
         '''
         return len(self.get_all_jobs())
 
