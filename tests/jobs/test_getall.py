@@ -23,6 +23,13 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         got_fullnames = [job[u"fullname"] for job in jobs_info]
         self.assertEqual(expected_fullnames, got_fullnames)
 
+        expected_request_urls = [
+            self.make_url('api/json'),
+            self.make_url('job/my_folder1/api/json')
+        ]
+        self.assertEqual(expected_request_urls,
+                         self.got_request_urls(jenkins_mock))
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_multi_level(self, jenkins_mock):
         response = build_jobs_list_responses(
@@ -44,6 +51,14 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
                                  for job in jobs_info
                                  if job['name'] == u"my_job1"]))
 
+        expected_request_urls = [
+            self.make_url('api/json'),
+            self.make_url('job/my_folder1/api/json'),
+            self.make_url('job/my_folder1/job/my_folder2/api/json')
+        ]
+        self.assertEqual(expected_request_urls,
+                         self.got_request_urls(jenkins_mock))
+
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_folders_depth(self, jenkins_mock):
         response = build_jobs_list_responses(
@@ -59,6 +74,13 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         self.assertEqual(len(expected_fullnames), len(jobs_info))
         got_fullnames = [job[u"fullname"] for job in jobs_info]
         self.assertEqual(expected_fullnames, got_fullnames)
+
+        expected_request_urls = [
+            self.make_url('api/json'),
+            self.make_url('job/my_folder1/api/json')
+        ]
+        self.assertEqual(expected_request_urls,
+                         self.got_request_urls(jenkins_mock))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_unsafe_chars(self, jenkins_mock):
@@ -76,3 +98,11 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         self.assertEqual(len(expected_fullnames), len(jobs_info))
         got_fullnames = [job[u"fullname"] for job in jobs_info]
         self.assertEqual(expected_fullnames, got_fullnames)
+
+        expected_request_urls = [
+            self.make_url('api/json'),
+            self.make_url('job/my_folder1/api/json'),
+            self.make_url('job/my_folder1/job/my%20spaced%20folder/api/json')
+        ]
+        self.assertEqual(expected_request_urls,
+                         self.got_request_urls(jenkins_mock))
