@@ -43,3 +43,9 @@ class JenkinsTestBase(TestWithScenarios, unittest.TestCase):
 
         for req in requests:
             req[0][0].prepare()
+
+    def got_request_urls(self, mock):
+        return [
+            call[0][0].url.split('?', maxsplit=1)[0]
+            for call in mock.call_args_list
+        ]
