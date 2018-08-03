@@ -1027,25 +1027,23 @@ class Jenkins(object):
         """
         jobs_list = []
 
-        jobs = [(0, "", self.get_info(query=JOBS_QUERY)['jobs'])]
+        jobs = [(0, [], self.get_info(query=JOBS_QUERY)['jobs'])]
         for lvl, root, lvl_jobs in jobs:
             if not isinstance(lvl_jobs, list):
                 lvl_jobs = [lvl_jobs]
             for job in lvl_jobs:
+                path = root + [job[u'name']]
                 # insert fullname info if it doesn't exist to
                 # allow callers to easily reference unambiguously
                 if u'fullname' not in job:
-                    job[u'fullname'] = '/'.join(
-                        [p for p in root.split('/')
-                         if p and p != 'job'] +
-                        [job[u'name']])
+                    job[u'fullname'] = '/'.join(path)
                 jobs_list.append(job)
                 if 'jobs' in job:  # folder
                     if folder_depth is None or lvl < folder_depth:
-                        path = '/job/'.join((root, job[u'name']))
+                        url_path = ''.join(['/job/' + p for p in path])
                         jobs.append(
                             (lvl + 1, path,
-                             self.get_info(path,
+                             self.get_info(url_path,
                                            query=JOBS_QUERY)['jobs']))
         return jobs_list
 

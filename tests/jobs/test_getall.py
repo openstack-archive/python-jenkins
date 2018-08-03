@@ -106,3 +106,23 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
         ]
         self.assertEqual(expected_request_urls,
                          self.got_request_urls(jenkins_mock))
+
+    @patch.object(jenkins.Jenkins, 'jenkins_open')
+    def test_folder_named_job(self, jenkins_mock):
+        response = build_jobs_list_responses(
+            self.jobs_in_folder_named_job, 'http://example.com/')
+        jenkins_mock.side_effect = iter(response)
+
+        jobs_info = self.j.get_all_jobs()
+
+        expected_fullnames = [u"job", u"job/my_job"]
+        self.assertEqual(len(expected_fullnames), len(jobs_info))
+        got_fullnames = [job[u"fullname"] for job in jobs_info]
+        self.assertEqual(expected_fullnames, got_fullnames)
+
+        expected_request_urls = [
+            self.make_url('api/json'),
+            self.make_url('job/job/api/json'),
+        ]
+        self.assertEqual(expected_request_urls,
+                         self.got_request_urls(jenkins_mock))
