@@ -18,7 +18,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         job_info_to_return = {u'jobs': jobs}
         jenkins_mock.return_value = json.dumps(job_info_to_return)
 
-        job_info = self.j.get_jobs()
+        job_info = self.j.get_jobs(folder_depth_per_request=1)
 
         jobs[u'fullname'] = jobs[u'name']
         self.assertEqual(job_info, [jobs])
