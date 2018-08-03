@@ -1,7 +1,7 @@
+import json
 from mock import patch
 
 import jenkins
-from tests.jobs.base import build_jobs_list_responses
 from tests.jobs.base import JenkinsGetJobsTestBase
 
 
@@ -9,9 +9,7 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_simple(self, jenkins_mock):
-        response = build_jobs_list_responses(
-            self.jobs_in_folder, 'http://example.com/')
-        jenkins_mock.side_effect = iter(response)
+        jenkins_mock.side_effect = map(json.dumps, self.jobs_in_folder)
 
         jobs_info = self.j.get_all_jobs()
 
@@ -32,9 +30,8 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_multi_level(self, jenkins_mock):
-        response = build_jobs_list_responses(
-            self.jobs_in_multiple_folders, 'http://example.com/')
-        jenkins_mock.side_effect = iter(response)
+        jenkins_mock.side_effect = map(
+            json.dumps, self.jobs_in_multiple_folders)
 
         jobs_info = self.j.get_all_jobs()
 
@@ -61,9 +58,8 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_folders_depth(self, jenkins_mock):
-        response = build_jobs_list_responses(
-            self.jobs_in_multiple_folders, 'http://example.com/')
-        jenkins_mock.side_effect = iter(response)
+        jenkins_mock.side_effect = map(
+            json.dumps, self.jobs_in_multiple_folders)
 
         jobs_info = self.j.get_all_jobs(folder_depth=1)
 
@@ -84,9 +80,8 @@ class JenkinsGetAllJobsTest(JenkinsGetJobsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_unsafe_chars(self, jenkins_mock):
-        response = build_jobs_list_responses(
-            self.jobs_in_unsafe_name_folders, 'http://example.com/')
-        jenkins_mock.side_effect = iter(response)
+        jenkins_mock.side_effect = map(
+            json.dumps, self.jobs_in_unsafe_name_folders)
 
         jobs_info = self.j.get_all_jobs()
 

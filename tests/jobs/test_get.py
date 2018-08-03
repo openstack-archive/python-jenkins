@@ -3,7 +3,6 @@ from mock import patch
 
 import jenkins
 from tests.helper import build_response_mock
-from tests.jobs.base import build_jobs_list_responses
 from tests.jobs.base import JenkinsGetJobsTestBase
 
 
@@ -30,9 +29,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_folders_simple(self, jenkins_mock):
-        response = build_jobs_list_responses(
-            self.jobs_in_folder, self.make_url(''))
-        jenkins_mock.side_effect = iter(response)
+        jenkins_mock.side_effect = map(json.dumps, self.jobs_in_folder)
 
         jobs_info = self.j.get_jobs()
 
@@ -45,9 +42,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_folders_additional_level(self, jenkins_mock):
-        response = build_jobs_list_responses(
-            self.jobs_in_folder, self.make_url(''))
-        jenkins_mock.side_effect = iter(response)
+        jenkins_mock.side_effect = map(json.dumps, self.jobs_in_folder)
 
         jobs_info = self.j.get_jobs(folder_depth=1)
 
