@@ -49,6 +49,11 @@ class JenkinsGetJobsTestBase(JenkinsJobsTestBase):
         ]
     )
 
+    jobs_in_folder_named_job = [
+        [{'name': 'job', 'jobs': None}], # actually a folder :-)
+        [{'name': 'my_job'}] # "job" folder jobs
+    ]
+
 
 def build_jobs_list_responses(jobs_list, server_url):
     responses = []
