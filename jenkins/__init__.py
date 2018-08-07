@@ -531,13 +531,14 @@ class Jenkins(object):
         response.raise_for_status()
 
         headers = response.headers
-        if (headers.get('content-length') is None and
-                headers.get('transfer-encoding') is None and
-                (response.content is None or len(response.content) <= 0)):
-            # response body should only exist if one of these is provided
-            raise EmptyResponseException(
-                "Error communicating with server[%s]: "
-                "empty response" % self.server)
+        if response.request.method != 'HEAD':
+            if (headers.get('content-length') is None and
+                    headers.get('transfer-encoding') is None and
+                    (response.content is None or len(response.content) <= 0)):
+                # response body should only exist if one of these is provided
+                raise EmptyResponseException(
+                    "Error communicating with server[%s]: "
+                    "empty response" % self.server)
 
         # Response objects will automatically return unicode encoded
         # when accessing .text property
