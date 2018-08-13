@@ -321,6 +321,14 @@ class Jenkins(object):
         self.timeout = timeout
         self._session = WrappedSession()
 
+        extra_headers = os.environ.get("JENKINS_API_EXTRA_HEADERS", "")
+        if extra_headers:
+            logging.warning("JENKINS_API_EXTRA_HEADERS adds these HTTP headers: %s", extra_headers.split("\n"))
+        for token in extra_headers.split("\n"):
+            if ":" in token:
+                header, value = token.split(":", 1)
+                self._session.headers[header] = value.strip()
+
         if os.getenv('PYTHONHTTPSVERIFY', '1') == '0':
             logging.debug('PYTHONHTTPSVERIFY=0 detected so we will '
                           'disable requests library SSL verification to keep '

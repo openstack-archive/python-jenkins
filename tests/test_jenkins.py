@@ -120,6 +120,34 @@ class JenkinsMaybeAddCrumbTest(JenkinsTestBase):
         self.assertFalse('.crumb' in request.headers)
 
 
+class JenkinsMaybeAddHeaders(JenkinsTestBase):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_simple(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            404, reason="Not Found")
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+
+        with patch.dict('os.environ', {}):
+            j = jenkins.Jenkins(self.base_url, 'test', 'test')
+            request = j._session.prepare_request(request)
+
+        self.assertEqual(request.headers, self.j._session.headers)
+        self.assertNotIn("X-Auth", request.headers)
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_add_header(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            404, reason="Not Found")
+        request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
+
+        with patch.dict('os.environ', {"JENKINS_API_EXTRA_HEADERS": "X-Auth: 123\nX-Key: 234"}):
+            j = jenkins.Jenkins(self.base_url, 'test', 'test')
+            request = j._session.prepare_request(request)
+
+        self.assertEqual(request.headers["X-Auth"], "123")
+        self.assertEqual(request.headers["X-Key"], "234")
+
+
 class JenkinsOpenTest(JenkinsTestBase):
 
     @patch('jenkins.requests.Session.send', autospec=True)
