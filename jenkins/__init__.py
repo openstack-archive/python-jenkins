@@ -377,6 +377,12 @@ class Jenkins(object):
         if self.crumb:
             req.headers[self.crumb['crumbRequestField']] = self.crumb['crumb']
 
+    def maybe_add_headers(self, req):
+        for token in os.environ.get("JENKINS_API_EXTRA_HEADERS", "").split("\n"):
+          if ":" in token:
+            header, value = token.split(":", 1)
+            req.headers[header] = value.strip()
+
     def _maybe_add_auth(self):
 
         if self._auth_resolved:
@@ -576,6 +582,7 @@ class Jenkins(object):
                 self._maybe_add_auth()
             if add_crumb:
                 self.maybe_add_crumb(req)
+            self.maybe_add_headers(req)
 
             return self._response_handler(
                 self._request(req))
