@@ -34,7 +34,7 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         jobs_info = self.j.get_jobs()
 
         expected_fullnames = [
-            u"my_job1", u"my_folder1", u"my_job2"
+            u"my_job1", u"my_folder1", u"my_job2", u"job"
         ]
         self.assertEqual(len(expected_fullnames), len(jobs_info))
         got_fullnames = [job[u"fullname"] for job in jobs_info]
@@ -47,8 +47,8 @@ class JenkinsGetJobsTest(JenkinsGetJobsTestBase):
         jobs_info = self.j.get_jobs(folder_depth=1)
 
         expected_fullnames = [
-            u"my_job1", u"my_folder1", u"my_job2",
-            u"my_folder1/my_job3", u"my_folder1/my_job4"
+            u"my_job1", u"my_folder1", u"my_job2", u"job",
+            u"my_folder1/my_job3", u"my_folder1/my_job4", u"job/my_job"
         ]
         self.assertEqual(len(expected_fullnames), len(jobs_info))
         got_fullnames = [job[u"fullname"] for job in jobs_info]
