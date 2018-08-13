@@ -318,6 +318,15 @@ class Jenkins(object):
 
         self.auth = None
         self.crumb = None
+        self.extra_headers = {}
+        for token in os.environ.get("JENKINS_API_EXTRA_HEADERS", "").split("\n"):
+            if ":" in token:
+                header, value = token.split(":", 1)
+                self.extra_headers[header] = value.strip()
+        if self.extra_headers:
+            logging.debug("JENKINS_API_EXTRA_HEADERS adds these HTTP headers: %s", self.extra_headers)
+
+
         self.timeout = timeout
         self._session = WrappedSession()
 
@@ -356,6 +365,10 @@ class Jenkins(object):
                 self.crumb = json.loads(response)
         if self.crumb:
             req.headers[self.crumb['crumbRequestField']] = self.crumb['crumb']
+
+    def maybe_add_headers(self, req):
+      for header, value in self.extra_headers.items():
+                req.headers[header] = value
 
     def _maybe_add_auth(self):
 
@@ -555,6 +568,7 @@ class Jenkins(object):
                 self._maybe_add_auth()
             if add_crumb:
                 self.maybe_add_crumb(req)
+            self.maybe_add_headers(req)
 
             return self._response_handler(
                 self._request(req))
