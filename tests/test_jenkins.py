@@ -1,3 +1,4 @@
+import copy
 import json
 import socket
 
@@ -118,6 +119,34 @@ class JenkinsMaybeAddCrumbTest(JenkinsTestBase):
             self.make_url('crumbIssuer/api/json'))
         self.assertFalse(self.j.crumb)
         self.assertFalse('.crumb' in request.headers)
+
+
+class JenkinsMaybeAddHeaders(JenkinsTestBase):
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_simple(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            404, reason="Not Found")
+        request = jenkins.requests.Request('http://example.com/job/TestJob')
+
+        old_headers = copy.deepcopy(request.headers)
+        with patch.dict('os.environ', {}):
+            j = jenkins.Jenkins(self.base_url, 'test', 'test')
+            j.maybe_add_headers(request)
+
+        self.assertEqual(request.headers, old_headers)
+
+    @patch('jenkins.requests.Session.send', autospec=True)
+    def test_add_header(self, session_send_mock):
+        session_send_mock.return_value = build_response_mock(
+            404, reason="Not Found")
+        request = jenkins.requests.Request('http://example.com/job/TestJob')
+
+        with patch.dict('os.environ', {"JENKINS_API_EXTRA_HEADERS": "X-Auth: 123\nX-Key: 234"}):
+            j = jenkins.Jenkins(self.base_url, 'test', 'test')
+            j.maybe_add_headers(request)
+
+        self.assertEqual(request.headers["X-Auth"], "123")
+        self.assertEqual(request.headers["X-Key"], "234")
 
 
 class JenkinsOpenTest(JenkinsTestBase):
