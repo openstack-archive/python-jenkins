@@ -16,12 +16,17 @@ class JenkinsGetJobsTestBase(JenkinsJobsTestBase):
         {'jobs': [
             {'name': 'my_job1', 'color': 'blue', 'url': 'http://...'},
             {'name': 'my_folder1', 'url': 'http://...', 'jobs': [{}, {}]},
-            {'name': 'my_job2', 'color': 'blue', 'url': 'http://...'}
+            {'name': 'my_job2', 'color': 'blue', 'url': 'http://...'},
+            {'name': 'job', 'url': 'http://...', 'jobs': [{}]}
         ]},
         # my_folder1 jobs
         {'jobs': [
             {'name': 'my_job3', 'color': 'blue', 'url': 'http://...'},
             {'name': 'my_job4', 'color': 'blue', 'url': 'http://...'}
+        ]},
+        # "job" folder jobs
+        {'jobs': [
+            {'name': 'my_job', 'color': 'blue', 'url': 'http://...'}
         ]}
     ]
 
@@ -59,17 +64,6 @@ class JenkinsGetJobsTestBase(JenkinsJobsTestBase):
         # my_folder1/my\ spaced\ folder jobs
         {'jobs': [
             {'name': 'my job 5', 'color': 'blue', 'url': 'http://...'}
-        ]}
-    ]
-
-    jobs_in_folder_named_job = [
-        # actually a folder :-)
-        {'jobs': [
-            {'name': 'job', 'url': 'http://...', 'jobs': [{}]}
-        ]},
-        # "job" folder jobs
-        {'jobs': [
-            {'name': 'my_job', 'color': 'blue', 'url': 'http://...'}
         ]}
     ]
 
