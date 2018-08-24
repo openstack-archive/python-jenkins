@@ -1,0 +1,8 @@
+Code-Review+2: Thanh Ha (zxiiro) <zxiiro@gmail.com>
+Workflow+1: Thanh Ha (zxiiro) <zxiiro@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Fri, 24 Aug 2018 17:36:56 +0000
+Reviewed-on: https://review.openstack.org/596404
+Project: openstack/python-jenkins
+Branch: refs/heads/master
