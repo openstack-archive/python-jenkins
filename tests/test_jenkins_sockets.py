@@ -22,7 +22,7 @@ class JenkinsRequestTimeoutTests(testtools.TestCase):
 
     def test_jenkins_open_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
-                            None, None, timeout=0.1, resolve=False)
+                            None, None, timeout=0.1)
         request = jenkins.requests.Request('GET', 'http://%s:%s/job/TestJob' %
                                            self.server.server_address)
 
@@ -32,7 +32,7 @@ class JenkinsRequestTimeoutTests(testtools.TestCase):
 
     def test_jenkins_open_no_timeout(self):
         j = jenkins.Jenkins("http://%s:%s" % self.server.server_address,
-                            None, None, resolve=False)
+                            None, None)
         request = jenkins.requests.Request('GET', 'http://%s:%s/job/TestJob' %
                                            self.server.server_address)
 
