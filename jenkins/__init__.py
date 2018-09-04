@@ -575,6 +575,8 @@ class Jenkins(object):
                 raise
         except req_exc.Timeout as e:
             raise TimeoutException('Error in request: %s' % (e))
+        except req_exc.SSLError as e:
+            raise
         except URLError as e:
             # python 2.6 compatibility to ensure same exception raised
             # since URLError wraps a socket timeout on python 2.6.
