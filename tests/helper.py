@@ -78,14 +78,15 @@ class NullServer(socketserver.TCPServer):
             *args, **kwargs)
 
 
-def build_response_mock(status_code, json_body=None, headers=None, **kwargs):
+def build_response_mock(status_code, json_body=None, headers=None,
+                        add_content_length=True, **kwargs):
     real_response = requests.Response()
     real_response.status_code = status_code
 
     text = None
     if json_body is not None:
         text = json.dumps(json_body)
-        if headers is not {}:
+        if add_content_length and headers is not {}:
             real_response.headers['content-length'] = len(text)
 
     if headers is not None:
