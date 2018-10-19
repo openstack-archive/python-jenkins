@@ -7,7 +7,6 @@
       - openstack/python-jenkins
       - openstack-infra/jenkins-job-builder
     voting: true
-    failure-message: WARNING
 
 - project:
     templates:
@@ -29,3 +28,4 @@
         - openstack-tox-py27
         - openstack-tox-py35
         - openstack-tox-py36
+        - jjb-tox-cross-jenkins-job-builder
