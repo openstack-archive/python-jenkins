@@ -1,0 +1,10 @@
+Code-Review+1: Aigars Mahinovs <aigarius@debian.org>
+Code-Review+2: Sorin Sbarnea <ssbarnea@redhat.com>
+Code-Review+2: Thanh Ha (zxiiro) <zxiiro@gmail.com>
+Workflow+1: Thanh Ha (zxiiro) <zxiiro@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Fri, 19 Oct 2018 15:36:37 +0000
+Reviewed-on: https://review.openstack.org/588940
+Project: openstack/python-jenkins
+Branch: refs/heads/master
