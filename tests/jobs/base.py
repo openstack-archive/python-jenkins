@@ -72,3 +72,19 @@ class JenkinsGetJobsTestBase(JenkinsJobsTestBase):
             {'name': 'my_job', 'color': 'blue', 'url': 'http://...'}
         ]}
     ]
+
+    jobs_in_folder_deep_query = [
+        {'jobs': [
+            {'name': 'top_folder', 'url': 'http://...', 'jobs': [
+                {'name': 'middle_folder', 'url': 'http://...', 'jobs': [
+                    {'name': 'bottom_folder', 'url': 'http://...',
+                     'jobs': [{}, {}]}
+                ]}
+            ]}
+        ]},
+        # top_folder/middle_folder/bottom_folder jobs
+        {'jobs': [
+            {'name': 'my_job1', 'color': 'blue', 'url': 'http://...'},
+            {'name': 'my_job2', 'color': 'blue', 'url': 'http://...'}
+        ]}
+    ]
