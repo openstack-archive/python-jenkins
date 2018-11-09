@@ -515,7 +515,7 @@ class Jenkins(object):
             return None
         else:
             actual = json.loads(response)['name']
-            if actual != short_name:
+            if actual.lower() != short_name.lower():
                 raise JenkinsException(
                     'Jenkins returned an unexpected job name %s '
                     '(expected: %s)' % (actual, name))
@@ -1156,7 +1156,7 @@ class Jenkins(object):
         :returns: ``True`` if Jenkins job exists
         '''
         folder_url, short_name = self._get_job_folder(name)
-        if self.get_job_name(name) == short_name:
+        if self.get_job_name(name).lower() == short_name.lower():
             return True
 
     def jobs_count(self):
