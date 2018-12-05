@@ -1337,6 +1337,7 @@ class Jenkins(object):
         '''
         # using a groovy script because Jenkins does not provide a REST endpoint
         # for installing plugins.
+        magic_str = ')]}'
         install = ('Jenkins.instance.updateCenter.getPlugin(\"' + name + '\")'
                    '.deploy();')
         if include_dependencies:
@@ -1350,10 +1351,10 @@ class Jenkins(object):
         is_restart_required = ('Jenkins.instance.updateCenter'
                                '.isRestartRequiredForCompletion()')
 
-        # response is a string (i.e. u'Result: true\n'), return a bool instead
+
         response_str = self.run_script(is_restart_required)
-        response = response_str.split(':')[1].strip().lower() == 'true'
-        return response
+        # response_str is ')]}'
+        return [True if(response_str.__contains__(magic_str)) else False][0]
 
     def stop_build(self, name, number):
         '''Stop a running Jenkins build.
