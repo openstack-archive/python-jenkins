@@ -1347,8 +1347,8 @@ class Jenkins(object):
         # run_script is an async call to run groovy. we need to wait a little
         # before we can get a reliable response on whether a restart is needed
         time.sleep(2)
-        is_restart_required = ('Jenkins.instance.updateCenter'
-                               '.isRestartRequiredForCompletion()')
+        is_restart_required = ('String res = Jenkins.instance.updateCenter.isRestartRequiredForCompletion(); '
+                               'println("Result:"+res)')
 
         # response is a string (i.e. u'Result: true\n'), return a bool instead
         response_str = self.run_script(is_restart_required)
