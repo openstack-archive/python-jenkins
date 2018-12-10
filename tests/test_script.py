@@ -57,8 +57,8 @@ class JenkinsScriptTest(JenkinsTestBase):
                           '.getNeededDependencies().each{it.deploy()};Jenkins'
                           '.instance.updateCenter.getPlugin(\"jabber\").deploy();'))
         self.assertEqual(run_script_mock.call_args_list[1][0][0],
-                         ('Jenkins.instance.updateCenter'
-                          '.isRestartRequiredForCompletion()'))
+                         ('String res = Jenkins.instance.updateCenter.isRestartRequiredForCompletion();'
+                               'println("Result:"+res)'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     @patch.object(jenkins.Jenkins, 'run_script')
@@ -72,8 +72,8 @@ class JenkinsScriptTest(JenkinsTestBase):
                          ('Jenkins.instance.updateCenter'
                           '.getPlugin(\"jabber\").deploy();'))
         self.assertEqual(run_script_mock.call_args_list[1][0][0],
-                         ('Jenkins.instance.updateCenter'
-                          '.isRestartRequiredForCompletion()'))
+                         ('String res = Jenkins.instance.updateCenter.isRestartRequiredForCompletion(); '
+                               'println("Result:"+res)'))
 
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     @patch.object(jenkins.Jenkins, 'run_script')
