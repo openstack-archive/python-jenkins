@@ -368,6 +368,8 @@ class Jenkins(object):
             try:
                 response = self.jenkins_open(requests.Request(
                     'GET', self._build_url(CRUMB_URL)), add_crumb=False)
+                if response.content is None or len(response.content) <= 0:
+                    raise EmptyResponseException("Empty response for crumb")
             except (NotFoundException, EmptyResponseException):
                 self.crumb = False
             else:
@@ -531,16 +533,6 @@ class Jenkins(object):
 
         # raise exceptions if occurred
         response.raise_for_status()
-
-        headers = response.headers
-        if (headers.get('content-length') is None and
-                headers.get('transfer-encoding') is None and
-                headers.get('location') is None and
-                (response.content is None or len(response.content) <= 0)):
-            # response body should only exist if one of these is provided
-            raise EmptyResponseException(
-                "Error communicating with server[%s]: "
-                "empty response" % self.server)
 
         # Response objects will automatically return unicode encoded
         # when accessing .text property

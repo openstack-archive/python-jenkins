@@ -88,6 +88,7 @@ def build_response_mock(status_code, json_body=None, headers=None,
         text = json.dumps(json_body)
         if add_content_length and headers is not {}:
             real_response.headers['content-length'] = len(text)
+    response.content = text
 
     if headers is not None:
         for k, v in headers.items():
