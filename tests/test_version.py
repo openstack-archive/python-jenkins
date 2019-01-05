@@ -36,11 +36,10 @@ class JenkinsVersionTest(JenkinsTestBase):
             'Error communicating with server[{0}/]'.format(self.base_url))
 
     @patch('jenkins.requests.Session.send', autospec=True)
-    def test_return_empty_response(self, session_send_mock):
+    def test_return_without_version_header(self, session_send_mock):
         session_send_mock.return_value = build_response_mock(0)
-        with self.assertRaises(jenkins.EmptyResponseException) as context_manager:
+        with self.assertRaises(KeyError) as context_manager:
             self.j.get_version()
         self.assertEqual(
             str(context_manager.exception),
-            'Error communicating with server[{0}/]:'
-            ' empty response'.format(self.base_url))
+            "'x-jenkins'")

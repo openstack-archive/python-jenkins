@@ -266,11 +266,10 @@ class JenkinsCreateNodeTest(JenkinsNodesTestBase):
 
     @requests_mock.Mocker()
     def test_already_exists(self, req_mock):
-        req_mock.get(self.make_url(jenkins.CRUMB_URL))
+        req_mock.get(self.make_url(jenkins.CRUMB_URL), content=None)
         req_mock.get(
             self.make_url('computer/test_node/api/json?depth=0'),
-            status_code=200, json=self.node_info,
-            headers={'content-length': '20'}
+            status_code=200, json=self.node_info
         )
 
         with self.assertRaises(jenkins.JenkinsException) as context_manager:
