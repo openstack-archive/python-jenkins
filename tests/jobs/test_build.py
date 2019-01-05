@@ -60,7 +60,7 @@ class JenkinsBuildJobTest(JenkinsJobsTestBase):
 
         self.assertEqual(
             str(context_mgr.exception),
-            'Error communicating with server[{0}]: empty response'.format(
+            "Header 'Location' not found in response from server[{0}]".format(
                 self.make_url('')))
 
     @patch('jenkins.requests.Session.send', autospec=True)
