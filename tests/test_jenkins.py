@@ -108,7 +108,7 @@ class JenkinsMaybeAddCrumbTest(JenkinsTestBase):
     @patch.object(jenkins.Jenkins, 'jenkins_open')
     def test_return_empty_response(self, jenkins_mock):
         "Don't try to create crumb header from an empty response"
-        jenkins_mock.side_effect = jenkins.EmptyResponseException("empty response")
+        session_send_mock.return_value = build_response_mock(200, '')
         request = jenkins.requests.Request('GET', 'http://example.com/job/TestJob')
 
         self.j.maybe_add_crumb(request)
@@ -254,10 +254,8 @@ class JenkinsOpenTest(JenkinsTestBase):
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertTrue(j.wait_for_normal_op(0))
 
-    @patch.object(jenkins.Jenkins, 'jenkins_open',
-                  side_effect=jenkins.EmptyResponseException())
     @patch.object(jenkins.Jenkins, 'get_version',
-                  side_effect=jenkins.EmptyResponseException())
+                  side_effect=jenkins.BadHTTPException())
     def test_wait_for_normal_op__empty_response(self, version_mock, jenkins_mock):
         j = jenkins.Jenkins('http://example.com', 'test', 'test')
         self.assertFalse(j.wait_for_normal_op(0))
