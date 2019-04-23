@@ -1065,7 +1065,7 @@ class Jenkins(object):
                                    'folder must be the same' % (from_name, to_name))
 
         self.jenkins_open(requests.Request(
-            'POST', self._build_url(COPY_JOB, locals())
+            'POST', self._build_url(COPY_JOB, locals()), headers={'Content-Type': 'multipart/form-data'}
         ))
         self.assert_job_exists(to_name, 'create[%s] failed')
 
